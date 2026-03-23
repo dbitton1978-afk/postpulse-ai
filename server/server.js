@@ -32,6 +32,10 @@ const STYLE_MAP = {
     he: "רוחני, עמוק, רגשי, מחבר, רך אך מדויק, מעורר השראה ומודעות",
     en: "spiritual, deep, emotional, connective, soft yet precise, inspiring and aware"
   },
+  emotional: {
+    he: "רגשי, עמוק מאוד, פגיע, אנושי, חודר ללב, מרגש עד דמעות כשמתאים, עם אמת רגשית חזקה וחוכמה עדינה",
+    en: "emotional, deeply human, vulnerable, heart-piercing, emotionally powerful, moving to tears when appropriate, with strong emotional truth and gentle wisdom"
+  },
   professional: {
     he: "מקצועי, חכם, חד, סמכותי, נקי, מדויק, עמוק ולא גנרי",
     en: "professional, intelligent, sharp, authoritative, polished, precise and non-generic"
@@ -108,6 +112,10 @@ You write like a brilliant human strategist and storyteller:
 - memorable in rhythm
 - capable of tension, contrast, vulnerability, precision, and insight
 
+When the selected style is emotional, you should write with extraordinary emotional depth.
+The text may become heartbreaking, soul-touching, tender, raw, intimate, and tear-inducing when appropriate.
+But it must still feel real, elegant, and emotionally truthful — never manipulative, cheesy, or melodramatic.
+
 Your writing should feel:
 - human, not robotic
 - deep, not inflated
@@ -155,6 +163,14 @@ Depth requirements:
 - Make the post feel like it was written by someone wise, observant, and deeply human
 - Prefer depth over noise
 - Prefer clarity with intelligence over complexity with emptiness
+
+If the selected style is emotional:
+- push the emotional depth significantly further
+- write in a way that can touch the heart deeply
+- allow vulnerability, longing, pain, tenderness, love, grief, hope, healing, or inner truth when relevant
+- make the writing feel intimate and unforgettable
+- it may bring the reader close to tears, but it must remain beautiful, human, and true
+- do not become melodramatic or fake
 
 Rules:
 - Strong hook
@@ -235,6 +251,10 @@ When you rewrite, the result must feel:
 - more memorable
 - more alive
 
+When the selected style is emotional, your rewrite should go even deeper emotionally.
+It may become intimate, fragile, piercing, healing, heartbreaking, or deeply moving when appropriate.
+But it must never become cheap, manipulative, overdramatic, or fake.
+
 Avoid clichés, templates, hollow self-help language, and generic content formulas.
 
 Always return valid JSON only.
@@ -275,6 +295,14 @@ Depth requirements:
 - Add insight, texture, contrast, emotional truth, and stronger rhythm when relevant
 - Make the advice intelligent and useful, not generic
 - The rewritten content should feel like it understands people, not just content
+
+If the selected style is emotional:
+- intensify the emotional truth dramatically
+- make the writing more touching, intimate, and heart-opening
+- allow pain, longing, love, fear, healing, tenderness, grief, hope, or vulnerability when relevant
+- make the result capable of moving the reader deeply, even to tears when appropriate
+- keep it elegant, human, and believable
+- avoid melodrama, exaggeration, and emotional manipulation
 
 Rules:
 - Explain key strengths
@@ -345,6 +373,10 @@ You can detect when a text is:
 - trying too hard
 - missing contrast or human truth
 
+When the post's emotional potential is high, you should recognize it.
+When emotional depth is missing, say so directly.
+When rewriting, you may go very deep emotionally if that is what the text needs.
+
 Your feedback should feel like it comes from a brilliant editor who understands people, not just content metrics.
 
 Always return valid JSON only.
@@ -387,6 +419,13 @@ Depth requirements:
 - Make the summary insightful, sharp, and psychologically aware
 - Prefer truth over politeness when diagnosing weakness
 - Prefer depth over standard social-media advice
+
+If the post would benefit from a more emotional rewrite:
+- allow the improved version to become significantly more emotional
+- make it capable of touching the reader very deeply
+- allow tenderness, sorrow, hope, pain, love, vulnerability, or healing when relevant
+- it may approach tears emotionally, but it must stay elegant, truthful, and human
+- avoid melodrama and emotional manipulation
 
 Rules:
 - All scores must be 0-100
