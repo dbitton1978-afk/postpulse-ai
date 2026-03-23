@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { analyzePost, generatePost, improvePost } from "./api";
 import { translations } from "./translations";
+import StoryEditor from "./components/StoryEditor";
 
 const styles = [
   { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
@@ -598,6 +599,12 @@ export default function App() {
         </section>
       </main>
 
+      <section className="panel glass" style={{ marginTop: 24 }}>
+        <h2 style={{ marginBottom: 16 }}>
+          {language === "he" ? "עורך סטורי" : "Story Editor"}
+        </h2>
+        <StoryEditor />
+      </section>
     </div>
   );
 }
