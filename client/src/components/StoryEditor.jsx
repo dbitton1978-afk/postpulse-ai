@@ -135,6 +135,12 @@ export default function StoryEditor() {
     setBgY(0);
   }
 
+  function deleteBackground() {
+  setBackground(null);
+  setBgScale(1);
+  setBgX(0);
+  setBgY(0);
+}
   const selectedLayer = layers.find((layer) => layer.id === selectedId);
 
   return (
@@ -197,6 +203,9 @@ export default function StoryEditor() {
           </button>
           <button onClick={resetBackground} disabled={!background}>
             איפוס תמונה
+          </button>
+          <button onClick={deleteBackground} disabled={!background}>
+            מחק תמונה
           </button>
         </div>
 
