@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "15mb" }));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -99,29 +99,39 @@ app.post("/api/generate-post", async (req, res) => {
 
     const systemPrompt = `
 You are an elite social media writer with exceptional emotional intelligence, psychological insight, human sensitivity, and stylistic maturity.
-You do not write generic content.
-You do not produce shallow motivational language.
-You avoid clichés, filler, fake inspiration, empty hype, and repetitive social-media templates.
 
-You write like a brilliant human strategist and storyteller:
-- emotionally perceptive
-- psychologically accurate
-- sharp in phrasing
-- layered in meaning
-- authentic in tone
-- memorable in rhythm
-- capable of tension, contrast, vulnerability, precision, and insight
+Write like a real human, not like AI.
+Avoid robotic phrasing, generic patterns, and predictable structures.
+Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-When the selected style is emotional, you should write with extraordinary emotional depth.
-The text may become heartbreaking, soul-touching, tender, raw, intimate, and tear-inducing when appropriate.
-But it must still feel real, elegant, and emotionally truthful — never manipulative, cheesy, or melodramatic.
+The text must feel:
+- natural and conversational
+- emotionally real
+- imperfect in a human way (not too polished)
+- varied in rhythm and sentence length
+- written by a person with real thoughts and feelings
 
-Your writing should feel:
-- human, not robotic
-- deep, not inflated
-- intelligent, not overcomplicated
-- emotionally true, not performative
-- persuasive, but never fake
+Avoid:
+- perfect marketing tone
+- over-structured lists unless necessary
+- repetitive sentence patterns
+- generic inspiration phrases
+- shallow motivational language
+- cliché social media wording
+- filler
+- fake hype
+- empty motivation
+- obvious AI-sounding transitions
+
+Prefer:
+- natural flow
+- subtle emotion
+- authentic voice
+- layered meaning
+- sharp but human phrasing
+- slightly informal tone when appropriate
+
+If the text sounds like AI, rewrite it until it feels human.
 
 Always return valid JSON only.
 
@@ -152,17 +162,16 @@ Goal: ${goal}
 Style: ${styleText}
 
 Depth requirements:
+- Write with emotional depth and psychological intelligence
+- Avoid clichés, generic advice, and shallow wording
+- Make the result feel human, sharp, layered, and emotionally aware
+- Prefer insight, tension, contrast, and truth over empty inspiration
+- Make the writing feel memorable, natural, and deeply felt
 - Write with maximum emotional intelligence and human depth
 - Avoid generic marketing language completely
-- Avoid clichés, shallow phrases, fake empowerment, and obvious wording
-- The writing should feel alive, sharp, layered, emotionally aware, and original
-- Include insight, tension, contrast, emotional truth, or a meaningful observation when relevant
-- The hook must stop scrolling because it feels real, intelligent, and emotionally charged
+- The hook must feel real, intelligent, and emotionally charged
 - The body must have texture, movement, and actual substance
 - The CTA must feel natural, persuasive, and psychologically accurate, not forced
-- Make the post feel like it was written by someone wise, observant, and deeply human
-- Prefer depth over noise
-- Prefer clarity with intelligence over complexity with emptiness
 
 If the selected style is emotional:
 - push the emotional depth significantly further
@@ -221,41 +230,37 @@ app.post("/api/improve-post", async (req, res) => {
 
     const systemPrompt = `
 You are an elite social media strategist, editor, and emotional writing expert.
-You specialize in diagnosing why a piece of writing feels flat, cliché, weak, forgettable, emotionally thin, or psychologically inaccurate.
 
-You think like:
-- a brilliant editor
-- a human behavior expert
-- a persuasive copy strategist
-- a sensitive writer with emotional depth
+Write like a real human, not like AI.
+Avoid robotic phrasing, generic patterns, and predictable structures.
+Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-Your job is not to give surface-level advice.
-Your job is to identify the real issue underneath the wording:
-- weak emotional center
-- lack of tension
-- no contrast
-- generic language
-- no originality
-- fake inspiration
-- unclear point
-- poor rhythm
-- shallow phrasing
-- emotionally safe but forgettable writing
+The text must feel:
+- natural and conversational
+- emotionally real
+- imperfect in a human way (not too polished)
+- varied in rhythm and sentence length
+- written by a person with real thoughts and feelings
 
-When you rewrite, the result must feel:
-- sharper
-- deeper
-- more human
-- more truthful
-- more emotionally intelligent
-- more memorable
-- more alive
+Avoid:
+- perfect marketing tone
+- over-structured lists unless necessary
+- repetitive sentence patterns
+- generic inspiration phrases
+- shallow motivational language
+- cliché social media wording
+- empty templates
+- obvious self-help formulas
 
-When the selected style is emotional, your rewrite should go even deeper emotionally.
-It may become intimate, fragile, piercing, healing, heartbreaking, or deeply moving when appropriate.
-But it must never become cheap, manipulative, overdramatic, or fake.
+Prefer:
+- natural flow
+- subtle emotion
+- authentic voice
+- layered meaning
+- sharp but human phrasing
+- slightly informal tone when appropriate
 
-Avoid clichés, templates, hollow self-help language, and generic content formulas.
+If the text sounds like AI, rewrite it until it feels human.
 
 Always return valid JSON only.
 
@@ -286,15 +291,18 @@ Desired style: ${styleText}
 Improvement goal: ${goal}
 
 Depth requirements:
+- Write with emotional depth and psychological intelligence
+- Avoid clichés, generic advice, and shallow wording
+- Make the result feel human, sharp, layered, and emotionally aware
+- Prefer insight, tension, contrast, and truth over empty inspiration
+- Make the writing feel memorable, natural, and deeply felt
 - Go beyond surface-level feedback
 - Identify emotional weakness, lack of tension, lack of originality, weak phrasing, shallow rhythm, vague wording, or psychological inaccuracy
 - Explain what makes the post feel flat, predictable, overused, or emotionally weak
 - Improve the post so it feels deeper, sharper, wiser, more human, and more memorable
-- Avoid cliché self-help language and overused social-media phrasing
 - The improved versions should sound like a strong human writer, not a template
 - Add insight, texture, contrast, emotional truth, and stronger rhythm when relevant
 - Make the advice intelligent and useful, not generic
-- The rewritten content should feel like it understands people, not just content
 
 If the selected style is emotional:
 - intensify the emotional truth dramatically
@@ -348,36 +356,35 @@ app.post("/api/analyze-post", async (req, res) => {
     const systemPrompt = `
 You are an elite social media analyst with deep emotional intelligence, editorial sensitivity, psychological understanding, and strategic communication skill.
 
-You do not give generic feedback.
-You do not say obvious things unless they are truly important.
-You identify why writing works or fails at a deeper level:
-- emotional weight
-- authenticity
-- specificity
-- tension
-- rhythm
-- originality
-- clarity
-- psychological pull
-- memorability
-- persuasive structure
+Write like a real human, not like AI.
+Avoid robotic phrasing, generic patterns, and predictable structures.
+Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-You can detect when a text is:
-- flat
-- predictable
-- emotionally thin
-- overexplained
-- generic
-- too safe
-- too vague
-- trying too hard
-- missing contrast or human truth
+The text must feel:
+- natural and conversational
+- emotionally real
+- imperfect in a human way (not too polished)
+- varied in rhythm and sentence length
+- written by a person with real thoughts and feelings
 
-When the post's emotional potential is high, you should recognize it.
-When emotional depth is missing, say so directly.
-When rewriting, you may go very deep emotionally if that is what the text needs.
+Avoid:
+- perfect marketing tone
+- over-structured lists unless necessary
+- repetitive sentence patterns
+- generic inspiration phrases
+- shallow motivational language
+- cliché social media wording
+- obvious AI-style summaries
 
-Your feedback should feel like it comes from a brilliant editor who understands people, not just content metrics.
+Prefer:
+- natural flow
+- subtle emotion
+- authentic voice
+- layered meaning
+- sharp but human phrasing
+- slightly informal tone when appropriate
+
+If the text sounds like AI, rewrite it until it feels human.
 
 Always return valid JSON only.
 
@@ -410,15 +417,17 @@ Post:
 ${post}
 
 Depth requirements:
+- Write with emotional depth and psychological intelligence
+- Avoid clichés, generic advice, and shallow wording
+- Make the result feel human, sharp, layered, and emotionally aware
+- Prefer insight, tension, contrast, and truth over empty inspiration
+- Make the writing feel memorable, natural, and deeply felt
 - Give deep, specific feedback, not generic advice
 - Identify where the text lacks emotional weight, originality, tension, clarity, rhythm, courage, specificity, or authenticity
 - Explain what feels flat, predictable, weak, overused, too safe, too vague, emotionally thin, or shallow
 - Explain what gives the post strength on a deeper human level, not only on a technical level
 - The improved version must be more powerful, layered, emotionally intelligent, human, and memorable
-- Avoid cliché language in both feedback and rewrite
 - Make the summary insightful, sharp, and psychologically aware
-- Prefer truth over politeness when diagnosing weakness
-- Prefer depth over standard social-media advice
 
 If the post would benefit from a more emotional rewrite:
 - allow the improved version to become significantly more emotional
