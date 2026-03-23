@@ -41,23 +41,7 @@ export const translations = {
     ctaScore: "CTA Score",
     hebrew: "עברית",
     english: "English",
-    emotional: "Emotional",
-    uploadImage: "Upload Image",
-    imagePreview: "Image Preview",
-    analyzeImage: "Analyze Image",
-    imageAnalysis: "Image Analysis",
-    generateFromImage: "Generate Post From Image Analysis",
-    noImageUploaded: "Please upload an image first",
-    mainSubjects: "Main Subjects",
-    visualMood: "Visual Mood",
-    emotionalTone: "Emotional Tone",
-    visualStrengths: "Visual Strengths",
-    visualWeaknesses: "Visual Weaknesses",
-    contentAngles: "Content Angles",
-    audienceFit: "Audience Fit",
-    storyPotential: "Story Potential",
-    bestPostDirection: "Best Post Direction",
-    suggestedStyle: "Suggested Style"
+    emotional: "Emotional"
   },
   he: {
     appName: "PostPulse AI",
@@ -101,22 +85,6 @@ export const translations = {
     ctaScore: "ציון CTA",
     hebrew: "עברית",
     english: "English",
-    emotional: "רגשי",
-    uploadImage: "העלה תמונה",
-    imagePreview: "תצוגה מקדימה",
-    analyzeImage: "נתח תמונה",
-    imageAnalysis: "ניתוח תמונה",
-    generateFromImage: "צור פוסט לפי ניתוח התמונה",
-    noImageUploaded: "צריך להעלות תמונה קודם",
-    mainSubjects: "נושאים מרכזיים",
-    visualMood: "אווירה חזותית",
-    emotionalTone: "טון רגשי",
-    visualStrengths: "חוזקות חזותיות",
-    visualWeaknesses: "חולשות חזותיות",
-    contentAngles: "זוויות תוכן",
-    audienceFit: "התאמה לקהל",
-    storyPotential: "פוטנציאל סיפורי",
-    bestPostDirection: "כיוון הפוסט המומלץ",
-    suggestedStyle: "סגנון מומלץ"
+    emotional: "רגשי"
   }
 };
