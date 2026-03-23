@@ -78,9 +78,9 @@ export default function StoryEditor() {
   function handleMouseMove(e) {
     if (!dragId) return;
 
-    const container = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - container.left;
-    const y = e.clientY - container.top;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     setLayers((prev) =>
       prev.map((layer) =>
@@ -129,6 +129,12 @@ export default function StoryEditor() {
     setBgY((prev) => prev + dy);
   }
 
+  function resetBackground() {
+    setBgScale(1);
+    setBgX(0);
+    setBgY(0);
+  }
+
   const selectedLayer = layers.find((layer) => layer.id === selectedId);
 
   return (
@@ -137,43 +143,70 @@ export default function StoryEditor() {
 
       <input type="file" accept="image/*" onChange={handleUpload} />
 
-      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={addText}>הוסף טקסט</button>
-        <button onClick={addEmoji}>הוסף אימוג׳י</button>
-        <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
-          הגדל אלמנט +
-        </button>
-        <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
-          הקטן אלמנט -
-        </button>
-        <button onClick={deleteLayer} disabled={!selectedId}>
-          מחק אלמנט
-        </button>
+      <div
+        style={{
+          marginTop: 12,
+          padding: 10,
+          border: "1px solid #444",
+          borderRadius: 8
+        }}
+      >
+        <div style={{ marginBottom: 8, fontWeight: "bold" }}>אלמנטים</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={addText}>הוסף טקסט</button>
+          <button onClick={addEmoji}>הוסף אימוג׳י</button>
+          <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
+            הגדל אלמנט +
+          </button>
+          <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
+            הקטן אלמנט -
+          </button>
+          <button onClick={deleteLayer} disabled={!selectedId}>
+            מחק אלמנט
+          </button>
+        </div>
       </div>
 
-      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={() => scaleBackground(0.1)} disabled={!background}>
-          הגדל תמונה +
-        </button>
-        <button onClick={() => scaleBackground(-0.1)} disabled={!background}>
-          הקטן תמונה -
-        </button>
-        <button onClick={() => moveBackground(-20, 0)} disabled={!background}>
-          ←
-        </button>
-        <button onClick={() => moveBackground(20, 0)} disabled={!background}>
-          →
-        </button>
-        <button onClick={() => moveBackground(0, -20)} disabled={!background}>
-          ↑
-        </button>
-        <button onClick={() => moveBackground(0, 20)} disabled={!background}>
-          ↓
-        </button>
+      <div
+        style={{
+          marginTop: 12,
+          padding: 10,
+          border: "1px solid #444",
+          borderRadius: 8
+        }}
+      >
+        <div style={{ marginBottom: 8, fontWeight: "bold" }}>תמונה</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => scaleBackground(0.1)} disabled={!background}>
+            הגדל תמונה +
+          </button>
+          <button onClick={() => scaleBackground(-0.1)} disabled={!background}>
+            הקטן תמונה -
+          </button>
+          <button onClick={() => moveBackground(-20, 0)} disabled={!background}>
+            שמאלה
+          </button>
+          <button onClick={() => moveBackground(20, 0)} disabled={!background}>
+            ימינה
+          </button>
+          <button onClick={() => moveBackground(0, -20)} disabled={!background}>
+            למעלה
+          </button>
+          <button onClick={() => moveBackground(0, 20)} disabled={!background}>
+            למטה
+          </button>
+          <button onClick={resetBackground} disabled={!background}>
+            איפוס תמונה
+          </button>
+        </div>
+
+        <div style={{ marginTop: 8, fontSize: 13 }}>
+          גודל תמונה: {bgScale.toFixed(1)}x
+        </div>
       </div>
 
       {selectedLayer && selectedLayer.type === "text" && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 12 }}>
           <input
             value={selectedLayer.content}
             onChange={(e) => updateText(e.target.value)}
@@ -197,22 +230,30 @@ export default function StoryEditor() {
         }}
       >
         {background && (
-          <img
-            src={background}
-            alt=""
-            draggable={false}
+          <div
             style={{
               position: "absolute",
               left: "50%",
               top: "50%",
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transform: `translate(calc(-50% + ${bgX}px), calc(-50% + ${bgY}px)) scale(${bgScale})`,
-              transformOrigin: "center center",
-              pointerEvents: "none"
+              width: `${100 * bgScale}%`,
+              height: `${100 * bgScale}%`,
+              transform: `translate(-50%, -50%) translate(${bgX}px, ${bgY}px)`
             }}
-          />
+          >
+            <img
+              src={background}
+              alt=""
+              draggable={false}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                pointerEvents: "none",
+                userSelect: "none",
+                display: "block"
+              }}
+            />
+          </div>
         )}
 
         {layers.map((layer) => (
@@ -231,7 +272,8 @@ export default function StoryEditor() {
               userSelect: "none",
               border: selectedId === layer.id ? "2px solid #00ffcc" : "none",
               padding: 4,
-              whiteSpace: "nowrap"
+              whiteSpace: "nowrap",
+              zIndex: 2
             }}
           >
             {layer.content}
