@@ -16,6 +16,29 @@ export default function StoryEditor({
     if (!incomingText || !incomingTextToken) return;
 
     const id = createId();
+    const length = incomingText.length;
+
+    let scale = 1;
+    let y = 560;
+    let maxWidth = 260;
+
+    if (length < 60) {
+      scale = 1.4;
+      y = 300;
+      maxWidth = 300;
+    } else if (length < 120) {
+      scale = 1.2;
+      y = 420;
+      maxWidth = 280;
+    } else if (length < 200) {
+      scale = 1;
+      y = 500;
+      maxWidth = 260;
+    } else {
+      scale = 0.8;
+      y = 540;
+      maxWidth = 240;
+    }
 
     setLayers((prev) => [
       ...prev,
@@ -23,8 +46,9 @@ export default function StoryEditor({
         id,
         type: "text",
         x: 180,
-        y: 560,
-        scale: 1,
+        y,
+        scale,
+        maxWidth,
         content: incomingText
       }
     ]);
@@ -47,8 +71,8 @@ export default function StoryEditor({
           {
             id,
             type: "image",
-            x: 180,
-            y: 320,
+            x: 180 + index * 10,
+            y: 320 + index * 10,
             scale: 1,
             src: reader.result,
             width: 180,
@@ -76,6 +100,7 @@ export default function StoryEditor({
         x: 180,
         y: 560,
         scale: 1,
+        maxWidth: 260,
         content: "טקסט חדש"
       }
     ]);
@@ -298,12 +323,13 @@ export default function StoryEditor({
                 border: selectedId === layer.id ? "2px solid #00ffcc" : "none",
                 padding: 8,
                 whiteSpace: "pre-wrap",
-                maxWidth: 260,
+                maxWidth: layer.maxWidth || 260,
                 zIndex: selectedId === layer.id ? 10 : 2,
                 background:
                   layer.type === "text" ? "rgba(0,0,0,0.35)" : "transparent",
                 borderRadius: 10,
-                textAlign: "center"
+                textAlign: "center",
+                lineHeight: 1.4
               }}
             >
               {layer.content}
