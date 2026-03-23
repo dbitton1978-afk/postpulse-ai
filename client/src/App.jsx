@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  analyzeImage,
-  analyzePost,
-  generatePost,
-  generatePostFromImageAnalysis,
-  improvePost
-} from "./api";
+import { analyzePost, generatePost, improvePost } from "./api";
 import { translations } from "./translations";
 
 const styles = [
@@ -93,13 +87,7 @@ export default function App() {
     platform: "instagram"
   });
 
-  const [imageData, setImageData] = useState("");
-  const [imageAnalysis, setImageAnalysis] = useState(null);
-
   const [loading, setLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [imagePostLoading, setImagePostLoading] = useState(false);
-
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
@@ -109,18 +97,6 @@ export default function App() {
     } catch (err) {
       console.error("Copy failed:", err);
     }
-  };
-
-  const handleImageUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageData(reader.result?.toString() || "");
-      setImageAnalysis(null);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleBuild = async () => {
@@ -192,59 +168,6 @@ export default function App() {
       setError(err.message || "Error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAnalyzeImage = async () => {
-    if (!imageData) {
-      setError(t.noImageUploaded);
-      return;
-    }
-
-    setImageLoading(true);
-    setError("");
-    setImageAnalysis(null);
-
-    try {
-      const res = await analyzeImage({
-        imageData,
-        language
-      });
-
-      setImageAnalysis(res.data);
-    } catch (err) {
-      setError(err.message || "Error");
-    } finally {
-      setImageLoading(false);
-    }
-  };
-
-  const handleGenerateFromImage = async () => {
-    if (!imageAnalysis) {
-      setError(language === "he" ? "צריך קודם לנתח את התמונה" : "Please analyze the image first");
-      return;
-    }
-
-    setImagePostLoading(true);
-    setError("");
-    setResult(null);
-
-    try {
-      const res = await generatePostFromImageAnalysis({
-        analysis: imageAnalysis,
-        language,
-        style: buildForm.style,
-        goal: buildForm.goal,
-        platform: buildForm.platform,
-        targetAudience: buildForm.targetAudience
-      });
-
-      setResult({ type: "build", data: res.data });
-      setTab("build");
-    } catch (err) {
-      setError(err.message || "Error");
-    } finally {
-      setImagePostLoading(false);
     }
   };
 
@@ -396,95 +319,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="field">
-                <label>{t.uploadImage}</label>
-                <input type="file" accept="image/*" onChange={handleImageUpload} />
-              </div>
-
-              {imageData && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ marginBottom: 8, fontWeight: 700 }}>
-                    {t.imagePreview}
-                  </div>
-                  <img
-                    src={imageData}
-                    alt="preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: 260,
-                      objectFit: "cover",
-                      borderRadius: 18,
-                      border: "1px solid rgba(255,255,255,0.12)"
-                    }}
-                  />
-                </div>
-              )}
-
-              <div style={{ display: "grid", gap: 10 }}>
-                <button className="primary-btn" onClick={handleBuild}>
-                  {loading ? t.loading : t.generate}
-                </button>
-
-                <button className="primary-btn" onClick={handleAnalyzeImage}>
-                  {imageLoading ? t.loading : t.analyzeImage}
-                </button>
-
-                <button className="primary-btn" onClick={handleGenerateFromImage}>
-                  {imagePostLoading ? t.loading : t.generateFromImage}
-                </button>
-              </div>
-
-              {imageAnalysis && (
-                <div style={{ marginTop: 20 }}>
-                  <Section title={t.imageAnalysis}>
-                    <div className="text-card" style={{ marginBottom: 12 }}>
-                      {imageAnalysis.summary || ""}
-                    </div>
-
-                    <Section title={t.mainSubjects}>
-                      <ListBlock items={imageAnalysis.mainSubjects || []} />
-                    </Section>
-
-                    <Section title={t.visualMood}>
-                      <div className="text-card">{imageAnalysis.visualMood || ""}</div>
-                    </Section>
-
-                    <Section title={t.emotionalTone}>
-                      <div className="text-card">{imageAnalysis.emotionalTone || ""}</div>
-                    </Section>
-
-                    <Section title={t.visualStrengths}>
-                      <ListBlock items={imageAnalysis.visualStrengths || []} />
-                    </Section>
-
-                    <Section title={t.visualWeaknesses}>
-                      <ListBlock items={imageAnalysis.visualWeaknesses || []} />
-                    </Section>
-
-                    <Section title={t.contentAngles}>
-                      <ListBlock items={imageAnalysis.contentAngles || []} />
-                    </Section>
-
-                    <Section title={t.audienceFit}>
-                      <div className="text-card">{imageAnalysis.audienceFit || ""}</div>
-                    </Section>
-
-                    <Section title={t.storyPotential}>
-                      <div className="text-card">{imageAnalysis.storyPotential || ""}</div>
-                    </Section>
-
-                    <Section title={t.bestPostDirection}>
-                      <div className="text-card">
-                        {imageAnalysis.bestPostDirection || ""}
-                      </div>
-                    </Section>
-
-                    <Section title={t.suggestedStyle}>
-                      <div className="text-card">{imageAnalysis.suggestedStyle || ""}</div>
-                    </Section>
-                  </Section>
-                </div>
-              )}
+              <button className="primary-btn" onClick={handleBuild}>
+                {loading ? t.loading : t.generate}
+              </button>
             </>
           )}
 
