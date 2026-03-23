@@ -123,6 +123,15 @@ Target audience: ${targetAudience}
 Goal: ${goal}
 Style: ${styleText}
 
+Depth requirements:
+- Write with emotional depth, not generic marketing language
+- Avoid clichés, empty motivation, and shallow phrases
+- Make the text feel human, sharp, layered, and thoughtful
+- Include insight, tension, contrast, or emotional truth when relevant
+- The hook should feel alive and scroll-stopping, not fake or exaggerated
+- The body should feel meaningful, not repetitive
+- The CTA should feel natural and persuasive, not forced
+
 Rules:
 - Strong hook
 - Natural and authentic writing
@@ -200,6 +209,14 @@ ${post}
 Desired style: ${styleText}
 Improvement goal: ${goal}
 
+Depth requirements:
+- Go beyond surface-level feedback
+- Identify emotional weakness, lack of tension, lack of originality, weak phrasing, or generic wording
+- Improve the post so it feels deeper, sharper, more human, and more memorable
+- Avoid cliché self-help language and overused social-media phrasing
+- The improved versions should sound like a strong human writer, not a template
+- Add insight, texture, emotional truth, and stronger rhythm when relevant
+
 Rules:
 - Explain key strengths
 - Explain key weaknesses
@@ -273,11 +290,18 @@ IMPORTANT:
 Post:
 ${post}
 
+Depth requirements:
+- Give deep, specific feedback, not generic advice
+- Identify where the text lacks emotional weight, originality, tension, clarity, rhythm, or authenticity
+- Explain what feels flat, predictable, weak, overused, or shallow
+- The improved version must be more powerful, layered, human, and memorable
+- Avoid cliché language in both feedback and rewrite
+
 Rules:
 - All scores must be 0-100
 - Be realistic
 - Evaluate viral potential, authenticity, clarity, emotional pull, hook quality, CTA quality
-- Give concise practical feedback
+- Give concise but meaningful practical feedback
 - Give an improved version
 - Return JSON only
 `;
