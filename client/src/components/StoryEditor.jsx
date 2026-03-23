@@ -7,6 +7,7 @@ function createId() {
 export default function StoryEditor() {
   const [background, setBackground] = useState(null);
   const [layers, setLayers] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [dragId, setDragId] = useState(null);
 
   function handleUpload(e) {
@@ -21,32 +22,43 @@ export default function StoryEditor() {
   }
 
   function addText() {
+    const id = createId();
     setLayers((prev) => [
       ...prev,
       {
-        id: createId(),
+        id,
         type: "text",
         x: 100,
         y: 100,
         content: "טקסט חדש"
       }
     ]);
+    setSelectedId(id);
   }
 
   function addEmoji() {
+    const id = createId();
     setLayers((prev) => [
       ...prev,
       {
-        id: createId(),
+        id,
         type: "emoji",
         x: 120,
         y: 150,
         content: "🔥"
       }
     ]);
+    setSelectedId(id);
+  }
+
+  function deleteLayer() {
+    if (!selectedId) return;
+    setLayers((prev) => prev.filter((l) => l.id !== selectedId));
+    setSelectedId(null);
   }
 
   function handleMouseDown(id) {
+    setSelectedId(id);
     setDragId(id);
   }
 
@@ -70,16 +82,43 @@ export default function StoryEditor() {
     );
   }
 
+  function updateText(value) {
+    if (!selectedId) return;
+
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === selectedId
+          ? { ...layer, content: value }
+          : layer
+      )
+    );
+  }
+
+  const selectedLayer = layers.find((l) => l.id === selectedId);
+
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor (MVP)</h2>
+      <h2>Story Editor (Improved)</h2>
 
       <input type="file" accept="image/*" onChange={handleUpload} />
 
       <div style={{ marginTop: 10 }}>
         <button onClick={addText}>הוסף טקסט</button>
         <button onClick={addEmoji}>הוסף אימוג׳י</button>
+        <button onClick={deleteLayer} disabled={!selectedId}>
+          מחק אלמנט
+        </button>
       </div>
+
+      {selectedLayer && selectedLayer.type === "text" && (
+        <div style={{ marginTop: 10 }}>
+          <input
+            value={selectedLayer.content}
+            onChange={(e) => updateText(e.target.value)}
+            style={{ padding: 8, width: 200 }}
+          />
+        </div>
+      )}
 
       <div
         onMouseMove={handleMouseMove}
@@ -90,7 +129,8 @@ export default function StoryEditor() {
           height: 640,
           background: "#222",
           marginTop: 20,
-          overflow: "hidden"
+          overflow: "hidden",
+          border: "2px solid #444"
         }}
       >
         {background && (
@@ -116,7 +156,12 @@ export default function StoryEditor() {
               color: "white",
               fontSize: layer.type === "emoji" ? 40 : 24,
               cursor: "grab",
-              userSelect: "none"
+              userSelect: "none",
+              border:
+                selectedId === layer.id
+                  ? "2px solid #00ffcc"
+                  : "none",
+              padding: 4
             }}
           >
             {layer.content}
