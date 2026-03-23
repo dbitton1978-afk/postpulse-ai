@@ -13,7 +13,8 @@ const DEFAULT_TEXT = {
   bgColor: "#000000",
   bgOpacity: 0.4,
   align: "center",
-  font: "Arial"
+  font: "Arial",
+  styleType: "box" // box / transparent / outline
 };
 
 export default function StoryEditor() {
@@ -77,7 +78,6 @@ export default function StoryEditor() {
 
     setSelectedId(null);
     setSelectedType(null);
-    setDragItem(null);
   }
 
   function handleMouseDown(id, type) {
@@ -117,15 +117,15 @@ export default function StoryEditor() {
   function scaleSelected(delta) {
     if (!selectedId || !selectedType) return;
 
+    const update = (item) => ({
+      ...item,
+      scale: Math.min(3, Math.max(0.3, item.scale + delta))
+    });
+
     if (selectedType === "image") {
       setImages((prev) =>
         prev.map((item) =>
-          item.id === selectedId
-            ? {
-                ...item,
-                scale: Math.min(3, Math.max(0.3, item.scale + delta))
-              }
-            : item
+          item.id === selectedId ? update(item) : item
         )
       );
     }
@@ -133,19 +133,14 @@ export default function StoryEditor() {
     if (selectedType === "text") {
       setTexts((prev) =>
         prev.map((item) =>
-          item.id === selectedId
-            ? {
-                ...item,
-                scale: Math.min(3, Math.max(0.3, item.scale + delta))
-              }
-            : item
+          item.id === selectedId ? update(item) : item
         )
       );
     }
   }
 
   function updateSelectedText(value) {
-    if (selectedType !== "text" || !selectedId) return;
+    if (selectedType !== "text") return;
 
     setTexts((prev) =>
       prev.map((item) =>
@@ -155,7 +150,7 @@ export default function StoryEditor() {
   }
 
   function updateStyle(key, value) {
-    if (selectedType !== "text" || !selectedId) return;
+    if (selectedType !== "text") return;
 
     setTexts((prev) =>
       prev.map((item) =>
@@ -172,23 +167,23 @@ export default function StoryEditor() {
   function hexToRgba(hex, opacity) {
     if (!hex) return `rgba(0,0,0,${opacity})`;
 
-    const safeHex = hex.replace("#", "");
-    const bigint = parseInt(safeHex, 16);
+    const clean = hex.replace("#", "");
+    const num = parseInt(clean, 16);
 
-    if (safeHex.length !== 6 || Number.isNaN(bigint)) {
+    if (clean.length !== 6 || Number.isNaN(num)) {
       return `rgba(0,0,0,${opacity})`;
     }
 
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
 
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    return `rgba(${r},${g},${b},${opacity})`;
   }
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor - Step 4</h2>
+      <h2>Story Editor - Step 5</h2>
 
       <input type="file" accept="image/*" multiple onChange={handleUpload} />
 
@@ -206,80 +201,52 @@ export default function StoryEditor() {
       </div>
 
       {selectedText && (
-        <div
-          style={{
-            marginTop: 12,
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            alignItems: "center"
-          }}
-        >
+        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input
             value={selectedText.content}
             onChange={(e) => updateSelectedText(e.target.value)}
-            style={{ padding: 8, minWidth: 220 }}
           />
 
-          <label>
-            צבע טקסט{" "}
-            <input
-              type="color"
-              value={selectedText.color}
-              onChange={(e) => updateStyle("color", e.target.value)}
-            />
-          </label>
+          <input
+            type="color"
+            value={selectedText.color}
+            onChange={(e) => updateStyle("color", e.target.value)}
+          />
 
-          <label>
-            צבע רקע{" "}
-            <input
-              type="color"
-              value={selectedText.bgColor}
-              onChange={(e) => updateStyle("bgColor", e.target.value)}
-            />
-          </label>
+          <input
+            type="color"
+            value={selectedText.bgColor}
+            onChange={(e) => updateStyle("bgColor", e.target.value)}
+          />
 
-          <label>
-            שקיפות{" "}
-            <select
-              value={String(selectedText.bgOpacity)}
-              onChange={(e) => updateStyle("bgOpacity", Number(e.target.value))}
-            >
-              <option value="0">בלי רקע</option>
-              <option value="0.2">20%</option>
-              <option value="0.4">40%</option>
-              <option value="0.6">60%</option>
-              <option value="0.8">80%</option>
-              <option value="1">100%</option>
-            </select>
-          </label>
+          <select
+            value={selectedText.align}
+            onChange={(e) => updateStyle("align", e.target.value)}
+          >
+            <option value="left">שמאל</option>
+            <option value="center">מרכז</option>
+            <option value="right">ימין</option>
+          </select>
 
-          <label>
-            יישור{" "}
-            <select
-              value={selectedText.align}
-              onChange={(e) => updateStyle("align", e.target.value)}
-            >
-              <option value="left">שמאל</option>
-              <option value="center">מרכז</option>
-              <option value="right">ימין</option>
-            </select>
-          </label>
+          <select
+            value={selectedText.font}
+            onChange={(e) => updateStyle("font", e.target.value)}
+          >
+            <option>Arial</option>
+            <option>Impact</option>
+            <option>Tahoma</option>
+            <option>Courier New</option>
+          </select>
 
-          <label>
-            פונט{" "}
-            <select
-              value={selectedText.font}
-              onChange={(e) => updateStyle("font", e.target.value)}
-            >
-              <option value="Arial">Arial</option>
-              <option value="Impact">Impact</option>
-              <option value="Tahoma">Tahoma</option>
-              <option value="Courier New">Courier New</option>
-              <option value="Georgia">Georgia</option>
-              <option value="Verdana">Verdana</option>
-            </select>
-          </label>
+          {/* 🔥 סוג מסגרת */}
+          <select
+            value={selectedText.styleType}
+            onChange={(e) => updateStyle("styleType", e.target.value)}
+          >
+            <option value="box">רקע מלא</option>
+            <option value="transparent">ללא רקע</option>
+            <option value="outline">מסגרת</option>
+          </select>
         </div>
       )}
 
@@ -302,7 +269,6 @@ export default function StoryEditor() {
             key={img.id}
             src={img.src}
             alt=""
-            draggable={false}
             onMouseDown={() => handleMouseDown(img.id, "image")}
             style={{
               position: "absolute",
@@ -316,41 +282,49 @@ export default function StoryEditor() {
                 selectedId === img.id && selectedType === "image"
                   ? "3px solid #00ffcc"
                   : "none",
-              cursor: "grab",
-              userSelect: "none"
+              cursor: "grab"
             }}
           />
         ))}
 
-        {texts.map((txt) => (
-          <div
-            key={txt.id}
-            onMouseDown={() => handleMouseDown(txt.id, "text")}
-            style={{
-              position: "absolute",
-              left: txt.x,
-              top: txt.y,
-              transform: `translate(-50%, -50%) scale(${txt.scale})`,
-              color: txt.color,
-              background: hexToRgba(txt.bgColor, txt.bgOpacity),
-              padding: "8px 12px",
-              borderRadius: 10,
-              textAlign: txt.align,
-              fontFamily: txt.font,
-              border:
-                selectedId === txt.id && selectedType === "text"
-                  ? "2px solid #00ffcc"
-                  : "none",
-              cursor: "grab",
-              userSelect: "none",
-              maxWidth: 240,
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.3
-            }}
-          >
-            {txt.content}
-          </div>
-        ))}
+        {texts.map((txt) => {
+          const bg =
+            txt.styleType === "box"
+              ? hexToRgba(txt.bgColor, txt.bgOpacity)
+              : "transparent";
+
+          const border =
+            txt.styleType === "outline"
+              ? `2px solid ${txt.bgColor}`
+              : "none";
+
+          return (
+            <div
+              key={txt.id}
+              onMouseDown={() => handleMouseDown(txt.id, "text")}
+              style={{
+                position: "absolute",
+                left: txt.x,
+                top: txt.y,
+                transform: `translate(-50%, -50%) scale(${txt.scale})`,
+                color: txt.color,
+                background: bg,
+                padding: "8px 12px",
+                borderRadius: 20,
+                textAlign: txt.align,
+                fontFamily: txt.font,
+                border:
+                  selectedId === txt.id && selectedType === "text"
+                    ? "2px solid #00ffcc"
+                    : border,
+                cursor: "grab",
+                maxWidth: 240
+              }}
+            >
+              {txt.content}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
