@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function App() {
   const [topic, setTopic] = useState("");
   const [result, setResult] = useState("");
@@ -12,7 +14,7 @@ export default function App() {
     setResult("");
 
     try {
-      const res = await fetch("http://localhost:5000/generate", {
+      const res = await fetch(`${API_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -25,7 +27,12 @@ export default function App() {
       });
 
       const data = await res.json();
-      setResult(data.post);
+
+      if (!res.ok) {
+        throw new Error(data.message || "Request failed");
+      }
+
+      setResult(data.post || "לא התקבלה תשובה");
     } catch (err) {
       setResult("שגיאה ביצירת הפוסט");
     }
