@@ -1,157 +1,459 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { analyzePost, generatePost, improvePost } from "./api";
+import { translations } from "./translations";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const styles = [
+  { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
+  { value: "mentor", he: "מנטור", en: "Mentor" },
+  { value: "humorous", he: "הומוריסטי", en: "Humorous" },
+  { value: "spiritual", he: "רוחני", en: "Spiritual" },
+  { value: "professional", he: "מקצועי", en: "Professional" }
+];
+
+const platforms = [
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "tiktok", label: "TikTok" }
+];
+
+function Section({ title, children }) {
+  return (
+    <div className="result-section">
+      <h3>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function ListBlock({ items }) {
+  if (!items?.length) return null;
+  return (
+    <ul className="result-list">
+      {items.map((item, index) => (
+        <li key={`${item}-${index}`}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+function ScoreCard({ label, value }) {
+  return (
+    <div className="score-card">
+      <div className="score-value">{value}%</div>
+      <div className="score-label">{label}</div>
+    </div>
+  );
+}
 
 export default function App() {
-  const [mode, setMode] = useState("generate");
+  const [language, setLanguage] = useState("he");
+  const [tab, setTab] = useState("build");
+  const t = useMemo(() => translations[language], [language]);
+  const dir = language === "he" ? "rtl" : "ltr";
 
-  const [topic, setTopic] = useState("");
-  const [result, setResult] = useState("");
+  const [buildForm, setBuildForm] = useState({
+    topic: "",
+    targetAudience: "",
+    goal: "",
+    style: "professional",
+    platform: "instagram"
+  });
+
+  const [improveForm, setImproveForm] = useState({
+    post: "",
+    goal: "",
+    style: "professional"
+  });
+
+  const [analyzeForm, setAnalyzeForm] = useState({
+    post: "",
+    platform: "instagram"
+  });
+
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-  const [postToImprove, setPostToImprove] = useState("");
-  const [improveLoading, setImproveLoading] = useState(false);
-  const [improveResult, setImproveResult] = useState(null);
-
-  const generatePost = async () => {
-    if (!topic) return;
-
+  const handleBuild = async () => {
     setLoading(true);
-    setResult("");
+    setError("");
+    setResult(null);
 
     try {
-      const res = await fetch(`${API_URL}/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          topic,
-          language: "he",
-          style: "mentor"
-        })
+      const res = await generatePost({
+        ...buildForm,
+        language
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Request failed");
-      }
-
-      setResult(data.post || "לא התקבלה תשובה");
+      setResult({ type: "build", data: res.data });
     } catch (err) {
-      setResult("שגיאה ביצירת הפוסט");
+      setError(err.message || "Error");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
-  const improvePost = async () => {
-    if (!postToImprove) return;
-
-    setImproveLoading(true);
-    setImproveResult(null);
+  const handleImprove = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
 
     try {
-      const res = await fetch(`${API_URL}/improve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          post: postToImprove
-        })
+      const res = await improvePost({
+        ...improveForm,
+        language
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Request failed");
-      }
-
-      setImproveResult(data.data || null);
+      setResult({ type: "improve", data: res.data });
     } catch (err) {
-      setImproveResult({
-        error: "שגיאה בשיפור הפוסט"
-      });
+      setError(err.message || "Error");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setImproveLoading(false);
+  const handleAnalyze = async () => {
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const res = await analyzePost({
+        ...analyzeForm,
+        language
+      });
+
+      setResult({ type: "analyze", data: res.data });
+    } catch (err) {
+      setError(err.message || "Error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>PostPulse AI 🚀</h1>
+    <div className="app" dir={dir}>
+      <div className="bg-orb orb-1" />
+      <div className="bg-orb orb-2" />
+      <div className="bg-orb orb-3" />
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button onClick={() => setMode("generate")}>יצירת פוסט</button>
-        <button onClick={() => setMode("improve")}>שיפור פוסט</button>
-      </div>
-
-      {mode === "generate" && (
+      <header className="hero">
         <div>
-          <textarea
-            placeholder="כתוב רעיון לפוסט..."
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            rows={4}
-            style={{ width: "100%", marginBottom: 10 }}
-          />
-
-          <button onClick={generatePost}>
-            {loading ? "טוען..." : "צור פוסט"}
-          </button>
-
-          <div style={{ marginTop: 20, whiteSpace: "pre-wrap" }}>
-            {result}
-          </div>
+          <h1>{t.appName}</h1>
+          <p>{t.subtitle}</p>
         </div>
-      )}
 
-      {mode === "improve" && (
-        <div>
-          <textarea
-            placeholder="הדבק כאן פוסט קיים..."
-            value={postToImprove}
-            onChange={(e) => setPostToImprove(e.target.value)}
-            rows={6}
-            style={{ width: "100%", marginBottom: 10 }}
-          />
-
-          <button onClick={improvePost}>
-            {improveLoading ? "משפר..." : "שפר פוסט"}
+        <div className="lang-switch">
+          <button
+            className={language === "he" ? "active" : ""}
+            onClick={() => setLanguage("he")}
+          >
+            {t.hebrew}
           </button>
+          <button
+            className={language === "en" ? "active" : ""}
+            onClick={() => setLanguage("en")}
+          >
+            {t.english}
+          </button>
+        </div>
+      </header>
 
-          {improveResult?.error && (
-            <div style={{ marginTop: 20, whiteSpace: "pre-wrap" }}>
-              {improveResult.error}
-            </div>
-          )}
+      <nav className="tabs">
+        <button
+          className={tab === "build" ? "active" : ""}
+          onClick={() => setTab("build")}
+        >
+          {t.build}
+        </button>
+        <button
+          className={tab === "improve" ? "active" : ""}
+          onClick={() => setTab("improve")}
+        >
+          {t.improve}
+        </button>
+        <button
+          className={tab === "analyze" ? "active" : ""}
+          onClick={() => setTab("analyze")}
+        >
+          {t.analyze}
+        </button>
+      </nav>
 
-          {improveResult && !improveResult.error && (
-            <div style={{ marginTop: 20 }}>
-              <h3>חוזקות</h3>
-              <ul>
-                {(improveResult.strengths || []).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-
-              <h3>חולשות</h3>
-              <ul>
-                {(improveResult.weaknesses || []).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-
-              <h3>גרסה משופרת</h3>
-              <div style={{ whiteSpace: "pre-wrap" }}>
-                {improveResult.improvedPost}
+      <main className="layout">
+        <section className="panel glass">
+          {tab === "build" && (
+            <>
+              <div className="field">
+                <label>{t.topic}</label>
+                <textarea
+                  rows={4}
+                  value={buildForm.topic}
+                  onChange={(e) =>
+                    setBuildForm({ ...buildForm, topic: e.target.value })
+                  }
+                />
               </div>
+
+              <div className="field">
+                <label>{t.targetAudience}</label>
+                <input
+                  value={buildForm.targetAudience}
+                  onChange={(e) =>
+                    setBuildForm({
+                      ...buildForm,
+                      targetAudience: e.target.value
+                    })
+                  }
+                />
+              </div>
+
+              <div className="field">
+                <label>{t.goal}</label>
+                <input
+                  value={buildForm.goal}
+                  onChange={(e) =>
+                    setBuildForm({ ...buildForm, goal: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid-2">
+                <div className="field">
+                  <label>{t.style}</label>
+                  <select
+                    value={buildForm.style}
+                    onChange={(e) =>
+                      setBuildForm({ ...buildForm, style: e.target.value })
+                    }
+                  >
+                    {styles.map((style) => (
+                      <option key={style.value} value={style.value}>
+                        {language === "he" ? style.he : style.en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>{t.platform}</label>
+                  <select
+                    value={buildForm.platform}
+                    onChange={(e) =>
+                      setBuildForm({ ...buildForm, platform: e.target.value })
+                    }
+                  >
+                    {platforms.map((platform) => (
+                      <option key={platform.value} value={platform.value}>
+                        {platform.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button className="primary-btn" onClick={handleBuild}>
+                {loading ? t.loading : t.generate}
+              </button>
+            </>
+          )}
+
+          {tab === "improve" && (
+            <>
+              <div className="field">
+                <label>{t.postText}</label>
+                <textarea
+                  rows={8}
+                  value={improveForm.post}
+                  onChange={(e) =>
+                    setImproveForm({ ...improveForm, post: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="field">
+                <label>{t.goal}</label>
+                <input
+                  value={improveForm.goal}
+                  onChange={(e) =>
+                    setImproveForm({ ...improveForm, goal: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="field">
+                <label>{t.style}</label>
+                <select
+                  value={improveForm.style}
+                  onChange={(e) =>
+                    setImproveForm({ ...improveForm, style: e.target.value })
+                  }
+                >
+                  {styles.map((style) => (
+                    <option key={style.value} value={style.value}>
+                      {language === "he" ? style.he : style.en}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button className="primary-btn" onClick={handleImprove}>
+                {loading ? t.loading : t.improveBtn}
+              </button>
+            </>
+          )}
+
+          {tab === "analyze" && (
+            <>
+              <div className="field">
+                <label>{t.postText}</label>
+                <textarea
+                  rows={8}
+                  value={analyzeForm.post}
+                  onChange={(e) =>
+                    setAnalyzeForm({ ...analyzeForm, post: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="field">
+                <label>{t.platform}</label>
+                <select
+                  value={analyzeForm.platform}
+                  onChange={(e) =>
+                    setAnalyzeForm({
+                      ...analyzeForm,
+                      platform: e.target.value
+                    })
+                  }
+                >
+                  {platforms.map((platform) => (
+                    <option key={platform.value} value={platform.value}>
+                      {platform.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button className="primary-btn" onClick={handleAnalyze}>
+                {loading ? t.loading : t.analyzeBtn}
+              </button>
+            </>
+          )}
+
+          {error && <div className="error-box">{error}</div>}
+        </section>
+
+        <section className="panel glass">
+          <h2>{t.result}</h2>
+
+          {!result && <div className="empty-state">PostPulse AI ✨</div>}
+
+          {result?.type === "build" && (
+            <div className="result-wrap">
+              <Section title={t.title}>
+                <div className="text-card">{result.data.title}</div>
+              </Section>
+
+              <Section title={t.hook}>
+                <div className="text-card">{result.data.hook}</div>
+              </Section>
+
+              <Section title={t.body}>
+                <div className="text-card">{result.data.body}</div>
+              </Section>
+
+              <Section title={t.cta}>
+                <div className="text-card">{result.data.cta}</div>
+              </Section>
+
+              <Section title={t.hashtags}>
+                <div className="hashtags">
+                  {result.data.hashtags?.map((tag, index) => (
+                    <span key={`${tag}-${index}`}>#{tag.replace(/^#/, "")}</span>
+                  ))}
+                </div>
+              </Section>
+
+              <Section title={t.shortVersion}>
+                <div className="text-card">{result.data.shortVersion}</div>
+              </Section>
+
+              <Section title={t.alternativeVersion}>
+                <div className="text-card">{result.data.alternativeVersion}</div>
+              </Section>
             </div>
           )}
-        </div>
-      )}
+
+          {result?.type === "improve" && (
+            <div className="result-wrap">
+              <Section title={t.strengths}>
+                <ListBlock items={result.data.strengths} />
+              </Section>
+
+              <Section title={t.weaknesses}>
+                <ListBlock items={result.data.weaknesses} />
+              </Section>
+
+              <Section title={t.improvedVersion}>
+                <div className="text-card">{result.data.improvedPost}</div>
+              </Section>
+
+              <Section title={t.moreViralVersion}>
+                <div className="text-card">{result.data.moreViralVersion}</div>
+              </Section>
+
+              <Section title={t.moreAuthenticVersion}>
+                <div className="text-card">{result.data.moreAuthenticVersion}</div>
+              </Section>
+
+              <Section title={t.tips}>
+                <ListBlock items={result.data.tips} />
+              </Section>
+            </div>
+          )}
+
+          {result?.type === "analyze" && (
+            <div className="result-wrap">
+              <div className="scores-grid">
+                <ScoreCard label={t.viralScore} value={result.data.viralScore} />
+                <ScoreCard
+                  label={t.authenticityScore}
+                  value={result.data.authenticityScore}
+                />
+                <ScoreCard label={t.clarityScore} value={result.data.clarityScore} />
+                <ScoreCard
+                  label={t.emotionalScore}
+                  value={result.data.emotionalScore}
+                />
+                <ScoreCard label={t.hookScore} value={result.data.hookScore} />
+                <ScoreCard label={t.ctaScore} value={result.data.ctaScore} />
+              </div>
+
+              <Section title={t.summary}>
+                <div className="text-card">{result.data.summary}</div>
+              </Section>
+
+              <Section title={t.whatWorks}>
+                <ListBlock items={result.data.whatWorks} />
+              </Section>
+
+              <Section title={t.whatHurts}>
+                <ListBlock items={result.data.whatHurts} />
+              </Section>
+
+              <Section title={t.improvements}>
+                <ListBlock items={result.data.improvements} />
+              </Section>
+
+              <Section title={t.improvedVersion}>
+                <div className="text-card">{result.data.improvedVersion}</div>
+              </Section>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
