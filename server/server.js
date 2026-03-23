@@ -77,7 +77,7 @@ app.post("/api/generate-post", async (req, res) => {
     const {
       topic = "",
       targetAudience = "",
-      language = "he",
+      language = "en",
       style = "professional",
       goal = "",
       platform = "instagram"
@@ -110,7 +110,13 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Write a strong ${platform} social media post in ${getLanguageLabel(language)}.
+Write a strong ${platform} social media post.
+
+IMPORTANT:
+- You MUST respond ONLY in ${getLanguageLabel(language)}
+- DO NOT use any other language
+- If Hebrew is selected -> everything must be in Hebrew
+- If English is selected -> everything must be in English
 
 Topic: ${topic}
 Target audience: ${targetAudience}
@@ -122,7 +128,6 @@ Rules:
 - Natural and authentic writing
 - Clear CTA
 - 6-10 relevant hashtags
-- Return only in the selected language
 - Return JSON only
 `;
 
@@ -150,7 +155,7 @@ app.post("/api/improve-post", async (req, res) => {
   try {
     const {
       post = "",
-      language = "he",
+      language = "en",
       style = "professional",
       goal = "make it stronger"
     } = req.body;
@@ -181,7 +186,13 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Analyze and improve this social media post in ${getLanguageLabel(language)}.
+Analyze and improve this social media post.
+
+IMPORTANT:
+- You MUST respond ONLY in ${getLanguageLabel(language)}
+- DO NOT use any other language
+- If Hebrew is selected -> everything must be in Hebrew
+- If English is selected -> everything must be in English
 
 Original post:
 ${post}
@@ -196,7 +207,7 @@ Rules:
 - Create a more viral version
 - Create a more authentic version
 - Give practical tips
-- JSON only
+- Return JSON only
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
@@ -221,7 +232,7 @@ Rules:
 
 app.post("/api/analyze-post", async (req, res) => {
   try {
-    const { post = "", language = "he", platform = "instagram" } = req.body;
+    const { post = "", language = "en", platform = "instagram" } = req.body;
 
     if (!post.trim()) {
       return res.status(400).json({
@@ -251,7 +262,13 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Analyze this ${platform} social media post in ${getLanguageLabel(language)}.
+Analyze this ${platform} social media post.
+
+IMPORTANT:
+- You MUST respond ONLY in ${getLanguageLabel(language)}
+- DO NOT use any other language
+- If Hebrew is selected -> everything must be in Hebrew
+- If English is selected -> everything must be in English
 
 Post:
 ${post}
@@ -281,52 +298,6 @@ Rules:
     return res.status(500).json({
       success: false,
       message: "Failed to analyze post"
-    });
-  }
-});
-
-app.post("/improve", async (req, res) => {
-  try {
-    const { post } = req.body;
-
-    if (!post) {
-      return res.status(400).json({
-        success: false,
-        message: "post is required"
-      });
-    }
-
-    const prompt = `
-Improve this social media post.
-
-Original:
-${post}
-
-Return JSON:
-{
-  "strengths": ["", ""],
-  "weaknesses": ["", ""],
-  "improvedPost": ""
-}
-`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content: prompt }]
-    });
-
-    const parsed = JSON.parse(response.choices[0].message.content);
-
-    res.json({
-      success: true,
-      data: parsed
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Improve failed"
     });
   }
 });
