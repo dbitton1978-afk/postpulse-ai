@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #ff4ecd, #7c5cff, #00cfff);
+  min-height: 100vh;
+}
+
+textarea {
+  font-size: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+}
+
+button {
+  background: black;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+h1 {
+  color: white;
+}
+
+div {
+  color: white;
+}
