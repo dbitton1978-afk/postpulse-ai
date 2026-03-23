@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json({ limit: "15mb" }));
+app.use(express.json({ limit: "2mb" }));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -68,31 +68,6 @@ async function askAI(systemPrompt, userPrompt) {
   return response.choices[0]?.message?.content || "{}";
 }
 
-async function askAIWithImage(systemPrompt, userPrompt, imageData) {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    temperature: 0.9,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: userPrompt },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageData
-            }
-          }
-        ]
-      }
-    ]
-  });
-
-  return response.choices[0]?.message?.content || "{}";
-}
-
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
 });
@@ -141,6 +116,13 @@ When the selected style is emotional, you should write with extraordinary emotio
 The text may become heartbreaking, soul-touching, tender, raw, intimate, and tear-inducing when appropriate.
 But it must still feel real, elegant, and emotionally truthful — never manipulative, cheesy, or melodramatic.
 
+Your writing should feel:
+- human, not robotic
+- deep, not inflated
+- intelligent, not overcomplicated
+- emotionally true, not performative
+- persuasive, but never fake
+
 Always return valid JSON only.
 
 Required JSON structure:
@@ -179,6 +161,8 @@ Depth requirements:
 - The body must have texture, movement, and actual substance
 - The CTA must feel natural, persuasive, and psychologically accurate, not forced
 - Make the post feel like it was written by someone wise, observant, and deeply human
+- Prefer depth over noise
+- Prefer clarity with intelligence over complexity with emptiness
 
 If the selected style is emotional:
 - push the emotional depth significantly further
@@ -246,11 +230,32 @@ You think like:
 - a sensitive writer with emotional depth
 
 Your job is not to give surface-level advice.
-Your job is to identify the real issue underneath the wording.
+Your job is to identify the real issue underneath the wording:
+- weak emotional center
+- lack of tension
+- no contrast
+- generic language
+- no originality
+- fake inspiration
+- unclear point
+- poor rhythm
+- shallow phrasing
+- emotionally safe but forgettable writing
+
+When you rewrite, the result must feel:
+- sharper
+- deeper
+- more human
+- more truthful
+- more emotionally intelligent
+- more memorable
+- more alive
 
 When the selected style is emotional, your rewrite should go even deeper emotionally.
 It may become intimate, fragile, piercing, healing, heartbreaking, or deeply moving when appropriate.
 But it must never become cheap, manipulative, overdramatic, or fake.
+
+Avoid clichés, templates, hollow self-help language, and generic content formulas.
 
 Always return valid JSON only.
 
@@ -289,6 +294,7 @@ Depth requirements:
 - The improved versions should sound like a strong human writer, not a template
 - Add insight, texture, contrast, emotional truth, and stronger rhythm when relevant
 - Make the advice intelligent and useful, not generic
+- The rewritten content should feel like it understands people, not just content
 
 If the selected style is emotional:
 - intensify the emotional truth dramatically
@@ -342,6 +348,8 @@ app.post("/api/analyze-post", async (req, res) => {
     const systemPrompt = `
 You are an elite social media analyst with deep emotional intelligence, editorial sensitivity, psychological understanding, and strategic communication skill.
 
+You do not give generic feedback.
+You do not say obvious things unless they are truly important.
 You identify why writing works or fails at a deeper level:
 - emotional weight
 - authenticity
@@ -353,6 +361,23 @@ You identify why writing works or fails at a deeper level:
 - psychological pull
 - memorability
 - persuasive structure
+
+You can detect when a text is:
+- flat
+- predictable
+- emotionally thin
+- overexplained
+- generic
+- too safe
+- too vague
+- trying too hard
+- missing contrast or human truth
+
+When the post's emotional potential is high, you should recognize it.
+When emotional depth is missing, say so directly.
+When rewriting, you may go very deep emotionally if that is what the text needs.
+
+Your feedback should feel like it comes from a brilliant editor who understands people, not just content metrics.
 
 Always return valid JSON only.
 
@@ -392,6 +417,8 @@ Depth requirements:
 - The improved version must be more powerful, layered, emotionally intelligent, human, and memorable
 - Avoid cliché language in both feedback and rewrite
 - Make the summary insightful, sharp, and psychologically aware
+- Prefer truth over politeness when diagnosing weakness
+- Prefer depth over standard social-media advice
 
 If the post would benefit from a more emotional rewrite:
 - allow the improved version to become significantly more emotional
@@ -425,174 +452,6 @@ Rules:
     return res.status(500).json({
       success: false,
       message: "Failed to analyze post"
-    });
-  }
-});
-
-app.post("/api/analyze-image", async (req, res) => {
-  try {
-    const { imageData = "", language = "en" } = req.body;
-
-    if (!imageData || !imageData.startsWith("data:image")) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid imageData is required"
-      });
-    }
-
-    const systemPrompt = `
-You are an elite visual content analyst for social media.
-You analyze images with high emotional intelligence, visual sensitivity, branding awareness, and storytelling skill.
-
-Always return valid JSON only.
-
-Required JSON structure:
-{
-  "summary": "",
-  "mainSubjects": [],
-  "visualMood": "",
-  "emotionalTone": "",
-  "visualStrengths": [],
-  "visualWeaknesses": [],
-  "contentAngles": [],
-  "audienceFit": "",
-  "storyPotential": "",
-  "bestPostDirection": "",
-  "suggestedStyle": ""
-}
-`;
-
-    const userPrompt = `
-Analyze this image for social media content strategy.
-
-IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(language)}
-- DO NOT use any other language
-- If Hebrew is selected -> everything must be in Hebrew
-- If English is selected -> everything must be in English
-
-Depth requirements:
-- Analyze the image deeply, not superficially
-- Identify emotional tone, visual energy, mood, and story potential
-- Explain what kind of post can come out of this image
-- Detect human emotion, atmosphere, symbolism, contrast, and visual message when relevant
-- Suggest the strongest content direction for social media
-- Be insightful, emotionally intelligent, and specific
-
-Rules:
-- Return JSON only
-`;
-
-    const raw = await askAIWithImage(systemPrompt, userPrompt, imageData);
-    const parsed = safeJsonParse(raw);
-
-    if (!parsed) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to parse image analysis"
-      });
-    }
-
-    return res.json({ success: true, data: parsed });
-  } catch (error) {
-    console.error("analyze-image error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to analyze image"
-    });
-  }
-});
-
-app.post("/api/generate-post-from-image-analysis", async (req, res) => {
-  try {
-    const {
-      analysis,
-      language = "en",
-      style = "professional",
-      goal = "",
-      platform = "instagram",
-      targetAudience = ""
-    } = req.body;
-
-    if (!analysis || typeof analysis !== "object") {
-      return res.status(400).json({
-        success: false,
-        message: "analysis object is required"
-      });
-    }
-
-    const styleText =
-      STYLE_MAP[style]?.[language] || STYLE_MAP.professional[language];
-
-    const systemPrompt = `
-You are an elite social media writer who turns image analysis into a powerful post.
-Always return valid JSON only.
-
-Required JSON structure:
-{
-  "title": "",
-  "hook": "",
-  "body": "",
-  "cta": "",
-  "hashtags": [],
-  "shortVersion": "",
-  "alternativeVersion": ""
-}
-`;
-
-    const userPrompt = `
-Create a strong ${platform} social media post based on this image analysis.
-
-IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(language)}
-- DO NOT use any other language
-- If Hebrew is selected -> everything must be in Hebrew
-- If English is selected -> everything must be in English
-
-Target audience: ${targetAudience}
-Goal: ${goal}
-Style: ${styleText}
-
-Image analysis:
-${JSON.stringify(analysis, null, 2)}
-
-Depth requirements:
-- Use the image analysis as the emotional and strategic core of the post
-- Make the post feel human, intelligent, and visually grounded
-- Reflect the mood, energy, and story potential of the image
-- Avoid generic caption language
-- Build a post that feels connected to what is actually seen and felt in the image
-- Strong hook, meaningful body, natural CTA
-
-If the selected style is emotional:
-- go very deep emotionally when appropriate
-- allow tenderness, vulnerability, grief, hope, love, longing, healing, or human truth
-- make it touching but never fake or melodramatic
-
-Rules:
-- Strong hook
-- Natural and authentic writing
-- Clear CTA
-- 6-10 relevant hashtags
-- Return JSON only
-`;
-
-    const raw = await askAI(systemPrompt, userPrompt);
-    const parsed = safeJsonParse(raw);
-
-    if (!parsed) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to parse generated post"
-      });
-    }
-
-    return res.json({ success: true, data: parsed });
-  } catch (error) {
-    console.error("generate-post-from-image-analysis error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to generate post from image analysis"
     });
   }
 });
