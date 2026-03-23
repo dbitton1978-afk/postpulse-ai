@@ -19,7 +19,7 @@ const platforms = [
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy }) {
+function Section({ title, children, onCopy, onSendToStory }) {
   return (
     <div className="result-section">
       <div
@@ -27,15 +27,25 @@ function Section({ title, children, onCopy }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 12
+          gap: 12,
+          flexWrap: "wrap"
         }}
       >
         <h3>{title}</h3>
-        {onCopy && (
-          <button className="copy-btn" onClick={onCopy}>
-            Copy
-          </button>
-        )}
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {onSendToStory && (
+            <button className="copy-btn" onClick={onSendToStory}>
+              שלח לעורך סטורי
+            </button>
+          )}
+
+          {onCopy && (
+            <button className="copy-btn" onClick={onCopy}>
+              Copy
+            </button>
+          )}
+        </div>
       </div>
       {children}
     </div>
@@ -92,12 +102,21 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
+  const [storyText, setStoryText] = useState("");
+  const [storyTextToken, setStoryTextToken] = useState(0);
+
   const copyText = async (text) => {
     try {
       await navigator.clipboard.writeText(text || "");
     } catch (err) {
       console.error("Copy failed:", err);
     }
+  };
+
+  const sendToStory = (text) => {
+    if (!text || !text.trim()) return;
+    setStoryText(text);
+    setStoryTextToken(Date.now());
   };
 
   const handleBuild = async () => {
@@ -198,46 +217,6 @@ export default function App() {
 
   const analyzeCopyText =
     result?.type === "analyze" ? result.data?.improvedVersion || "" : "";
-
-  const aiStoryText = useMemo(() => {
-    if (!result?.data) return "";
-
-    if (result.type === "build") {
-      return [
-        result.data?.title || "",
-        result.data?.hook || "",
-        result.data?.body || "",
-        result.data?.cta || "",
-        (result.data?.hashtags || []).join(" ")
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-
-    if (result.type === "improve") {
-      return [
-        result.data?.improvedPost || "",
-        result.data?.moreViralVersion || "",
-        result.data?.moreAuthenticVersion || "",
-        (result.data?.tips || []).join(" ")
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-
-    if (result.type === "analyze") {
-      return [
-        result.data?.summary || "",
-        (result.data?.whatWorks || []).join(" "),
-        (result.data?.improvements || []).join(" "),
-        result.data?.improvedVersion || ""
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-
-    return "";
-  }, [result]);
 
   return (
     <div className="app" dir={dir}>
@@ -408,6 +387,14 @@ export default function App() {
               <button className="primary-btn" onClick={handleImprove}>
                 {loading ? t.loading : t.improveBtn}
               </button>
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => sendToStory(improveForm.post)}
+              >
+                שלח את הטקסט שכתבתי לעורך סטורי
+              </button>
             </>
           )}
 
@@ -446,6 +433,14 @@ export default function App() {
               <button className="primary-btn" onClick={handleAnalyze}>
                 {loading ? t.loading : t.analyzeBtn}
               </button>
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => sendToStory(analyzeForm.post)}
+              >
+                שלח את הטקסט שכתבתי לעורך סטורי
+              </button>
             </>
           )}
 
@@ -462,6 +457,7 @@ export default function App() {
               <Section
                 title={t.title}
                 onCopy={() => copyText(result.data?.title || "")}
+                onSendToStory={() => sendToStory(result.data?.title || "")}
               >
                 <div className="text-card">{result.data?.title || ""}</div>
               </Section>
@@ -469,6 +465,7 @@ export default function App() {
               <Section
                 title={t.hook}
                 onCopy={() => copyText(result.data?.hook || "")}
+                onSendToStory={() => sendToStory(result.data?.hook || "")}
               >
                 <div className="text-card">{result.data?.hook || ""}</div>
               </Section>
@@ -476,6 +473,7 @@ export default function App() {
               <Section
                 title={t.body}
                 onCopy={() => copyText(result.data?.body || "")}
+                onSendToStory={() => sendToStory(result.data?.body || "")}
               >
                 <div className="text-card">{result.data?.body || ""}</div>
               </Section>
@@ -483,6 +481,7 @@ export default function App() {
               <Section
                 title={t.cta}
                 onCopy={() => copyText(result.data?.cta || "")}
+                onSendToStory={() => sendToStory(result.data?.cta || "")}
               >
                 <div className="text-card">{result.data?.cta || ""}</div>
               </Section>
@@ -490,6 +489,9 @@ export default function App() {
               <Section
                 title={t.hashtags}
                 onCopy={() => copyText((result.data?.hashtags || []).join(" "))}
+                onSendToStory={() =>
+                  sendToStory((result.data?.hashtags || []).join(" "))
+                }
               >
                 <div className="hashtags">
                   {(result.data?.hashtags || []).map((tag, index) => (
@@ -501,6 +503,7 @@ export default function App() {
               <Section
                 title={t.shortVersion}
                 onCopy={() => copyText(result.data?.shortVersion || "")}
+                onSendToStory={() => sendToStory(result.data?.shortVersion || "")}
               >
                 <div className="text-card">{result.data?.shortVersion || ""}</div>
               </Section>
@@ -508,6 +511,9 @@ export default function App() {
               <Section
                 title={t.alternativeVersion}
                 onCopy={() => copyText(result.data?.alternativeVersion || "")}
+                onSendToStory={() =>
+                  sendToStory(result.data?.alternativeVersion || "")
+                }
               >
                 <div className="text-card">
                   {result.data?.alternativeVersion || ""}
@@ -520,6 +526,14 @@ export default function App() {
                 onClick={() => copyText(buildCopyText)}
               >
                 Copy Full Post
+              </button>
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => sendToStory(buildCopyText)}
+              >
+                שלח פוסט מלא לעורך סטורי
               </button>
             </div>
           )}
@@ -537,6 +551,7 @@ export default function App() {
               <Section
                 title={t.improvedVersion}
                 onCopy={() => copyText(result.data?.improvedPost || "")}
+                onSendToStory={() => sendToStory(result.data?.improvedPost || "")}
               >
                 <div className="text-card">{result.data?.improvedPost || ""}</div>
               </Section>
@@ -544,6 +559,9 @@ export default function App() {
               <Section
                 title={t.moreViralVersion}
                 onCopy={() => copyText(result.data?.moreViralVersion || "")}
+                onSendToStory={() =>
+                  sendToStory(result.data?.moreViralVersion || "")
+                }
               >
                 <div className="text-card">
                   {result.data?.moreViralVersion || ""}
@@ -553,6 +571,9 @@ export default function App() {
               <Section
                 title={t.moreAuthenticVersion}
                 onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
+                onSendToStory={() =>
+                  sendToStory(result.data?.moreAuthenticVersion || "")
+                }
               >
                 <div className="text-card">
                   {result.data?.moreAuthenticVersion || ""}
@@ -569,6 +590,14 @@ export default function App() {
                 onClick={() => copyText(improveCopyText)}
               >
                 Copy Improved Versions
+              </button>
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => sendToStory(improveCopyText)}
+              >
+                שלח לעורך סטורי
               </button>
             </div>
           )}
@@ -602,7 +631,10 @@ export default function App() {
                 />
               </div>
 
-              <Section title={t.summary}>
+              <Section
+                title={t.summary}
+                onSendToStory={() => sendToStory(result.data?.summary || "")}
+              >
                 <div className="text-card">{result.data?.summary || ""}</div>
               </Section>
 
@@ -621,6 +653,7 @@ export default function App() {
               <Section
                 title={t.improvedVersion}
                 onCopy={() => copyText(analyzeCopyText)}
+                onSendToStory={() => sendToStory(analyzeCopyText)}
               >
                 <div className="text-card">
                   {result.data?.improvedVersion || ""}
@@ -634,6 +667,14 @@ export default function App() {
               >
                 Copy Improved Version
               </button>
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: 10 }}
+                onClick={() => sendToStory(analyzeCopyText)}
+              >
+                שלח לעורך סטורי
+              </button>
             </div>
           )}
         </section>
@@ -641,10 +682,13 @@ export default function App() {
 
       <section className="panel glass" style={{ marginTop: 24 }}>
         <h2 style={{ marginBottom: 16 }}>
-          {language === "he" ? "עורך סטורי + AI" : "Story Editor + AI"}
+          {language === "he" ? "עורך סטורי" : "Story Editor"}
         </h2>
 
-        <StoryEditor aiText={aiStoryText} />
+        <StoryEditor
+          incomingText={storyText}
+          incomingTextToken={storyTextToken}
+        />
       </section>
     </div>
   );
