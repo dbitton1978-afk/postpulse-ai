@@ -30,6 +30,7 @@ export default function StoryEditor() {
         type: "text",
         x: 100,
         y: 100,
+        scale: 1,
         content: "טקסט חדש"
       }
     ]);
@@ -45,6 +46,7 @@ export default function StoryEditor() {
         type: "emoji",
         x: 120,
         y: 150,
+        scale: 1,
         content: "🔥"
       }
     ]);
@@ -82,6 +84,25 @@ export default function StoryEditor() {
     );
   }
 
+  function handleWheel(e) {
+    if (!selectedId) return;
+
+    e.preventDefault();
+
+    const delta = e.deltaY * -0.001;
+
+    setLayers((prev) =>
+      prev.map((layer) =>
+        layer.id === selectedId
+          ? {
+              ...layer,
+              scale: Math.min(Math.max(0.5, layer.scale + delta), 3)
+            }
+          : layer
+      )
+    );
+  }
+
   function updateText(value) {
     if (!selectedId) return;
 
@@ -98,7 +119,7 @@ export default function StoryEditor() {
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor (Improved)</h2>
+      <h2>Story Editor (Pro)</h2>
 
       <input type="file" accept="image/*" onChange={handleUpload} />
 
@@ -123,6 +144,7 @@ export default function StoryEditor() {
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
         style={{
           position: "relative",
           width: 360,
@@ -153,6 +175,7 @@ export default function StoryEditor() {
               position: "absolute",
               left: layer.x,
               top: layer.y,
+              transform: `scale(${layer.scale})`,
               color: "white",
               fontSize: layer.type === "emoji" ? 40 : 24,
               cursor: "grab",
