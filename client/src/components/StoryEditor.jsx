@@ -6,8 +6,10 @@ function createId() {
 
 export default function StoryEditor() {
   const [images, setImages] = useState([]);
+  const [texts, setTexts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [dragId, setDragId] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
+  const [dragItem, setDragItem] = useState(null);
 
   function handleUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -35,73 +37,147 @@ export default function StoryEditor() {
     e.target.value = "";
   }
 
-  function removeImage(id) {
-    setImages((prev) => prev.filter((img) => img.id !== id));
-    setSelectedId(null);
+  function addText() {
+    const id = createId();
+
+    setTexts((prev) => [
+      ...prev,
+      {
+        id,
+        content: "טקסט חדש",
+        x: 180,
+        y: 100,
+        scale: 1
+      }
+    ]);
+
+    setSelectedId(id);
+    setSelectedType("text");
   }
 
-  function handleMouseDown(id) {
+  function removeSelected() {
+    if (!selectedId || !selectedType) return;
+
+    if (selectedType === "image") {
+      setImages((prev) => prev.filter((item) => item.id !== selectedId));
+    }
+
+    if (selectedType === "text") {
+      setTexts((prev) => prev.filter((item) => item.id !== selectedId));
+    }
+
+    setSelectedId(null);
+    setSelectedType(null);
+  }
+
+  function handleMouseDown(id, type) {
     setSelectedId(id);
-    setDragId(id);
+    setSelectedType(type);
+    setDragItem({ id, type });
   }
 
   function handleMouseUp() {
-    setDragId(null);
+    setDragItem(null);
   }
 
   function handleMouseMove(e) {
-    if (!dragId) return;
+    if (!dragItem) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === dragId ? { ...img, x, y } : img
-      )
-    );
+    if (dragItem.type === "image") {
+      setImages((prev) =>
+        prev.map((item) =>
+          item.id === dragItem.id ? { ...item, x, y } : item
+        )
+      );
+    }
+
+    if (dragItem.type === "text") {
+      setTexts((prev) =>
+        prev.map((item) =>
+          item.id === dragItem.id ? { ...item, x, y } : item
+        )
+      );
+    }
   }
 
   function scaleSelected(delta) {
-    if (!selectedId) return;
+    if (!selectedId || !selectedType) return;
 
-    setImages((prev) =>
-      prev.map((img) =>
-        img.id === selectedId
-          ? {
-              ...img,
-              scale: Math.min(3, Math.max(0.3, img.scale + delta))
-            }
-          : img
+    if (selectedType === "image") {
+      setImages((prev) =>
+        prev.map((item) =>
+          item.id === selectedId
+            ? {
+                ...item,
+                scale: Math.min(3, Math.max(0.3, item.scale + delta))
+              }
+            : item
+        )
+      );
+    }
+
+    if (selectedType === "text") {
+      setTexts((prev) =>
+        prev.map((item) =>
+          item.id === selectedId
+            ? {
+                ...item,
+                scale: Math.min(3, Math.max(0.3, item.scale + delta))
+              }
+            : item
+        )
+      );
+    }
+  }
+
+  function updateSelectedText(value) {
+    if (selectedType !== "text" || !selectedId) return;
+
+    setTexts((prev) =>
+      prev.map((item) =>
+        item.id === selectedId ? { ...item, content: value } : item
       )
     );
   }
 
+  const selectedText =
+    selectedType === "text"
+      ? texts.find((item) => item.id === selectedId)
+      : null;
+
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor - Step 2</h2>
+      <h2>Story Editor - Step 3</h2>
 
-      {/* העלאת תמונה */}
       <input type="file" accept="image/*" multiple onChange={handleUpload} />
 
-      {/* כפתורים */}
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={addText}>הוסף טקסט</button>
         <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
           הגדל +
         </button>
         <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
           הקטן -
         </button>
-        <button
-          onClick={() => removeImage(selectedId)}
-          disabled={!selectedId}
-        >
+        <button onClick={removeSelected} disabled={!selectedId}>
           מחק נבחר
         </button>
       </div>
 
-      {/* קנבס */}
+      {selectedText && (
+        <div style={{ marginTop: 10 }}>
+          <input
+            value={selectedText.content}
+            onChange={(e) => updateSelectedText(e.target.value)}
+            style={{ padding: 8, width: 220 }}
+          />
+        </div>
+      )}
+
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -122,7 +198,7 @@ export default function StoryEditor() {
             src={img.src}
             alt=""
             draggable={false}
-            onMouseDown={() => handleMouseDown(img.id)}
+            onMouseDown={() => handleMouseDown(img.id, "image")}
             style={{
               position: "absolute",
               left: img.x,
@@ -132,11 +208,41 @@ export default function StoryEditor() {
               objectFit: "cover",
               transform: `translate(-50%, -50%) scale(${img.scale})`,
               border:
-                selectedId === img.id ? "3px solid #00ffcc" : "none",
+                selectedId === img.id && selectedType === "image"
+                  ? "3px solid #00ffcc"
+                  : "none",
               cursor: "grab",
               userSelect: "none"
             }}
           />
+        ))}
+
+        {texts.map((txt) => (
+          <div
+            key={txt.id}
+            onMouseDown={() => handleMouseDown(txt.id, "text")}
+            style={{
+              position: "absolute",
+              left: txt.x,
+              top: txt.y,
+              transform: `translate(-50%, -50%) scale(${txt.scale})`,
+              color: "white",
+              background: "rgba(0,0,0,0.4)",
+              padding: "8px 12px",
+              borderRadius: 10,
+              border:
+                selectedId === txt.id && selectedType === "text"
+                  ? "2px solid #00ffcc"
+                  : "none",
+              cursor: "grab",
+              userSelect: "none",
+              maxWidth: 240,
+              textAlign: "center",
+              whiteSpace: "pre-wrap"
+            }}
+          >
+            {txt.content}
+          </div>
         ))}
       </div>
     </div>
