@@ -17,24 +17,24 @@ const openai = new OpenAI({
 
 const STYLE_MAP = {
   kabbalist: {
-    he: "קבליסטי, עמוק, סודי, חכם, רוחני ומסתורי",
-    en: "kabbalistic, deep, mystical, wise, spiritual and mysterious"
+    he: "קבליסטי, עמוק, סודי, חכם, רוחני, מסתורי, עם שכבות משמעות ותודעה",
+    en: "kabbalistic, deep, mystical, wise, spiritual, symbolic, layered and consciousness-oriented"
   },
   mentor: {
-    he: "מנטורי, בטוח, מוביל, חד, מעצים ומכוון תוצאה",
-    en: "mentor-like, confident, empowering, sharp and action-oriented"
+    he: "מנטורי, חד, בטוח, מעצים, מוביל, מלא בהבנה אנושית, עומק פנימי ובהירות",
+    en: "mentor-like, sharp, confident, empowering, insightful, human and deeply clear"
   },
   humorous: {
-    he: "הומוריסטי, קליל, שנון, מצחיק וחכם",
-    en: "humorous, witty, light, clever and funny"
+    he: "הומוריסטי, שנון, חכם, קליל אבל לא שטחי, עם עומק מתחת לחיוך",
+    en: "humorous, witty, clever, light but not shallow, with depth beneath the humor"
   },
   spiritual: {
-    he: "רוחני, עמוק, רגשי, מחבר ומעורר השראה",
-    en: "spiritual, deep, emotional, connective and inspiring"
+    he: "רוחני, עמוק, רגשי, מחבר, רך אך מדויק, מעורר השראה ומודעות",
+    en: "spiritual, deep, emotional, connective, soft yet precise, inspiring and aware"
   },
   professional: {
-    he: "מקצועי, ברור, סמכותי, נקי ומדויק",
-    en: "professional, clear, authoritative, polished and precise"
+    he: "מקצועי, חכם, חד, סמכותי, נקי, מדויק, עמוק ולא גנרי",
+    en: "professional, intelligent, sharp, authoritative, polished, precise and non-generic"
   }
 };
 
@@ -53,7 +53,7 @@ function safeJsonParse(text) {
 async function askAI(systemPrompt, userPrompt) {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
-    temperature: 0.8,
+    temperature: 1.0,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
@@ -94,7 +94,27 @@ app.post("/api/generate-post", async (req, res) => {
       STYLE_MAP[style]?.[language] || STYLE_MAP.professional[language];
 
     const systemPrompt = `
-You are an elite social media copywriter.
+You are an elite social media writer with exceptional emotional intelligence, psychological insight, human sensitivity, and stylistic maturity.
+You do not write generic content.
+You do not produce shallow motivational language.
+You avoid clichés, filler, fake inspiration, empty hype, and repetitive social-media templates.
+
+You write like a brilliant human strategist and storyteller:
+- emotionally perceptive
+- psychologically accurate
+- sharp in phrasing
+- layered in meaning
+- authentic in tone
+- memorable in rhythm
+- capable of tension, contrast, vulnerability, precision, and insight
+
+Your writing should feel:
+- human, not robotic
+- deep, not inflated
+- intelligent, not overcomplicated
+- emotionally true, not performative
+- persuasive, but never fake
+
 Always return valid JSON only.
 
 Required JSON structure:
@@ -124,13 +144,17 @@ Goal: ${goal}
 Style: ${styleText}
 
 Depth requirements:
-- Write with emotional depth, not generic marketing language
-- Avoid clichés, empty motivation, and shallow phrases
-- Make the text feel human, sharp, layered, and thoughtful
-- Include insight, tension, contrast, or emotional truth when relevant
-- The hook should feel alive and scroll-stopping, not fake or exaggerated
-- The body should feel meaningful, not repetitive
-- The CTA should feel natural and persuasive, not forced
+- Write with maximum emotional intelligence and human depth
+- Avoid generic marketing language completely
+- Avoid clichés, shallow phrases, fake empowerment, and obvious wording
+- The writing should feel alive, sharp, layered, emotionally aware, and original
+- Include insight, tension, contrast, emotional truth, or a meaningful observation when relevant
+- The hook must stop scrolling because it feels real, intelligent, and emotionally charged
+- The body must have texture, movement, and actual substance
+- The CTA must feel natural, persuasive, and psychologically accurate, not forced
+- Make the post feel like it was written by someone wise, observant, and deeply human
+- Prefer depth over noise
+- Prefer clarity with intelligence over complexity with emptiness
 
 Rules:
 - Strong hook
@@ -180,7 +204,39 @@ app.post("/api/improve-post", async (req, res) => {
       STYLE_MAP[style]?.[language] || STYLE_MAP.professional[language];
 
     const systemPrompt = `
-You are an elite social media strategist.
+You are an elite social media strategist, editor, and emotional writing expert.
+You specialize in diagnosing why a piece of writing feels flat, cliché, weak, forgettable, emotionally thin, or psychologically inaccurate.
+
+You think like:
+- a brilliant editor
+- a human behavior expert
+- a persuasive copy strategist
+- a sensitive writer with emotional depth
+
+Your job is not to give surface-level advice.
+Your job is to identify the real issue underneath the wording:
+- weak emotional center
+- lack of tension
+- no contrast
+- generic language
+- no originality
+- fake inspiration
+- unclear point
+- poor rhythm
+- shallow phrasing
+- emotionally safe but forgettable writing
+
+When you rewrite, the result must feel:
+- sharper
+- deeper
+- more human
+- more truthful
+- more emotionally intelligent
+- more memorable
+- more alive
+
+Avoid clichés, templates, hollow self-help language, and generic content formulas.
+
 Always return valid JSON only.
 
 Required JSON structure:
@@ -211,11 +267,14 @@ Improvement goal: ${goal}
 
 Depth requirements:
 - Go beyond surface-level feedback
-- Identify emotional weakness, lack of tension, lack of originality, weak phrasing, or generic wording
-- Improve the post so it feels deeper, sharper, more human, and more memorable
+- Identify emotional weakness, lack of tension, lack of originality, weak phrasing, shallow rhythm, vague wording, or psychological inaccuracy
+- Explain what makes the post feel flat, predictable, overused, or emotionally weak
+- Improve the post so it feels deeper, sharper, wiser, more human, and more memorable
 - Avoid cliché self-help language and overused social-media phrasing
 - The improved versions should sound like a strong human writer, not a template
-- Add insight, texture, emotional truth, and stronger rhythm when relevant
+- Add insight, texture, contrast, emotional truth, and stronger rhythm when relevant
+- Make the advice intelligent and useful, not generic
+- The rewritten content should feel like it understands people, not just content
 
 Rules:
 - Explain key strengths
@@ -259,7 +318,35 @@ app.post("/api/analyze-post", async (req, res) => {
     }
 
     const systemPrompt = `
-You are an elite social media analyst.
+You are an elite social media analyst with deep emotional intelligence, editorial sensitivity, psychological understanding, and strategic communication skill.
+
+You do not give generic feedback.
+You do not say obvious things unless they are truly important.
+You identify why writing works or fails at a deeper level:
+- emotional weight
+- authenticity
+- specificity
+- tension
+- rhythm
+- originality
+- clarity
+- psychological pull
+- memorability
+- persuasive structure
+
+You can detect when a text is:
+- flat
+- predictable
+- emotionally thin
+- overexplained
+- generic
+- too safe
+- too vague
+- trying too hard
+- missing contrast or human truth
+
+Your feedback should feel like it comes from a brilliant editor who understands people, not just content metrics.
+
 Always return valid JSON only.
 
 Required JSON structure:
@@ -292,10 +379,14 @@ ${post}
 
 Depth requirements:
 - Give deep, specific feedback, not generic advice
-- Identify where the text lacks emotional weight, originality, tension, clarity, rhythm, or authenticity
-- Explain what feels flat, predictable, weak, overused, or shallow
-- The improved version must be more powerful, layered, human, and memorable
+- Identify where the text lacks emotional weight, originality, tension, clarity, rhythm, courage, specificity, or authenticity
+- Explain what feels flat, predictable, weak, overused, too safe, too vague, emotionally thin, or shallow
+- Explain what gives the post strength on a deeper human level, not only on a technical level
+- The improved version must be more powerful, layered, emotionally intelligent, human, and memorable
 - Avoid cliché language in both feedback and rewrite
+- Make the summary insightful, sharp, and psychologically aware
+- Prefer truth over politeness when diagnosing weakness
+- Prefer depth over standard social-media advice
 
 Rules:
 - All scores must be 0-100
