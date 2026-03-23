@@ -199,6 +199,46 @@ export default function App() {
   const analyzeCopyText =
     result?.type === "analyze" ? result.data?.improvedVersion || "" : "";
 
+  const aiStoryText = useMemo(() => {
+    if (!result?.data) return "";
+
+    if (result.type === "build") {
+      return [
+        result.data?.title || "",
+        result.data?.hook || "",
+        result.data?.body || "",
+        result.data?.cta || "",
+        (result.data?.hashtags || []).join(" ")
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    if (result.type === "improve") {
+      return [
+        result.data?.improvedPost || "",
+        result.data?.moreViralVersion || "",
+        result.data?.moreAuthenticVersion || "",
+        (result.data?.tips || []).join(" ")
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    if (result.type === "analyze") {
+      return [
+        result.data?.summary || "",
+        (result.data?.whatWorks || []).join(" "),
+        (result.data?.improvements || []).join(" "),
+        result.data?.improvedVersion || ""
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    return "";
+  }, [result]);
+
   return (
     <div className="app" dir={dir}>
       <div className="bg-orb orb-1" />
@@ -601,9 +641,10 @@ export default function App() {
 
       <section className="panel glass" style={{ marginTop: 24 }}>
         <h2 style={{ marginBottom: 16 }}>
-          {language === "he" ? "עורך סטורי" : "Story Editor"}
+          {language === "he" ? "עורך סטורי + AI" : "Story Editor + AI"}
         </h2>
-        <StoryEditor />
+
+        <StoryEditor aiText={aiStoryText} />
       </section>
     </div>
   );
