@@ -7,6 +7,7 @@ const styles = [
   { value: "mentor", he: "מנטור", en: "Mentor" },
   { value: "humorous", he: "הומוריסטי", en: "Humorous" },
   { value: "spiritual", he: "רוחני", en: "Spiritual" },
+  { value: "emotional", he: "רגשי", en: "Emotional" },
   { value: "professional", he: "מקצועי", en: "Professional" }
 ];
 
@@ -170,31 +171,32 @@ export default function App() {
     }
   };
 
-  const buildCopyText = result?.type === "build"
-    ? [
-        result.data?.title || "",
-        result.data?.hook || "",
-        result.data?.body || "",
-        result.data?.cta || "",
-        (result.data?.hashtags || []).join(" ")
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    : "";
+  const buildCopyText =
+    result?.type === "build"
+      ? [
+          result.data?.title || "",
+          result.data?.hook || "",
+          result.data?.body || "",
+          result.data?.cta || "",
+          (result.data?.hashtags || []).join(" ")
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
 
-  const improveCopyText = result?.type === "improve"
-    ? [
-        result.data?.improvedPost || "",
-        result.data?.moreViralVersion || "",
-        result.data?.moreAuthenticVersion || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    : "";
+  const improveCopyText =
+    result?.type === "improve"
+      ? [
+          result.data?.improvedPost || "",
+          result.data?.moreViralVersion || "",
+          result.data?.moreAuthenticVersion || ""
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
 
-  const analyzeCopyText = result?.type === "analyze"
-    ? result.data?.improvedVersion || ""
-    : "";
+  const analyzeCopyText =
+    result?.type === "analyze" ? result.data?.improvedVersion || "" : "";
 
   return (
     <div className="app" dir={dir}>
