@@ -37,24 +37,3 @@ export async function analyzePost(payload) {
     body: JSON.stringify(payload)
   });
 }
-
-export async function analyzeImage(payload) {
-  return request("/api/analyze-image", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function generatePostFromImageAnalysis(payload) {
-  return request("/api/generate-post-from-image-analysis", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function analyzePost(payload) {
-  return request("/api/analyze-post", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-}
