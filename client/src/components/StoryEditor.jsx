@@ -1,99 +1,83 @@
 import { useEffect, useState } from "react";
 
 function createId() {
-  return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  return `${Date.now()}-${Math.random()}`;
+}
+
+function splitText(text) {
+  if (!text) return [];
+
+  const sentences = text.split(/[.!?\n]/).filter(Boolean);
+
+  const chunks = [];
+  let current = "";
+
+  sentences.forEach((s) => {
+    if ((current + s).length < 100) {
+      current += s + " ";
+    } else {
+      chunks.push(current.trim());
+      current = s + " ";
+    }
+  });
+
+  if (current) chunks.push(current.trim());
+
+  return chunks.slice(0, 4); // מקסימום 4 שקופיות
 }
 
 export default function StoryEditor({
   incomingText = "",
   incomingTextToken = 0
 }) {
-  const [layers, setLayers] = useState([]);
+  const [slides, setSlides] = useState([[]]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   const [selectedId, setSelectedId] = useState(null);
   const [dragId, setDragId] = useState(null);
 
+  // 🔥 פיצול אוטומטי
   useEffect(() => {
     if (!incomingText || !incomingTextToken) return;
 
-    const id = createId();
-    const length = incomingText.length;
+    const parts = splitText(incomingText);
 
-    let scale = 1;
-    let y = 560;
-    let maxWidth = 260;
+    const newSlides = parts.map((part) => {
+      const id = createId();
 
-    if (length < 60) {
-      scale = 1.4;
-      y = 300;
-      maxWidth = 300;
-    } else if (length < 120) {
-      scale = 1.2;
-      y = 420;
-      maxWidth = 280;
-    } else if (length < 200) {
-      scale = 1;
-      y = 500;
-      maxWidth = 260;
-    } else {
-      scale = 0.8;
-      y = 540;
-      maxWidth = 240;
-    }
-
-    setLayers((prev) => [
-      ...prev,
-      {
-        id,
-        type: "text",
-        x: 180,
-        y,
-        scale,
-        maxWidth,
-        content: incomingText
-      }
-    ]);
-
-    setSelectedId(id);
-  }, [incomingText, incomingTextToken]);
-
-  function handleUploadImages(e) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    files.forEach((file, index) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        const id = `${createId()}-${index}`;
-
-        setLayers((prev) => [
-          ...prev,
-          {
-            id,
-            type: "image",
-            x: 180 + index * 10,
-            y: 320 + index * 10,
-            scale: 1,
-            src: reader.result,
-            width: 180,
-            height: 180
-          }
-        ]);
-
-        setSelectedId(id);
-      };
-
-      reader.readAsDataURL(file);
+      return [
+        {
+          id,
+          type: "text",
+          x: 180,
+          y: 320,
+          scale: 1,
+          maxWidth: 260,
+          content: part
+        }
+      ];
     });
 
-    e.target.value = "";
+    setSlides(newSlides.length ? newSlides : [[]]);
+    setCurrentSlide(0);
+    setSelectedId(null);
+  }, [incomingText, incomingTextToken]);
+
+  const layers = slides[currentSlide] || [];
+
+  function updateLayers(newLayers) {
+    setSlides((prev) =>
+      prev.map((slide, index) =>
+        index === currentSlide ? newLayers : slide
+      )
+    );
   }
 
   function addText() {
     const id = createId();
 
-    setLayers((prev) => [
-      ...prev,
+    updateLayers([
+      ...layers,
       {
         id,
         type: "text",
@@ -108,43 +92,9 @@ export default function StoryEditor({
     setSelectedId(id);
   }
 
-  function addEmoji() {
-    const id = createId();
-
-    setLayers((prev) => [
-      ...prev,
-      {
-        id,
-        type: "emoji",
-        x: 120,
-        y: 150,
-        scale: 1,
-        content: "🔥"
-      }
-    ]);
-
-    setSelectedId(id);
-  }
-
-  function deleteSelectedLayer() {
-    if (!selectedId) return;
-
-    setLayers((prev) => prev.filter((layer) => layer.id !== selectedId));
-    setSelectedId(null);
-  }
-
-  function clearAllLayers() {
-    setLayers([]);
-    setSelectedId(null);
-  }
-
   function handleMouseDown(id) {
     setSelectedId(id);
     setDragId(id);
-  }
-
-  function handleMouseUp() {
-    setDragId(null);
   }
 
   function handleMouseMove(e) {
@@ -154,188 +104,135 @@ export default function StoryEditor({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === dragId
-          ? {
-              ...layer,
-              x,
-              y
-            }
-          : layer
+    updateLayers(
+      layers.map((layer) =>
+        layer.id === dragId ? { ...layer, x, y } : layer
       )
     );
   }
 
-  function updateText(value) {
-    if (!selectedId) return;
-
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === selectedId && layer.type === "text"
-          ? { ...layer, content: value }
-          : layer
-      )
-    );
+  function handleMouseUp() {
+    setDragId(null);
   }
 
   function scaleSelected(delta) {
     if (!selectedId) return;
 
-    setLayers((prev) =>
-      prev.map((layer) =>
+    updateLayers(
+      layers.map((layer) =>
         layer.id === selectedId
           ? {
               ...layer,
-              scale: Math.min(3, Math.max(0.3, (layer.scale || 1) + delta))
+              scale: Math.min(3, Math.max(0.5, layer.scale + delta))
             }
           : layer
       )
     );
   }
 
-  function bringSelectedToFront() {
-    if (!selectedId) return;
-
-    setLayers((prev) => {
-      const selected = prev.find((layer) => layer.id === selectedId);
-      const others = prev.filter((layer) => layer.id !== selectedId);
-      return selected ? [...others, selected] : prev;
-    });
+  function deleteSelected() {
+    updateLayers(layers.filter((l) => l.id !== selectedId));
+    setSelectedId(null);
   }
 
-  const selectedLayer = layers.find((layer) => layer.id === selectedId);
+  function updateText(value) {
+    updateLayers(
+      layers.map((l) =>
+        l.id === selectedId ? { ...l, content: value } : l
+      )
+    );
+  }
+
+  function addSlide() {
+    setSlides((prev) => [...prev, []]);
+    setCurrentSlide(slides.length);
+  }
+
+  function deleteSlide() {
+    if (slides.length === 1) return;
+
+    const newSlides = slides.filter((_, i) => i !== currentSlide);
+    setSlides(newSlides);
+    setCurrentSlide(Math.max(0, currentSlide - 1));
+  }
+
+  const selectedLayer = layers.find((l) => l.id === selectedId);
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor</h2>
+      <h2>Story Slides Editor</h2>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+      {/* ניווט שקופיות */}
+      <div style={{ display: "flex", gap: 6 }}>
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentSlide(i)}
+            style={{
+              background: i === currentSlide ? "#00ffcc" : "#333",
+              color: "black"
+            }}
+          >
+            {i + 1}
+          </button>
+        ))}
+
+        <button onClick={addSlide}>+</button>
+        <button onClick={deleteSlide}>🗑</button>
+      </div>
+
+      {/* כפתורים */}
+      <div style={{ marginTop: 10 }}>
+        <button onClick={addText}>הוסף טקסט</button>
+        <button onClick={() => scaleSelected(0.1)}>+</button>
+        <button onClick={() => scaleSelected(-0.1)}>-</button>
+        <button onClick={deleteSelected}>מחק</button>
+      </div>
+
+      {selectedLayer && (
         <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleUploadImages}
+          value={selectedLayer.content}
+          onChange={(e) => updateText(e.target.value)}
+          style={{ marginTop: 10 }}
         />
-      </div>
-
-      <div
-        style={{
-          marginTop: 12,
-          padding: 10,
-          border: "1px solid #444",
-          borderRadius: 8
-        }}
-      >
-        <div style={{ marginBottom: 8, fontWeight: "bold" }}>אלמנטים</div>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={addText}>הוסף טקסט</button>
-          <button onClick={addEmoji}>הוסף אימוג׳י</button>
-          <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
-            הגדל +
-          </button>
-          <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
-            הקטן -
-          </button>
-          <button onClick={bringSelectedToFront} disabled={!selectedId}>
-            הבא לקדימה
-          </button>
-          <button onClick={deleteSelectedLayer} disabled={!selectedId}>
-            מחק נבחר
-          </button>
-          <button onClick={clearAllLayers} disabled={!layers.length}>
-            נקה הכל
-          </button>
-        </div>
-      </div>
-
-      {selectedLayer && selectedLayer.type === "text" && (
-        <div style={{ marginTop: 12 }}>
-          <input
-            value={selectedLayer.content}
-            onChange={(e) => updateText(e.target.value)}
-            style={{ padding: 8, width: 260 }}
-          />
-        </div>
       )}
 
+      {/* קנבס */}
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setSelectedId(null);
-          }
-        }}
         style={{
           position: "relative",
           width: 360,
           height: 640,
           background: "#222",
           marginTop: 20,
-          overflow: "hidden",
           border: "2px solid #444"
         }}
       >
-        {layers.map((layer) => {
-          if (layer.type === "image") {
-            return (
-              <img
-                key={layer.id}
-                src={layer.src}
-                alt=""
-                draggable={false}
-                onMouseDown={() => handleMouseDown(layer.id)}
-                style={{
-                  position: "absolute",
-                  left: layer.x,
-                  top: layer.y,
-                  width: layer.width,
-                  height: layer.height,
-                  objectFit: "cover",
-                  transform: `translate(-50%, -50%) scale(${layer.scale || 1})`,
-                  transformOrigin: "center center",
-                  border: selectedId === layer.id ? "3px solid #00ffcc" : "none",
-                  cursor: "grab",
-                  userSelect: "none",
-                  zIndex: selectedId === layer.id ? 10 : 1
-                }}
-              />
-            );
-          }
-
-          return (
-            <div
-              key={layer.id}
-              onMouseDown={() => handleMouseDown(layer.id)}
-              style={{
-                position: "absolute",
-                left: layer.x,
-                top: layer.y,
-                transform: `translate(-50%, -50%) scale(${layer.scale || 1})`,
-                transformOrigin: "center center",
-                color: "white",
-                fontSize: layer.type === "emoji" ? 40 : 24,
-                cursor: "grab",
-                userSelect: "none",
-                border: selectedId === layer.id ? "2px solid #00ffcc" : "none",
-                padding: 8,
-                whiteSpace: "pre-wrap",
-                maxWidth: layer.maxWidth || 260,
-                zIndex: selectedId === layer.id ? 10 : 2,
-                background:
-                  layer.type === "text" ? "rgba(0,0,0,0.35)" : "transparent",
-                borderRadius: 10,
-                textAlign: "center",
-                lineHeight: 1.4
-              }}
-            >
-              {layer.content}
-            </div>
-          );
-        })}
+        {layers.map((layer) => (
+          <div
+            key={layer.id}
+            onMouseDown={() => handleMouseDown(layer.id)}
+            style={{
+              position: "absolute",
+              left: layer.x,
+              top: layer.y,
+              transform: `translate(-50%, -50%) scale(${layer.scale})`,
+              color: "white",
+              maxWidth: layer.maxWidth,
+              textAlign: "center",
+              background: "rgba(0,0,0,0.4)",
+              padding: 8,
+              border:
+                selectedId === layer.id
+                  ? "2px solid #00ffcc"
+                  : "none"
+            }}
+          >
+            {layer.content}
+          </div>
+        ))}
       </div>
     </div>
   );
