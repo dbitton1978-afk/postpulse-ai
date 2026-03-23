@@ -1,13 +1,128 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function createId() {
   return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
-export default function StoryEditor() {
+function buildAiStickers(aiText) {
+  if (!aiText || !aiText.trim()) return [];
+
+  const text = aiText.toLowerCase();
+  const stickers = [];
+
+  const hasWords = (...words) => words.some((word) => text.includes(word));
+
+  if (hasWords("instagram", "viral", "engagement", "reach", "boost")) {
+    stickers.push({
+      id: createId(),
+      type: "emoji",
+      x: 70,
+      y: 90,
+      scale: 1.2,
+      content: "🚀"
+    });
+  }
+
+  if (hasWords("emotion", "emotional", "heart", "love", "authentic")) {
+    stickers.push({
+      id: createId(),
+      type: "emoji",
+      x: 290,
+      y: 110,
+      scale: 1.2,
+      content: "❤️"
+    });
+  }
+
+  if (hasWords("question", "ask", "poll", "what do you think", "מה דעתכם", "?")) {
+    stickers.push({
+      id: createId(),
+      type: "text",
+      x: 180,
+      y: 120,
+      scale: 1,
+      content: "מה דעתכם?"
+    });
+  }
+
+  if (hasWords("sale", "offer", "discount", "buy", "shop")) {
+    stickers.push({
+      id: createId(),
+      type: "text",
+      x: 180,
+      y: 520,
+      scale: 1,
+      content: "לזמן מוגבל"
+    });
+  }
+
+  if (hasWords("cta", "click", "link", "join", "follow", "dm", "message")) {
+    stickers.push({
+      id: createId(),
+      type: "text",
+      x: 180,
+      y: 585,
+      scale: 1,
+      content: "שלחו הודעה"
+    });
+  }
+
+  if (hasWords("tips", "guide", "how", "steps", "learn")) {
+    stickers.push({
+      id: createId(),
+      type: "emoji",
+      x: 55,
+      y: 560,
+      scale: 1.1,
+      content: "💡"
+    });
+  }
+
+  if (hasWords("fun", "funny", "humor", "laugh")) {
+    stickers.push({
+      id: createId(),
+      type: "emoji",
+      x: 310,
+      y: 560,
+      scale: 1.1,
+      content: "😂"
+    });
+  }
+
+  if (stickers.length === 0) {
+    stickers.push(
+      {
+        id: createId(),
+        type: "emoji",
+        x: 70,
+        y: 90,
+        scale: 1.1,
+        content: "🔥"
+      },
+      {
+        id: createId(),
+        type: "text",
+        x: 180,
+        y: 580,
+        scale: 1,
+        content: "בדקו עכשיו"
+      }
+    );
+  }
+
+  return stickers;
+}
+
+export default function StoryEditor({ aiText = "" }) {
   const [layers, setLayers] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [dragId, setDragId] = useState(null);
+
+  const aiReady = useMemo(() => aiText && aiText.trim().length > 0, [aiText]);
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [aiText]);
 
   function handleUploadImages(e) {
     const files = Array.from(e.target.files || []);
@@ -17,7 +132,7 @@ export default function StoryEditor() {
       const reader = new FileReader();
 
       reader.onload = () => {
-        const id = createId() + "-" + index;
+        const id = `${createId()}-${index}`;
 
         setLayers((prev) => [
           ...prev,
@@ -78,10 +193,23 @@ export default function StoryEditor() {
     setSelectedId(id);
   }
 
+  function addAiStickers() {
+    const newStickers = buildAiStickers(aiText);
+    if (!newStickers.length) return;
+
+    setLayers((prev) => [...prev, ...newStickers]);
+    setSelectedId(newStickers[newStickers.length - 1].id);
+  }
+
   function deleteSelectedLayer() {
     if (!selectedId) return;
 
     setLayers((prev) => prev.filter((layer) => layer.id !== selectedId));
+    setSelectedId(null);
+  }
+
+  function clearAllLayers() {
+    setLayers([]);
     setSelectedId(null);
   }
 
@@ -155,7 +283,7 @@ export default function StoryEditor() {
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor (Multi Image)</h2>
+      <h2>Story Editor (AI Stickers)</h2>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         <input
@@ -179,6 +307,9 @@ export default function StoryEditor() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={addText}>הוסף טקסט</button>
           <button onClick={addEmoji}>הוסף אימוג׳י</button>
+          <button onClick={addAiStickers} disabled={!aiReady}>
+            AI הוסף סטיקרים
+          </button>
           <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
             הגדל +
           </button>
@@ -191,6 +322,15 @@ export default function StoryEditor() {
           <button onClick={deleteSelectedLayer} disabled={!selectedId}>
             מחק נבחר
           </button>
+          <button onClick={clearAllLayers} disabled={!layers.length}>
+            נקה הכל
+          </button>
+        </div>
+
+        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
+          {aiReady
+            ? "יש טקסט AI מוכן להוספת סטיקרים"
+            : "עדיין אין תוכן AI זמין לסטיקרים"}
         </div>
       </div>
 
@@ -267,7 +407,10 @@ export default function StoryEditor() {
                 border: selectedId === layer.id ? "2px solid #00ffcc" : "none",
                 padding: 4,
                 whiteSpace: "nowrap",
-                zIndex: selectedId === layer.id ? 10 : 2
+                zIndex: selectedId === layer.id ? 10 : 2,
+                background:
+                  layer.type === "text" ? "rgba(0,0,0,0.25)" : "transparent",
+                borderRadius: 8
               }}
             >
               {layer.content}
