@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 function createId() {
-  return Date.now().toString();
+  return `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
 export default function StoryEditor() {
@@ -55,7 +55,7 @@ export default function StoryEditor() {
 
   function deleteLayer() {
     if (!selectedId) return;
-    setLayers((prev) => prev.filter((l) => l.id !== selectedId));
+    setLayers((prev) => prev.filter((layer) => layer.id !== selectedId));
     setSelectedId(null);
   }
 
@@ -71,32 +71,17 @@ export default function StoryEditor() {
   function handleMouseMove(e) {
     if (!dragId) return;
 
+    const container = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - container.left;
+    const y = e.clientY - container.top;
+
     setLayers((prev) =>
       prev.map((layer) =>
         layer.id === dragId
           ? {
               ...layer,
-              x: e.nativeEvent.offsetX,
-              y: e.nativeEvent.offsetY
-            }
-          : layer
-      )
-    );
-  }
-
-  function handleWheel(e) {
-    if (!selectedId) return;
-
-    e.preventDefault();
-
-    const delta = e.deltaY * -0.001;
-
-    setLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === selectedId
-          ? {
-              ...layer,
-              scale: Math.min(Math.max(0.5, layer.scale + delta), 3)
+              x,
+              y
             }
           : layer
       )
@@ -108,14 +93,27 @@ export default function StoryEditor() {
 
     setLayers((prev) =>
       prev.map((layer) =>
+        layer.id === selectedId ? { ...layer, content: value } : layer
+      )
+    );
+  }
+
+  function scaleSelected(delta) {
+    if (!selectedId) return;
+
+    setLayers((prev) =>
+      prev.map((layer) =>
         layer.id === selectedId
-          ? { ...layer, content: value }
+          ? {
+              ...layer,
+              scale: Math.min(3, Math.max(0.5, (layer.scale || 1) + delta))
+            }
           : layer
       )
     );
   }
 
-  const selectedLayer = layers.find((l) => l.id === selectedId);
+  const selectedLayer = layers.find((layer) => layer.id === selectedId);
 
   return (
     <div style={{ marginTop: 30 }}>
@@ -123,9 +121,15 @@ export default function StoryEditor() {
 
       <input type="file" accept="image/*" onChange={handleUpload} />
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={addText}>הוסף טקסט</button>
         <button onClick={addEmoji}>הוסף אימוג׳י</button>
+        <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
+          הגדל +
+        </button>
+        <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
+          הקטן -
+        </button>
         <button onClick={deleteLayer} disabled={!selectedId}>
           מחק אלמנט
         </button>
@@ -136,7 +140,7 @@ export default function StoryEditor() {
           <input
             value={selectedLayer.content}
             onChange={(e) => updateText(e.target.value)}
-            style={{ padding: 8, width: 200 }}
+            style={{ padding: 8, width: 220 }}
           />
         </div>
       )}
@@ -144,7 +148,7 @@ export default function StoryEditor() {
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
+        onMouseLeave={handleMouseUp}
         style={{
           position: "relative",
           width: 360,
@@ -159,10 +163,12 @@ export default function StoryEditor() {
           <img
             src={background}
             alt=""
+            draggable={false}
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "cover"
+              objectFit: "cover",
+              pointerEvents: "none"
             }}
           />
         )}
@@ -175,16 +181,15 @@ export default function StoryEditor() {
               position: "absolute",
               left: layer.x,
               top: layer.y,
-              transform: `scale(${layer.scale})`,
+              transform: `translate(-50%, -50%) scale(${layer.scale || 1})`,
+              transformOrigin: "center center",
               color: "white",
               fontSize: layer.type === "emoji" ? 40 : 24,
               cursor: "grab",
               userSelect: "none",
-              border:
-                selectedId === layer.id
-                  ? "2px solid #00ffcc"
-                  : "none",
-              padding: 4
+              border: selectedId === layer.id ? "2px solid #00ffcc" : "none",
+              padding: 4,
+              whiteSpace: "nowrap"
             }}
           >
             {layer.content}
