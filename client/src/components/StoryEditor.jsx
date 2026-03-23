@@ -4,78 +4,6 @@ function createId() {
   return `${Date.now()}-${Math.random()}`;
 }
 
-// 🔥 AI BUILDER
-function buildAIStory(text) {
-  if (!text) return [[]];
-
-  const sentences = text.split(/[.!?\n]/).filter(Boolean);
-
-  const hook = sentences[0] || text.slice(0, 60);
-  const value = sentences.slice(1, 3).join(" ") || text;
-  const cta =
-    sentences.slice(3).join(" ") ||
-    "שלחו הודעה עכשיו / הקליקו לפרטים";
-
-  return [
-    [
-      {
-        id: createId(),
-        type: "text",
-        x: 180,
-        y: 260,
-        scale: 1.4,
-        content: hook
-      },
-      {
-        id: createId(),
-        type: "emoji",
-        x: 180,
-        y: 420,
-        scale: 1.2,
-        content: "🔥"
-      }
-    ],
-
-    [
-      {
-        id: createId(),
-        type: "text",
-        x: 180,
-        y: 320,
-        scale: 1,
-        content: value
-      },
-      {
-        id: createId(),
-        type: "emoji",
-        x: 60,
-        y: 560,
-        scale: 1.2,
-        content: "💡"
-      }
-    ],
-
-    [
-      {
-        id: createId(),
-        type: "text",
-        x: 180,
-        y: 300,
-        scale: 1.2,
-        content: cta
-      },
-      {
-        id: createId(),
-        type: "emoji",
-        x: 300,
-        y: 500,
-        scale: 1.3,
-        content: "👉"
-      }
-    ]
-  ];
-}
-
 export default function StoryEditor({
   incomingText = "",
   incomingTextToken = 0
@@ -87,7 +15,29 @@ export default function StoryEditor({
   const [dragId, setDragId] = useState(null);
 
   useEffect(() => {
-    if (!incomingTextToken) return;
+    if (!incomingText || !incomingTextToken) return;
+
+    const id = createId();
+
+    setSlides([
+      [
+        {
+          id,
+          type: "text",
+          x: 180,
+          y: 320,
+          scale: 1.2,
+          content: incomingText,
+          color: "#ffffff",
+          bgColor: "rgba(0,0,0,0.4)",
+          align: "center",
+          fontFamily: "Arial"
+        }
+      ]
+    ]);
+
+    setCurrentSlide(0);
+    setSelectedId(id);
   }, [incomingText, incomingTextToken]);
 
   const layers = slides[currentSlide] || [];
@@ -98,14 +48,6 @@ export default function StoryEditor({
         i === currentSlide ? newLayers : slide
       )
     );
-  }
-
-  // 🔥 AI BUTTON
-  function generateAIStory() {
-    const aiSlides = buildAIStory(incomingText);
-    setSlides(aiSlides);
-    setCurrentSlide(0);
-    setSelectedId(null);
   }
 
   function handleMouseDown(id) {
@@ -135,72 +77,69 @@ export default function StoryEditor({
     setDragId(null);
   }
 
-  function scaleSelected(delta) {
-    if (!selectedId) return;
-
+  function updateSelected(prop, value) {
     updateLayers(
       layers.map((l) =>
-        l.id === selectedId
-          ? { ...l, scale: Math.max(0.5, Math.min(3, l.scale + delta)) }
-          : l
+        l.id === selectedId ? { ...l, [prop]: value } : l
       )
     );
   }
 
-  function deleteSelected() {
-    updateLayers(layers.filter((l) => l.id !== selectedId));
-    setSelectedId(null);
-  }
-
-  function updateText(val) {
-    updateLayers(
-      layers.map((l) =>
-        l.id === selectedId ? { ...l, content: val } : l
-      )
-    );
-  }
+  const selected = layers.find((l) => l.id === selectedId);
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>AI Story Builder 🚀</h2>
+      <h2>Story Text Design 🎨</h2>
 
-      {/* 🔥 AI BUTTON */}
-      <button onClick={generateAIStory}>
-        צור סטורי אוטומטי
-      </button>
+      {/* 🎛️ CONTROLS */}
+      {selected && selected.type === "text" && (
+        <div style={{ marginBottom: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
+          
+          {/* צבע טקסט */}
+          <input
+            type="color"
+            value={selected.color}
+            onChange={(e) => updateSelected("color", e.target.value)}
+          />
 
-      {/* SLIDES */}
-      <div style={{ marginTop: 10 }}>
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentSlide(i)}
-            style={{
-              marginRight: 5,
-              background: i === currentSlide ? "#00ffcc" : "#333"
-            }}
+          {/* צבע רקע */}
+          <input
+            type="color"
+            onChange={(e) =>
+              updateSelected("bgColor", e.target.value + "88")
+            }
+          />
+
+          {/* יישור */}
+          <select
+            value={selected.align}
+            onChange={(e) => updateSelected("align", e.target.value)}
           >
-            {i + 1}
-          </button>
-        ))}
-      </div>
+            <option value="left">שמאל</option>
+            <option value="center">מרכז</option>
+            <option value="right">ימין</option>
+          </select>
 
-      {/* CONTROLS */}
-      <div style={{ marginTop: 10 }}>
-        <button onClick={() => scaleSelected(0.1)}>+</button>
-        <button onClick={() => scaleSelected(-0.1)}>-</button>
-        <button onClick={deleteSelected}>מחק</button>
-      </div>
+          {/* פונטים */}
+          <select
+            value={selected.fontFamily}
+            onChange={(e) =>
+              updateSelected("fontFamily", e.target.value)
+            }
+          >
+            <option value="Arial">Arial</option>
+            <option value="Impact">Impact</option>
+            <option value="Tahoma">Tahoma</option>
+            <option value="Courier New">Courier</option>
+          </select>
 
-      {/* EDIT */}
-      {layers.find((l) => l.id === selectedId) && (
-        <input
-          value={layers.find((l) => l.id === selectedId).content}
-          onChange={(e) => updateText(e.target.value)}
-        />
+          {/* גודל */}
+          <button onClick={() => updateSelected("scale", selected.scale + 0.1)}>+</button>
+          <button onClick={() => updateSelected("scale", selected.scale - 0.1)}>-</button>
+        </div>
       )}
 
-      {/* CANVAS */}
+      {/* 🎬 CANVAS */}
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -208,8 +147,7 @@ export default function StoryEditor({
           width: 360,
           height: 640,
           background: "#111",
-          position: "relative",
-          marginTop: 20
+          position: "relative"
         }}
       >
         {layers.map((l) => (
@@ -221,12 +159,18 @@ export default function StoryEditor({
               left: l.x,
               top: l.y,
               transform: `translate(-50%, -50%) scale(${l.scale})`,
-              color: "white",
-              textAlign: "center",
-              background: "rgba(0,0,0,0.4)",
-              padding: 8,
+              color: l.color,
+              background: l.bgColor,
+              padding: "10px 16px",
+              borderRadius: 12,
+              textAlign: l.align,
+              fontFamily: l.fontFamily,
+              maxWidth: 260,
+              cursor: "grab",
               border:
-                selectedId === l.id ? "2px solid #00ffcc" : "none"
+                selectedId === l.id
+                  ? "2px solid #00ffcc"
+                  : "none"
             }}
           >
             {l.content}
