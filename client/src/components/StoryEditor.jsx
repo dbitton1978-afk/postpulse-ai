@@ -6,6 +6,10 @@ function createId() {
 
 export default function StoryEditor() {
   const [background, setBackground] = useState(null);
+  const [bgScale, setBgScale] = useState(1);
+  const [bgX, setBgX] = useState(0);
+  const [bgY, setBgY] = useState(0);
+
   const [layers, setLayers] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [dragId, setDragId] = useState(null);
@@ -17,6 +21,9 @@ export default function StoryEditor() {
     const reader = new FileReader();
     reader.onload = () => {
       setBackground(reader.result);
+      setBgScale(1);
+      setBgX(0);
+      setBgY(0);
     };
     reader.readAsDataURL(file);
   }
@@ -113,6 +120,15 @@ export default function StoryEditor() {
     );
   }
 
+  function scaleBackground(delta) {
+    setBgScale((prev) => Math.min(3, Math.max(0.5, prev + delta)));
+  }
+
+  function moveBackground(dx, dy) {
+    setBgX((prev) => prev + dx);
+    setBgY((prev) => prev + dy);
+  }
+
   const selectedLayer = layers.find((layer) => layer.id === selectedId);
 
   return (
@@ -125,13 +141,34 @@ export default function StoryEditor() {
         <button onClick={addText}>הוסף טקסט</button>
         <button onClick={addEmoji}>הוסף אימוג׳י</button>
         <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
-          הגדל +
+          הגדל אלמנט +
         </button>
         <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
-          הקטן -
+          הקטן אלמנט -
         </button>
         <button onClick={deleteLayer} disabled={!selectedId}>
           מחק אלמנט
+        </button>
+      </div>
+
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={() => scaleBackground(0.1)} disabled={!background}>
+          הגדל תמונה +
+        </button>
+        <button onClick={() => scaleBackground(-0.1)} disabled={!background}>
+          הקטן תמונה -
+        </button>
+        <button onClick={() => moveBackground(-20, 0)} disabled={!background}>
+          ←
+        </button>
+        <button onClick={() => moveBackground(20, 0)} disabled={!background}>
+          →
+        </button>
+        <button onClick={() => moveBackground(0, -20)} disabled={!background}>
+          ↑
+        </button>
+        <button onClick={() => moveBackground(0, 20)} disabled={!background}>
+          ↓
         </button>
       </div>
 
@@ -165,9 +202,14 @@ export default function StoryEditor() {
             alt=""
             draggable={false}
             style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              transform: `translate(calc(-50% + ${bgX}px), calc(-50% + ${bgY}px)) scale(${bgScale})`,
+              transformOrigin: "center center",
               pointerEvents: "none"
             }}
           />
