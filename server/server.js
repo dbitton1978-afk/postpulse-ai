@@ -284,7 +284,48 @@ Rules:
     });
   }
 });
+app.post("/improve", async (req, res) => {
+  try {
+    const { post, language, style } = req.body;
 
+    const prompt = `
+Improve this social media post.
+
+Language: ${language || "he"}
+Style: ${style || "mentor"}
+
+Original post:
+${post}
+
+Return JSON in this exact structure:
+{
+  "strengths": ["", ""],
+  "weaknesses": ["", ""],
+  "improvedPost": ""
+}
+`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      response_format: { type: "json_object" },
+      messages: [{ role: "user", content: prompt }]
+    });
+
+    const content = response.choices[0].message.content;
+    const parsed = JSON.parse(content);
+
+    res.json({
+      success: true,
+      data: parsed
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Error improving post"
+    });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
