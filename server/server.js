@@ -23,42 +23,143 @@ const openai = new OpenAI({
 
 const STYLE_MAP = {
   kabbalist: {
-    he: "קבליסטי, עמוק, סודי, חכם, רוחני, מסתורי, עם שכבות משמעות ותודעה",
+    he: "קבליסטי, עמוק, מסתורי, חכם, רוחני, סמלי, עם שכבות משמעות ותודעה",
     en: "kabbalistic, deep, mystical, wise, spiritual, symbolic, layered and consciousness-oriented"
   },
   mentor: {
-    he: "מנטורי, חד, בטוח, מעצים, מוביל, מלא בהבנה אנושית, עומק פנימי ובהירות",
-    en: "mentor-like, sharp, confident, empowering, insightful, human and deeply clear"
+    he: "מנטורי, חד, בטוח, מעצים, מוביל, אנושי ובהיר",
+    en: "mentor-like, sharp, confident, empowering, insightful, human and clear"
   },
   humorous: {
-    he: "הומוריסטי, שנון, חכם, קליל אבל לא שטחי, עם עומק מתחת לחיוך",
-    en: "humorous, witty, clever, light but not shallow, with depth beneath the humor"
+    he: "הומוריסטי, שנון, קליל אבל חכם, עם עקיצה טובה ועומק",
+    en: "humorous, witty, clever, light but smart, with punch and depth"
   },
   spiritual: {
     he: "רוחני, עמוק, רגשי, מחבר, רך אך מדויק, מעורר השראה ומודעות",
     en: "spiritual, deep, emotional, connective, soft yet precise, inspiring and aware"
   },
   emotional: {
-    he: "רגשי, עמוק מאוד, פגיע, אנושי, חודר ללב, מרגש עד דמעות כשמתאים, עם אמת רגשית חזקה וחוכמה עדינה",
-    en: "emotional, deeply human, vulnerable, heart-piercing, emotionally powerful, moving to tears when appropriate, with strong emotional truth and gentle wisdom"
+    he: "רגשי, אנושי, פגיע, חודר ללב, כן, עמוק ומלא אמת רגשית",
+    en: "emotional, deeply human, vulnerable, heart-piercing, honest and emotionally true"
   },
   professional: {
-    he: "מקצועי, חכם, חד, סמכותי, נקי, מדויק, עמוק ולא גנרי",
-    en: "professional, intelligent, sharp, authoritative, polished, precise and non-generic"
+    he: "מקצועי, חד, אמין, סמכותי, נקי, מדויק ולא גנרי",
+    en: "professional, sharp, credible, authoritative, polished, precise and non-generic"
   }
 };
 
-function getLanguageLabel(language) {
-  return language === "he" ? "Hebrew" : "English";
-}
+const PLATFORM_MAP = {
+  instagram: {
+    he: `
+פלטפורמה: Instagram
+כתוב כמו פוסט אינסטגרם איכותי:
+- Hook חזק מאוד בשורה ראשונה
+- קצב קריא, זורם, נעים לעין
+- רגשי, אישי, אנושי, זכיר
+- CTA טבעי לשמירה / תגובה / שיתוף
+- 6-10 hashtags רלוונטיים
+- מתאים לקריאה במובייל
+- לא ארוך מדי, לא קצר מדי
+`,
+    en: `
+Platform: Instagram
+Write like a strong Instagram post:
+- very strong first-line hook
+- readable, flowing, mobile-friendly rhythm
+- emotional, personal, human, memorable
+- natural CTA for save / comment / share
+- 6-10 relevant hashtags
+- not too long, not too short
+`
+  },
+  facebook: {
+    he: `
+פלטפורמה: Facebook
+כתוב כמו פוסט פייסבוק חזק:
+- יותר אישי ושיחתי
+- אפשר קצת יותר אורך וסיפור
+- נבנה לחיבור, תגובות ודיון
+- CTA טבעי לתגובה / שיתוף / דעה
+- hashtags רק אם באמת מוסיפים ערך
+- להישמע אנושי ולא "משווק"
+`,
+    en: `
+Platform: Facebook
+Write like a strong Facebook post:
+- more personal and conversational
+- can be slightly longer and more story-driven
+- built for connection, comments and discussion
+- natural CTA for opinion / comment / share
+- hashtags only if they truly add value
+- must sound human, not markety
+`
+  },
+  linkedin: {
+    he: `
+פלטפורמה: LinkedIn
+כתוב כמו פוסט לינקדאין חזק:
+- מקצועי, חד, אמין, חכם
+- תובנה ברורה או לקח מעשי
+- בנוי לאמון, סמכות וערך
+- פחות האשטגים, מקסימום 3-5
+- CTA אינטליגנטי ולא אגרסיבי
+- לא סלנג מיותר
+- לא להישמע כמו קלישאה עסקית
+`,
+    en: `
+Platform: LinkedIn
+Write like a strong LinkedIn post:
+- professional, sharp, credible and thoughtful
+- clear insight or practical takeaway
+- built for trust, authority and value
+- fewer hashtags, max 3-5
+- intelligent CTA, not aggressive
+- no unnecessary slang
+- avoid business clichés
+`
+  },
+  tiktok: {
+    he: `
+פלטפורמה: TikTok
+כתוב כמו טקסט לטיקטוק / caption חד:
+- קצר יותר
+- ישיר, מהיר, מסקרן
+- Hook אגרסיבי יחסית
+- משפטים קצרים עם קצב
+- CTA קליל ומהיר
+- hashtags רלוונטיים אך לא כבדים
+- חייב למשוך בשניות הראשונות
+`,
+    en: `
+Platform: TikTok
+Write like a strong TikTok caption:
+- shorter
+- direct, fast, curiosity-driven
+- relatively aggressive hook
+- short punchy sentences
+- light and quick CTA
+- relevant but not heavy hashtags
+- must grab attention instantly
+`
+  }
+};
 
 function normalizeLanguage(language) {
   return language === "he" ? "he" : "en";
 }
 
+function getLanguageLabel(language) {
+  return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
+}
+
 function getStyleText(style, language) {
   const safeLanguage = normalizeLanguage(language);
   return STYLE_MAP[style]?.[safeLanguage] || STYLE_MAP.professional[safeLanguage];
+}
+
+function getPlatformText(platform, language) {
+  const safeLanguage = normalizeLanguage(language);
+  return PLATFORM_MAP[platform]?.[safeLanguage] || PLATFORM_MAP.instagram[safeLanguage];
 }
 
 function safeJsonParse(text) {
@@ -87,15 +188,32 @@ function cleanString(value, fallback = "") {
   return value.trim();
 }
 
-function normalizeGenerateResponse(data) {
+function normalizeGenerateResponse(data, platform) {
+  const safePlatform = String(platform || "instagram").toLowerCase();
+  const hashtags = cleanArray(data?.hashtags).map((tag) =>
+    tag.startsWith("#") ? tag : `#${tag}`
+  );
+
+  let finalHashtags = hashtags;
+
+  if (safePlatform === "linkedin") {
+    finalHashtags = hashtags.slice(0, 5);
+  }
+
+  if (safePlatform === "facebook") {
+    finalHashtags = hashtags.slice(0, 4);
+  }
+
+  if (safePlatform === "tiktok") {
+    finalHashtags = hashtags.slice(0, 6);
+  }
+
   return {
     title: cleanString(data?.title),
     hook: cleanString(data?.hook),
     body: cleanString(data?.body),
     cta: cleanString(data?.cta),
-    hashtags: cleanArray(data?.hashtags).map((tag) =>
-      tag.startsWith("#") ? tag : `#${tag}`
-    ),
+    hashtags: finalHashtags,
     shortVersion: cleanString(data?.shortVersion),
     alternativeVersion: cleanString(data?.alternativeVersion)
   };
@@ -184,42 +302,25 @@ app.post("/api/generate-post", async (req, res) => {
 
     const safeLanguage = normalizeLanguage(language);
     const styleText = getStyleText(style, safeLanguage);
+    const platformText = getPlatformText(platform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media writer with exceptional emotional intelligence, psychological insight, human sensitivity, and stylistic maturity.
+You are an elite social media writer with exceptional emotional intelligence, platform awareness, psychological insight, and strong editorial taste.
 
 Write like a real human, not like AI.
-Avoid robotic phrasing, generic patterns, and predictable structures.
-Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-The text must feel:
+Core rules:
 - natural and conversational
 - emotionally real
-- imperfect in a human way
-- varied in rhythm and sentence length
-- written by a person with real thoughts and feelings
+- sharp but human
+- avoid robotic structure
+- avoid filler
+- avoid cliché inspiration language
+- avoid fake hype
+- avoid generic marketing language
+- every output must feel specific, alive, and platform-native
 
-Avoid:
-- perfect marketing tone
-- over-structured lists unless necessary
-- repetitive sentence patterns
-- generic inspiration phrases
-- shallow motivational language
-- cliché social media wording
-- filler
-- fake hype
-- empty motivation
-- obvious AI-sounding transitions
-
-Prefer:
-- natural flow
-- subtle emotion
-- authentic voice
-- layered meaning
-- sharp but human phrasing
-- slightly informal tone when appropriate
-
-If the text sounds like AI, rewrite it until it feels human.
+If the writing sounds generic, rewrite it until it feels human and memorable.
 
 Always return valid JSON only.
 
@@ -236,7 +337,7 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Write a strong ${platform} social media post.
+Write a strong social media post.
 
 IMPORTANT:
 - You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
@@ -244,37 +345,28 @@ IMPORTANT:
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
 
+${platformText}
+
 Topic: ${topic}
 Target audience: ${targetAudience}
 Goal: ${goal}
 Style: ${styleText}
 
-Depth requirements:
-- Write with emotional depth and psychological intelligence
-- Avoid clichés, generic advice, and shallow wording
-- Make the result feel human, sharp, layered, and emotionally aware
-- Prefer insight, tension, contrast, and truth over empty inspiration
-- Make the writing feel memorable, natural, and deeply felt
-- Write with maximum emotional intelligence and human depth
-- Avoid generic marketing language completely
-- The hook must feel real, intelligent, and emotionally charged
-- The body must have texture, movement, and actual substance
-- The CTA must feel natural, persuasive, and psychologically accurate, not forced
+Writing requirements:
+- write with emotional intelligence
+- make the hook strong and native to the platform
+- make the body feel human, specific, and readable
+- make the CTA natural for that platform
+- adapt length, rhythm, structure, and tone to the selected platform
+- avoid repeating obvious ideas
+- avoid sounding like a template
 
-If the selected style is emotional:
-- push the emotional depth significantly further
-- write in a way that can touch the heart deeply
-- allow vulnerability, longing, pain, tenderness, love, grief, hope, healing, or inner truth when relevant
-- make the writing feel intimate and unforgettable
-- it may bring the reader close to tears, but it must remain beautiful, human, and true
-- do not become melodramatic or fake
+If style is emotional:
+- increase emotional honesty
+- allow vulnerability and tenderness when relevant
+- keep it elegant and believable
 
-Rules:
-- Strong hook
-- Natural and authentic writing
-- Clear CTA
-- 6-10 relevant hashtags
-- Return JSON only
+Return JSON only.
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
@@ -287,7 +379,7 @@ Rules:
       });
     }
 
-    const normalized = normalizeGenerateResponse(parsed);
+    const normalized = normalizeGenerateResponse(parsed, platform);
 
     return res.json({
       success: true,
@@ -316,7 +408,8 @@ app.post("/api/improve-post", async (req, res) => {
       post = "",
       language = "en",
       style = "professional",
-      goal = "make it stronger"
+      goal = "make it stronger",
+      platform = "instagram"
     } = req.body || {};
 
     if (!String(post).trim()) {
@@ -328,40 +421,22 @@ app.post("/api/improve-post", async (req, res) => {
 
     const safeLanguage = normalizeLanguage(language);
     const styleText = getStyleText(style, safeLanguage);
+    const platformText = getPlatformText(platform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media strategist, editor, and emotional writing expert.
+You are an elite social media strategist and editor.
+
+You understand how strong writing changes by platform.
 
 Write like a real human, not like AI.
-Avoid robotic phrasing, generic patterns, and predictable structures.
-Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-The text must feel:
-- natural and conversational
-- emotionally real
-- imperfect in a human way
-- varied in rhythm and sentence length
-- written by a person with real thoughts and feelings
-
-Avoid:
-- perfect marketing tone
-- over-structured lists unless necessary
-- repetitive sentence patterns
-- generic inspiration phrases
-- shallow motivational language
-- cliché social media wording
-- empty templates
-- obvious self-help formulas
-
-Prefer:
-- natural flow
-- subtle emotion
-- authentic voice
-- layered meaning
-- sharp but human phrasing
-- slightly informal tone when appropriate
-
-If the text sounds like AI, rewrite it until it feels human.
+Core rules:
+- no robotic phrasing
+- no generic tips
+- no empty marketing talk
+- no cliché inspiration lines
+- feedback must be precise, useful, and platform-aware
+- rewritten outputs must feel stronger, sharper, and more human
 
 Always return valid JSON only.
 
@@ -377,7 +452,7 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Analyze and improve this social media post.
+Analyze and improve this post.
 
 IMPORTANT:
 - You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
@@ -385,42 +460,24 @@ IMPORTANT:
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
 
+${platformText}
+
 Original post:
 ${post}
 
 Desired style: ${styleText}
 Improvement goal: ${goal}
 
-Depth requirements:
-- Write with emotional depth and psychological intelligence
-- Avoid clichés, generic advice, and shallow wording
-- Make the result feel human, sharp, layered, and emotionally aware
-- Prefer insight, tension, contrast, and truth over empty inspiration
-- Make the writing feel memorable, natural, and deeply felt
-- Go beyond surface-level feedback
-- Identify emotional weakness, lack of tension, lack of originality, weak phrasing, shallow rhythm, vague wording, or psychological inaccuracy
-- Explain what makes the post feel flat, predictable, overused, or emotionally weak
-- Improve the post so it feels deeper, sharper, wiser, more human, and more memorable
-- The improved versions should sound like a strong human writer, not a template
-- Add insight, texture, contrast, emotional truth, and stronger rhythm when relevant
-- Make the advice intelligent and useful, not generic
+Instructions:
+- judge the text according to the selected platform
+- explain what works and what weakens performance on that platform
+- improve rhythm, clarity, emotional pull, hook strength, and CTA fit
+- make the rewritten output feel platform-native
+- make the more viral version stronger without becoming fake
+- make the more authentic version feel more human and real
+- tips must be practical and not generic
 
-If the selected style is emotional:
-- intensify the emotional truth dramatically
-- make the writing more touching, intimate, and heart-opening
-- allow pain, longing, love, fear, healing, tenderness, grief, hope, or vulnerability when relevant
-- make the result capable of moving the reader deeply, even to tears when appropriate
-- keep it elegant, human, and believable
-- avoid melodrama, exaggeration, and emotional manipulation
-
-Rules:
-- Explain key strengths
-- Explain key weaknesses
-- Create a stronger rewritten version
-- Create a more viral version
-- Create a more authentic version
-- Give practical tips
-- Return JSON only
+Return JSON only.
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
@@ -468,39 +525,19 @@ app.post("/api/analyze-post", async (req, res) => {
     }
 
     const safeLanguage = normalizeLanguage(language);
+    const platformText = getPlatformText(platform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media analyst with deep emotional intelligence, editorial sensitivity, psychological understanding, and strategic communication skill.
+You are an elite social media analyst with deep platform awareness, emotional intelligence, editorial judgment, and strategic communication skill.
 
 Write like a real human, not like AI.
-Avoid robotic phrasing, generic patterns, and predictable structures.
-Avoid generic social media writing. Every output must feel original, deep, emotionally intelligent, and non-repetitive.
 
-The text must feel:
-- natural and conversational
-- emotionally real
-- imperfect in a human way
-- varied in rhythm and sentence length
-- written by a person with real thoughts and feelings
-
-Avoid:
-- perfect marketing tone
-- over-structured lists unless necessary
-- repetitive sentence patterns
-- generic inspiration phrases
-- shallow motivational language
-- cliché social media wording
-- obvious AI-style summaries
-
-Prefer:
-- natural flow
-- subtle emotion
-- authentic voice
-- layered meaning
-- sharp but human phrasing
-- slightly informal tone when appropriate
-
-If the text sounds like AI, rewrite it until it feels human.
+Core rules:
+- no robotic summaries
+- no generic advice
+- no cliché analysis language
+- be specific, sharp, and useful
+- analyze the text according to the selected platform
 
 Always return valid JSON only.
 
@@ -521,7 +558,7 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Analyze this ${platform} social media post.
+Analyze this post.
 
 IMPORTANT:
 - You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
@@ -529,36 +566,21 @@ IMPORTANT:
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
 
+${platformText}
+
 Post:
 ${post}
 
-Depth requirements:
-- Write with emotional depth and psychological intelligence
-- Avoid clichés, generic advice, and shallow wording
-- Make the result feel human, sharp, layered, and emotionally aware
-- Prefer insight, tension, contrast, and truth over empty inspiration
-- Make the writing feel memorable, natural, and deeply felt
-- Give deep, specific feedback, not generic advice
-- Identify where the text lacks emotional weight, originality, tension, clarity, rhythm, courage, specificity, or authenticity
-- Explain what feels flat, predictable, weak, overused, too safe, too vague, emotionally thin, or shallow
-- Explain what gives the post strength on a deeper human level, not only on a technical level
-- The improved version must be more powerful, layered, emotionally intelligent, human, and memorable
-- Make the summary insightful, sharp, and psychologically aware
+Instructions:
+- evaluate the post according to the selected platform
+- all scores must be 0-100
+- judge hook quality, clarity, emotional pull, authenticity, viral potential, and CTA fit
+- explain what works specifically for that platform
+- explain what hurts performance specifically for that platform
+- improved version must be more native to that platform
+- keep the summary insightful and concise
 
-If the post would benefit from a more emotional rewrite:
-- allow the improved version to become significantly more emotional
-- make it capable of touching the reader very deeply
-- allow tenderness, sorrow, hope, pain, love, vulnerability, or healing when relevant
-- it may approach tears emotionally, but it must stay elegant, truthful, and human
-- avoid melodrama and emotional manipulation
-
-Rules:
-- All scores must be 0-100
-- Be realistic
-- Evaluate viral potential, authenticity, clarity, emotional pull, hook quality, CTA quality
-- Give concise but meaningful practical feedback
-- Give an improved version
-- Return JSON only
+Return JSON only.
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
