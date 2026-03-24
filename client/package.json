@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/ensure-rollup-native.cjs",
     "build": "vite build",
     "preview": "vite preview"
   },
