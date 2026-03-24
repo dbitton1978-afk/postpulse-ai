@@ -328,3 +328,9 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
