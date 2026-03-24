@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import html2canvas from "html2canvas";
 
 function createId() {
   return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -6,23 +7,11 @@ function createId() {
 
 const EMOJIS = ["🔥","❤️","😂","😍","🚀","💡","🎯","✨","👑","⚡"];
 
-const DEFAULT_TEXT = {
-  content: "טקסט חדש",
-  x: 180,
-  y: 100,
-  scale: 1,
-  color: "#ffffff",
-  bgColor: "#000000",
-  bgOpacity: 0.4,
-  align: "center",
-  font: "Arial",
-  styleType: "box",
-  shadow: true,
-  stroke: false
-};
-
-export default function StoryEditor({ incomingText, incomingTextToken }) {
-  const [images, setImages] = useState([]);
+export default function StoryEditor({
+  incomingText,
+  incomingTextToken,
+  onExportReady
+}) {
   const [texts, setTexts] = useState([]);
   const [emojis, setEmojis] = useState([]);
 
@@ -30,7 +19,9 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
   const [selectedType, setSelectedType] = useState(null);
   const [dragItem, setDragItem] = useState(null);
 
-  // 🔥 הכנסת טקסט מהאפליקציה
+  const canvasRef = useRef();
+
+  // הכנסת טקסט מהאפליקציה
   useEffect(() => {
     if (!incomingText) return;
 
@@ -40,15 +31,35 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
       ...prev,
       {
         id,
-        ...DEFAULT_TEXT,
         content: incomingText,
-        y: 320
+        x: 180,
+        y: 320,
+        scale: 1
       }
     ]);
 
     setSelectedId(id);
     setSelectedType("text");
   }, [incomingTextToken]);
+
+  // export function
+  async function exportImage() {
+    if (!canvasRef.current) return null;
+
+    const canvas = await html2canvas(canvasRef.current, {
+      backgroundColor: null,
+      scale: 2
+    });
+
+    return canvas.toDataURL("image/png");
+  }
+
+  // שולח ל-App
+  useEffect(() => {
+    if (onExportReady) {
+      onExportReady(exportImage);
+    }
+  }, []);
 
   // ===== אימוג׳י =====
   function addEmoji(emoji) {
@@ -100,7 +111,6 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
     }
   }
 
-  // ===== scale =====
   function scaleSelected(delta) {
     if (!selectedId) return;
 
@@ -122,7 +132,6 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
     }
   }
 
-  // ===== מחיקה =====
   function removeSelected() {
     if (!selectedId) return;
 
@@ -141,8 +150,8 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
     <div style={{ marginTop: 20 }}>
       <h3>Story Editor</h3>
 
-      {/* כפתורים */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {/* אימוג׳ים */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {EMOJIS.map((e) => (
           <button key={e} onClick={() => addEmoji(e)}>
             {e}
@@ -156,6 +165,7 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
 
       {/* קנבס */}
       <div
+        ref={canvasRef}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -168,7 +178,6 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
           borderRadius: 20
         }}
       >
-        {/* טקסט */}
         {texts.map((t) => (
           <div
             key={t.id}
@@ -178,7 +187,7 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
               left: t.x,
               top: t.y,
               transform: `translate(-50%,-50%) scale(${t.scale})`,
-              color: t.color,
+              color: "#fff",
               background: "rgba(0,0,0,0.4)",
               padding: 10,
               borderRadius: 10,
@@ -189,7 +198,6 @@ export default function StoryEditor({ incomingText, incomingTextToken }) {
           </div>
         ))}
 
-        {/* אימוג׳ים */}
         {emojis.map((e) => (
           <div
             key={e.id}
