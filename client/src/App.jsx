@@ -592,6 +592,55 @@ export default function App() {
                 >
                   {t.copyFullPost}
                 </button>
+                <div className="action-row">
+  <button
+    type="button"
+    className="primary-btn"
+    onClick={() => {
+      const fullPost = [
+        result.data ? result.data.title : "",
+        result.data ? result.data.hook : "",
+        result.data ? result.data.body : "",
+        result.data ? result.data.cta : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      setImproveForm((prev) => ({
+        ...prev,
+        post: fullPost
+      }));
+
+      setTab("improve");
+    }}
+  >
+    Improve
+  </button>
+
+  <button
+    type="button"
+    className="primary-btn"
+    onClick={() => {
+      const fullPost = [
+        result.data ? result.data.title : "",
+        result.data ? result.data.hook : "",
+        result.data ? result.data.body : "",
+        result.data ? result.data.cta : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      setAnalyzeForm((prev) => ({
+        ...prev,
+        post: fullPost
+      }));
+
+      setTab("analyze");
+    }}
+  >
+    Analyze
+  </button>
+</div>
               </div>
             ) : null}
 
