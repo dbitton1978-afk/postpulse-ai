@@ -275,7 +275,6 @@ function getWeakestArea(data, t) {
     {
       key: "hook",
       score: Number(data.hookScore ?? 0),
-      label: t.hookScore,
       actionLabel: t.quickFixHook,
       goal: t.goalPresetFixHook,
       message: t.smartWeakHook
@@ -283,7 +282,6 @@ function getWeakestArea(data, t) {
     {
       key: "cta",
       score: Number(data.ctaScore ?? 0),
-      label: t.ctaScore,
       actionLabel: t.quickFixCta,
       goal: t.goalPresetFixCta,
       message: t.smartWeakCta
@@ -291,7 +289,6 @@ function getWeakestArea(data, t) {
     {
       key: "viral",
       score: Number(data.viralScore ?? 0),
-      label: t.viralScore,
       actionLabel: t.quickMakeViral,
       goal: t.goalPresetMoreViral,
       message: t.smartWeakViral
@@ -299,7 +296,6 @@ function getWeakestArea(data, t) {
     {
       key: "authenticity",
       score: Number(data.authenticityScore ?? 0),
-      label: t.authenticityScore,
       actionLabel: t.quickMakeHuman,
       goal: t.goalPresetMoreHuman,
       message: t.smartWeakAuthenticity
@@ -307,7 +303,6 @@ function getWeakestArea(data, t) {
     {
       key: "emotional",
       score: Number(data.emotionalScore ?? 0),
-      label: t.emotionalScore,
       actionLabel: t.quickMakeEmotional,
       goal: t.goalPresetMoreEmotional,
       message: t.smartWeakEmotional
@@ -315,7 +310,6 @@ function getWeakestArea(data, t) {
     {
       key: "curiosity",
       score: Number(data.curiosityScore ?? 0),
-      label: t.curiosityScore,
       actionLabel: t.quickMakeCurious,
       goal: t.goalPresetMoreCurious,
       message: t.smartWeakCuriosity
@@ -323,7 +317,6 @@ function getWeakestArea(data, t) {
     {
       key: "clarity",
       score: Number(data.clarityScore ?? 0),
-      label: t.clarityScore,
       actionLabel: t.quickMakeClear,
       goal: t.goalPresetMoreClear,
       message: t.smartWeakClarity
@@ -1278,7 +1271,7 @@ export default function App() {
                     </div>
                     <button
                       type="button"
-                      className="primary-btn"
+                      className="secondary-btn"
                       onClick={() => moveAnalyzeImprovedToImprove(weakestArea.goal)}
                     >
                       {weakestArea.actionLabel}
