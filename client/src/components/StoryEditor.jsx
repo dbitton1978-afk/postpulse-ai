@@ -4,6 +4,8 @@ function createId() {
   return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 }
 
+const EMOJIS = ["🔥","❤️","😂","😍","🚀","💡","🎯","✨","👑","⚡"];
+
 const DEFAULT_TEXT = {
   content: "טקסט חדש",
   x: 180,
@@ -19,18 +21,18 @@ const DEFAULT_TEXT = {
   stroke: false
 };
 
-export default function StoryEditor({
-  incomingText = "",
-  incomingTextToken = 0
-}) {
+export default function StoryEditor({ incomingText, incomingTextToken }) {
   const [images, setImages] = useState([]);
   const [texts, setTexts] = useState([]);
+  const [emojis, setEmojis] = useState([]);
+
   const [selectedId, setSelectedId] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [dragItem, setDragItem] = useState(null);
 
+  // 🔥 הכנסת טקסט מהאפליקציה
   useEffect(() => {
-    if (!incomingText || !incomingTextToken) return;
+    if (!incomingText) return;
 
     const id = createId();
 
@@ -40,73 +42,34 @@ export default function StoryEditor({
         id,
         ...DEFAULT_TEXT,
         content: incomingText,
-        x: 180,
-        y: 320,
-        scale: incomingText.length < 60 ? 1.2 : 1
+        y: 320
       }
     ]);
 
     setSelectedId(id);
     setSelectedType("text");
-  }, [incomingText, incomingTextToken]);
+  }, [incomingTextToken]);
 
-  function handleUpload(e) {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-
-      reader.onload = () => {
-        setImages((prev) => [
-          ...prev,
-          {
-            id: createId(),
-            src: reader.result,
-            x: 180,
-            y: 320,
-            scale: 1
-          }
-        ]);
-      };
-
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = "";
-  }
-
-  function addText() {
+  // ===== אימוג׳י =====
+  function addEmoji(emoji) {
     const id = createId();
 
-    setTexts((prev) => [
+    setEmojis((prev) => [
       ...prev,
       {
         id,
-        ...DEFAULT_TEXT
+        content: emoji,
+        x: 180,
+        y: 200,
+        scale: 1.5
       }
     ]);
 
     setSelectedId(id);
-    setSelectedType("text");
+    setSelectedType("emoji");
   }
 
-  function removeSelected() {
-    if (!selectedId || !selectedType) return;
-
-    if (selectedType === "image") {
-      setImages((prev) => prev.filter((item) => item.id !== selectedId));
-    }
-
-    if (selectedType === "text") {
-      setTexts((prev) => prev.filter((item) => item.id !== selectedId));
-    }
-
-    setSelectedId(null);
-    setSelectedType(null);
-    setDragItem(null);
-  }
-
+  // ===== גרירה =====
   function handleMouseDown(id, type) {
     setSelectedId(id);
     setSelectedType(type);
@@ -124,176 +87,74 @@ export default function StoryEditor({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (dragItem.type === "image") {
-      setImages((prev) =>
-        prev.map((item) =>
-          item.id === dragItem.id ? { ...item, x, y } : item
-        )
+    if (dragItem.type === "emoji") {
+      setEmojis((prev) =>
+        prev.map((i) => (i.id === dragItem.id ? { ...i, x, y } : i))
       );
     }
 
     if (dragItem.type === "text") {
       setTexts((prev) =>
-        prev.map((item) =>
-          item.id === dragItem.id ? { ...item, x, y } : item
-        )
+        prev.map((i) => (i.id === dragItem.id ? { ...i, x, y } : i))
       );
     }
   }
 
+  // ===== scale =====
   function scaleSelected(delta) {
-    if (!selectedId || !selectedType) return;
+    if (!selectedId) return;
 
     const update = (item) => ({
       ...item,
       scale: Math.min(3, Math.max(0.3, item.scale + delta))
     });
 
-    if (selectedType === "image") {
-      setImages((prev) =>
-        prev.map((item) =>
-          item.id === selectedId ? update(item) : item
-        )
+    if (selectedType === "emoji") {
+      setEmojis((prev) =>
+        prev.map((i) => (i.id === selectedId ? update(i) : i))
       );
     }
 
     if (selectedType === "text") {
       setTexts((prev) =>
-        prev.map((item) =>
-          item.id === selectedId ? update(item) : item
-        )
+        prev.map((i) => (i.id === selectedId ? update(i) : i))
       );
     }
   }
 
-  function updateSelectedText(value) {
-    if (selectedType !== "text") return;
+  // ===== מחיקה =====
+  function removeSelected() {
+    if (!selectedId) return;
 
-    setTexts((prev) =>
-      prev.map((item) =>
-        item.id === selectedId ? { ...item, content: value } : item
-      )
-    );
-  }
-
-  function updateStyle(key, value) {
-    if (selectedType !== "text") return;
-
-    setTexts((prev) =>
-      prev.map((item) =>
-        item.id === selectedId ? { ...item, [key]: value } : item
-      )
-    );
-  }
-
-  const selectedText = useMemo(() => {
-    if (selectedType !== "text") return null;
-    return texts.find((item) => item.id === selectedId) || null;
-  }, [texts, selectedId, selectedType]);
-
-  function hexToRgba(hex, opacity) {
-    if (!hex) return `rgba(0,0,0,${opacity})`;
-
-    const clean = hex.replace("#", "");
-    const num = parseInt(clean, 16);
-
-    if (clean.length !== 6 || Number.isNaN(num)) {
-      return `rgba(0,0,0,${opacity})`;
+    if (selectedType === "emoji") {
+      setEmojis((prev) => prev.filter((i) => i.id !== selectedId));
     }
 
-    const r = (num >> 16) & 255;
-    const g = (num >> 8) & 255;
-    const b = num & 255;
+    if (selectedType === "text") {
+      setTexts((prev) => prev.filter((i) => i.id !== selectedId));
+    }
 
-    return `rgba(${r},${g},${b},${opacity})`;
+    setSelectedId(null);
   }
 
   return (
-    <div style={{ marginTop: 30 }}>
-      <h2>Story Editor - Step 7</h2>
+    <div style={{ marginTop: 20 }}>
+      <h3>Story Editor</h3>
 
-      <input type="file" accept="image/*" multiple onChange={handleUpload} />
+      {/* כפתורים */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {EMOJIS.map((e) => (
+          <button key={e} onClick={() => addEmoji(e)}>
+            {e}
+          </button>
+        ))}
 
-      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={addText}>הוסף טקסט</button>
-        <button onClick={() => scaleSelected(0.1)} disabled={!selectedId}>
-          הגדל +
-        </button>
-        <button onClick={() => scaleSelected(-0.1)} disabled={!selectedId}>
-          הקטן -
-        </button>
-        <button onClick={removeSelected} disabled={!selectedId}>
-          מחק נבחר
-        </button>
+        <button onClick={() => scaleSelected(0.1)}>+</button>
+        <button onClick={() => scaleSelected(-0.1)}>-</button>
+        <button onClick={removeSelected}>🗑</button>
       </div>
 
-      {selectedText && (
-        <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input
-            value={selectedText.content}
-            onChange={(e) => updateSelectedText(e.target.value)}
-          />
-
-          <input
-            type="color"
-            value={selectedText.color}
-            onChange={(e) => updateStyle("color", e.target.value)}
-          />
-
-          <input
-            type="color"
-            value={selectedText.bgColor}
-            onChange={(e) => updateStyle("bgColor", e.target.value)}
-          />
-
-          <select
-            value={selectedText.align}
-            onChange={(e) => updateStyle("align", e.target.value)}
-          >
-            <option value="left">שמאל</option>
-            <option value="center">מרכז</option>
-            <option value="right">ימין</option>
-          </select>
-
-          <select
-            value={selectedText.font}
-            onChange={(e) => updateStyle("font", e.target.value)}
-          >
-            <option>Arial</option>
-            <option>Impact</option>
-            <option>Tahoma</option>
-            <option>Courier New</option>
-          </select>
-
-          <select
-            value={selectedText.styleType}
-            onChange={(e) => updateStyle("styleType", e.target.value)}
-          >
-            <option value="box">רקע מלא</option>
-            <option value="transparent">ללא רקע</option>
-            <option value="outline">מסגרת</option>
-          </select>
-
-          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <input
-              type="checkbox"
-              checked={selectedText.shadow}
-              onChange={(e) => updateStyle("shadow", e.target.checked)}
-            />
-            shadow
-          </label>
-
-          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <input
-              type="checkbox"
-              checked={selectedText.stroke}
-              onChange={(e) => updateStyle("stroke", e.target.checked)}
-            />
-            stroke
-          </label>
-        </div>
-      )}
-
+      {/* קנבס */}
       <div
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -304,87 +165,47 @@ export default function StoryEditor({
           height: 640,
           background: "#111",
           position: "relative",
-          overflow: "hidden",
           borderRadius: 20
         }}
       >
-        {images.map((img) => (
-          <img
-            key={img.id}
-            src={img.src}
-            alt=""
-            onMouseDown={() => handleMouseDown(img.id, "image")}
+        {/* טקסט */}
+        {texts.map((t) => (
+          <div
+            key={t.id}
+            onMouseDown={() => handleMouseDown(t.id, "text")}
             style={{
               position: "absolute",
-              left: img.x,
-              top: img.y,
-              width: 200,
-              height: 200,
-              objectFit: "cover",
-              transform: `translate(-50%, -50%) scale(${img.scale})`,
-              border:
-                selectedId === img.id && selectedType === "image"
-                  ? "3px solid #00ffcc"
-                  : "none",
+              left: t.x,
+              top: t.y,
+              transform: `translate(-50%,-50%) scale(${t.scale})`,
+              color: t.color,
+              background: "rgba(0,0,0,0.4)",
+              padding: 10,
+              borderRadius: 10,
               cursor: "grab"
             }}
-          />
+          >
+            {t.content}
+          </div>
         ))}
 
-        {texts.map((txt) => {
-          const bg =
-            txt.styleType === "box"
-              ? hexToRgba(txt.bgColor, txt.bgOpacity)
-              : "transparent";
-
-          const baseBorder =
-            txt.styleType === "outline"
-              ? `2px solid ${txt.bgColor}`
-              : "none";
-
-          const selectedBorder =
-            selectedId === txt.id && selectedType === "text"
-              ? "2px solid #00ffcc"
-              : baseBorder;
-
-          const textShadow = txt.stroke
-            ? `
-              -1px -1px 0 #000,
-               1px -1px 0 #000,
-              -1px  1px 0 #000,
-               1px  1px 0 #000,
-               0px  2px 6px rgba(0,0,0,0.6)
-            `
-            : txt.shadow
-            ? "0px 2px 6px rgba(0,0,0,0.6)"
-            : "none";
-
-          return (
-            <div
-              key={txt.id}
-              onMouseDown={() => handleMouseDown(txt.id, "text")}
-              style={{
-                position: "absolute",
-                left: txt.x,
-                top: txt.y,
-                transform: `translate(-50%, -50%) scale(${txt.scale})`,
-                color: txt.color,
-                background: bg,
-                padding: "8px 12px",
-                borderRadius: 20,
-                textAlign: txt.align,
-                fontFamily: txt.font,
-                border: selectedBorder,
-                cursor: "grab",
-                maxWidth: 240,
-                whiteSpace: "pre-wrap",
-                textShadow
-              }}
-            >
-              {txt.content}
-            </div>
-          );
-        })}
+        {/* אימוג׳ים */}
+        {emojis.map((e) => (
+          <div
+            key={e.id}
+            onMouseDown={() => handleMouseDown(e.id, "emoji")}
+            style={{
+              position: "absolute",
+              left: e.x,
+              top: e.y,
+              transform: `translate(-50%,-50%) scale(${e.scale})`,
+              fontSize: 40,
+              cursor: "grab"
+            }}
+          >
+            {e.content}
+          </div>
+        ))}
       </div>
     </div>
   );
