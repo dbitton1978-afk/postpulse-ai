@@ -23,129 +23,97 @@ const openai = new OpenAI({
 
 const STYLE_MAP = {
   kabbalist: {
-    he: "קבליסטי, עמוק, מסתורי, חכם, רוחני, סמלי, עם שכבות משמעות ותודעה",
-    en: "kabbalistic, deep, mystical, wise, spiritual, symbolic, layered and consciousness-oriented"
+    he: "קבליסטי, עמוק, מסתורי, חכם, רוחני, עם שכבות משמעות",
+    en: "kabbalistic, deep, mystical, wise, spiritual, layered"
   },
   mentor: {
-    he: "מנטורי, חד, בטוח, מעצים, מוביל, אנושי ובהיר",
-    en: "mentor-like, sharp, confident, empowering, insightful, human and clear"
+    he: "מנטורי, חד, בטוח, מעצים, אנושי ובהיר",
+    en: "mentor-like, sharp, confident, empowering, human and clear"
   },
   humorous: {
-    he: "הומוריסטי, שנון, קליל אבל חכם, עם עקיצה טובה ועומק",
-    en: "humorous, witty, clever, light but smart, with punch and depth"
+    he: "הומוריסטי, שנון, קליל אבל חכם",
+    en: "humorous, witty, clever, light but smart"
   },
   spiritual: {
-    he: "רוחני, עמוק, רגשי, מחבר, רך אך מדויק, מעורר השראה ומודעות",
-    en: "spiritual, deep, emotional, connective, soft yet precise, inspiring and aware"
+    he: "רוחני, עמוק, רגשי, מחבר, מעורר השראה",
+    en: "spiritual, deep, emotional, connective, inspiring"
   },
   emotional: {
-    he: "רגשי, אנושי, פגיע, חודר ללב, כן, עמוק ומלא אמת רגשית",
-    en: "emotional, deeply human, vulnerable, heart-piercing, honest and emotionally true"
+    he: "רגשי, אנושי, פגיע, כן, חודר ללב",
+    en: "emotional, human, vulnerable, honest, heart-piercing"
   },
   professional: {
-    he: "מקצועי, חד, אמין, סמכותי, נקי, מדויק ולא גנרי",
-    en: "professional, sharp, credible, authoritative, polished, precise and non-generic"
+    he: "מקצועי, חד, אמין, סמכותי, נקי ומדויק",
+    en: "professional, sharp, credible, authoritative, polished and precise"
   }
 };
 
 const PLATFORM_MAP = {
   instagram: {
-    he: `
-פלטפורמה: Instagram
-כתוב כמו פוסט אינסטגרם איכותי:
-- Hook חזק מאוד בשורה ראשונה
-- קצב קריא, זורם, נעים לעין
-- רגשי, אישי, אנושי, זכיר
-- CTA טבעי לשמירה / תגובה / שיתוף
-- 6-10 hashtags רלוונטיים
-- מתאים לקריאה במובייל
-- לא ארוך מדי, לא קצר מדי
-`,
-    en: `
-Platform: Instagram
-Write like a strong Instagram post:
-- very strong first-line hook
-- readable, flowing, mobile-friendly rhythm
-- emotional, personal, human, memorable
-- natural CTA for save / comment / share
-- 6-10 relevant hashtags
-- not too long, not too short
-`
+    he: {
+      tone: "אישי, רגשי, זורם, נעים לקריאה",
+      cta: "CTA טבעי לשמירה, תגובה או שיתוף",
+      hashtags: "6-8 hashtags רלוונטיים",
+      length: "אורך בינוני, מותאם למובייל"
+    },
+    en: {
+      tone: "personal, emotional, flowing, easy to read",
+      cta: "natural CTA for save, comment, or share",
+      hashtags: "6-8 relevant hashtags",
+      length: "medium length, mobile-friendly"
+    }
   },
   facebook: {
-    he: `
-פלטפורמה: Facebook
-כתוב כמו פוסט פייסבוק חזק:
-- יותר אישי ושיחתי
-- אפשר קצת יותר אורך וסיפור
-- נבנה לחיבור, תגובות ודיון
-- CTA טבעי לתגובה / שיתוף / דעה
-- hashtags רק אם באמת מוסיפים ערך
-- להישמע אנושי ולא "משווק"
-`,
-    en: `
-Platform: Facebook
-Write like a strong Facebook post:
-- more personal and conversational
-- can be slightly longer and more story-driven
-- built for connection, comments and discussion
-- natural CTA for opinion / comment / share
-- hashtags only if they truly add value
-- must sound human, not markety
-`
+    he: {
+      tone: "אישי, שיחתי, מחבר, מעט יותר סיפורי",
+      cta: "CTA טבעי לתגובה, שיתוף או דעה",
+      hashtags: "0-4 hashtags בלבד אם רלוונטי",
+      length: "אפשר מעט יותר אורך"
+    },
+    en: {
+      tone: "personal, conversational, connective, slightly more story-driven",
+      cta: "natural CTA for opinion, comment, or share",
+      hashtags: "0-4 hashtags only if relevant",
+      length: "can be slightly longer"
+    }
   },
   linkedin: {
-    he: `
-פלטפורמה: LinkedIn
-כתוב כמו פוסט לינקדאין חזק:
-- מקצועי, חד, אמין, חכם
-- תובנה ברורה או לקח מעשי
-- בנוי לאמון, סמכות וערך
-- פחות האשטגים, מקסימום 3-5
-- CTA אינטליגנטי ולא אגרסיבי
-- לא סלנג מיותר
-- לא להישמע כמו קלישאה עסקית
-`,
-    en: `
-Platform: LinkedIn
-Write like a strong LinkedIn post:
-- professional, sharp, credible and thoughtful
-- clear insight or practical takeaway
-- built for trust, authority and value
-- fewer hashtags, max 3-5
-- intelligent CTA, not aggressive
-- no unnecessary slang
-- avoid business clichés
-`
+    he: {
+      tone: "מקצועי, חד, חכם, אמין",
+      cta: "CTA אינטליגנטי ולא אגרסיבי",
+      hashtags: "3-5 hashtags לכל היותר",
+      length: "קצר עד בינוני עם ערך ברור"
+    },
+    en: {
+      tone: "professional, sharp, thoughtful, credible",
+      cta: "intelligent CTA, not aggressive",
+      hashtags: "3-5 hashtags at most",
+      length: "short to medium with clear value"
+    }
   },
   tiktok: {
-    he: `
-פלטפורמה: TikTok
-כתוב כמו טקסט לטיקטוק / caption חד:
-- קצר יותר
-- ישיר, מהיר, מסקרן
-- Hook אגרסיבי יחסית
-- משפטים קצרים עם קצב
-- CTA קליל ומהיר
-- hashtags רלוונטיים אך לא כבדים
-- חייב למשוך בשניות הראשונות
-`,
-    en: `
-Platform: TikTok
-Write like a strong TikTok caption:
-- shorter
-- direct, fast, curiosity-driven
-- relatively aggressive hook
-- short punchy sentences
-- light and quick CTA
-- relevant but not heavy hashtags
-- must grab attention instantly
-`
+    he: {
+      tone: "מהיר, חד, מסקרן, ישיר",
+      cta: "CTA קצר וקליל",
+      hashtags: "4-6 hashtags רלוונטיים",
+      length: "קצר"
+    },
+    en: {
+      tone: "fast, punchy, curiosity-driven, direct",
+      cta: "short and light CTA",
+      hashtags: "4-6 relevant hashtags",
+      length: "short"
+    }
   }
 };
 
 function normalizeLanguage(language) {
   return language === "he" ? "he" : "en";
+}
+
+function normalizePlatform(platform) {
+  const safePlatform = String(platform || "instagram").toLowerCase();
+  return PLATFORM_MAP[safePlatform] ? safePlatform : "instagram";
 }
 
 function getLanguageLabel(language) {
@@ -157,9 +125,10 @@ function getStyleText(style, language) {
   return STYLE_MAP[style]?.[safeLanguage] || STYLE_MAP.professional[safeLanguage];
 }
 
-function getPlatformText(platform, language) {
+function getPlatformRules(platform, language) {
   const safeLanguage = normalizeLanguage(language);
-  return PLATFORM_MAP[platform]?.[safeLanguage] || PLATFORM_MAP.instagram[safeLanguage];
+  const safePlatform = normalizePlatform(platform);
+  return PLATFORM_MAP[safePlatform][safeLanguage];
 }
 
 function safeJsonParse(text) {
@@ -188,32 +157,25 @@ function cleanString(value, fallback = "") {
   return value.trim();
 }
 
-function normalizeGenerateResponse(data, platform) {
-  const safePlatform = String(platform || "instagram").toLowerCase();
-  const hashtags = cleanArray(data?.hashtags).map((tag) =>
+function normalizeHashtagsByPlatform(hashtags, platform) {
+  const safePlatform = normalizePlatform(platform);
+  const normalized = cleanArray(hashtags).map((tag) =>
     tag.startsWith("#") ? tag : `#${tag}`
   );
 
-  let finalHashtags = hashtags;
+  if (safePlatform === "linkedin") return normalized.slice(0, 5);
+  if (safePlatform === "facebook") return normalized.slice(0, 4);
+  if (safePlatform === "tiktok") return normalized.slice(0, 6);
+  return normalized.slice(0, 8);
+}
 
-  if (safePlatform === "linkedin") {
-    finalHashtags = hashtags.slice(0, 5);
-  }
-
-  if (safePlatform === "facebook") {
-    finalHashtags = hashtags.slice(0, 4);
-  }
-
-  if (safePlatform === "tiktok") {
-    finalHashtags = hashtags.slice(0, 6);
-  }
-
+function normalizeGenerateResponse(data, platform) {
   return {
     title: cleanString(data?.title),
     hook: cleanString(data?.hook),
     body: cleanString(data?.body),
     cta: cleanString(data?.cta),
-    hashtags: finalHashtags,
+    hashtags: normalizeHashtagsByPlatform(data?.hashtags, platform),
     shortVersion: cleanString(data?.shortVersion),
     alternativeVersion: cleanString(data?.alternativeVersion)
   };
@@ -249,11 +211,17 @@ function normalizeAnalyzeResponse(data) {
 async function askAI(systemPrompt, userPrompt) {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.7,
-    max_tokens: 800,
+    temperature: 0.4,
+    max_completion_tokens: 450,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: systemPrompt },
+      {
+        role: "system",
+        content: `${systemPrompt}
+Keep the JSON concise and high quality.
+Avoid extra wording.
+`
+      },
       { role: "user", content: userPrompt }
     ]
   });
@@ -302,28 +270,15 @@ app.post("/api/generate-post", async (req, res) => {
     }
 
     const safeLanguage = normalizeLanguage(language);
+    const safePlatform = normalizePlatform(platform);
     const styleText = getStyleText(style, safeLanguage);
-    const platformText = getPlatformText(platform, safeLanguage);
+    const platformRules = getPlatformRules(safePlatform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media writer with exceptional emotional intelligence, platform awareness, psychological insight, and strong editorial taste.
-
+You are an elite social media writer.
 Write like a real human, not like AI.
-
-Core rules:
-- natural and conversational
-- emotionally real
-- sharp but human
-- avoid robotic structure
-- avoid filler
-- avoid cliché inspiration language
-- avoid fake hype
-- avoid generic marketing language
-- every output must feel specific, alive, and platform-native
-
-If the writing sounds generic, rewrite it until it feels human and memorable.
-
-Always return valid JSON only.
+Be specific, natural, clear, and platform-native.
+Return valid JSON only.
 
 Required JSON structure:
 {
@@ -338,34 +293,28 @@ Required JSON structure:
 `;
 
     const userPrompt = `
-Write a strong social media post.
+Write one strong social media post.
 
-IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
-- DO NOT use any other language
-- If Hebrew is selected -> everything must be in Hebrew
-- If English is selected -> everything must be in English
-
-${platformText}
-
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
 Topic: ${topic}
 Target audience: ${targetAudience}
 Goal: ${goal}
 Style: ${styleText}
 
-Writing requirements:
-- write with emotional intelligence
-- make the hook strong and native to the platform
-- make the body feel human, specific, and readable
-- make the CTA natural for that platform
-- adapt length, rhythm, structure, and tone to the selected platform
-- avoid repeating obvious ideas
-- avoid sounding like a template
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Hashtags: ${platformRules.hashtags}
+- Length: ${platformRules.length}
 
-If style is emotional:
-- increase emotional honesty
-- allow vulnerability and tenderness when relevant
-- keep it elegant and believable
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
+- strong hook
+- clear body
+- natural CTA
+- avoid generic AI tone
+- make it feel human and native to the platform
 
 Return JSON only.
 `;
@@ -380,7 +329,7 @@ Return JSON only.
       });
     }
 
-    const normalized = normalizeGenerateResponse(parsed, platform);
+    const normalized = normalizeGenerateResponse(parsed, safePlatform);
 
     return res.json({
       success: true,
@@ -421,25 +370,15 @@ app.post("/api/improve-post", async (req, res) => {
     }
 
     const safeLanguage = normalizeLanguage(language);
+    const safePlatform = normalizePlatform(platform);
     const styleText = getStyleText(style, safeLanguage);
-    const platformText = getPlatformText(platform, safeLanguage);
+    const platformRules = getPlatformRules(safePlatform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media strategist and editor.
-
-You understand how strong writing changes by platform.
-
-Write like a real human, not like AI.
-
-Core rules:
-- no robotic phrasing
-- no generic tips
-- no empty marketing talk
-- no cliché inspiration lines
-- feedback must be precise, useful, and platform-aware
-- rewritten outputs must feel stronger, sharper, and more human
-
-Always return valid JSON only.
+You are an elite social media editor.
+Improve text by platform.
+Be sharp, useful, human, and concise.
+Return valid JSON only.
 
 Required JSON structure:
 {
@@ -455,28 +394,26 @@ Required JSON structure:
     const userPrompt = `
 Analyze and improve this post.
 
-IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
-- DO NOT use any other language
-- If Hebrew is selected -> everything must be in Hebrew
-- If English is selected -> everything must be in English
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Desired style: ${styleText}
+Improvement goal: ${goal}
 
-${platformText}
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
 
 Original post:
 ${post}
 
-Desired style: ${styleText}
-Improvement goal: ${goal}
-
-Instructions:
-- judge the text according to the selected platform
-- explain what works and what weakens performance on that platform
-- improve rhythm, clarity, emotional pull, hook strength, and CTA fit
-- make the rewritten output feel platform-native
-- make the more viral version stronger without becoming fake
-- make the more authentic version feel more human and real
-- tips must be practical and not generic
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
+- explain strengths briefly
+- explain weaknesses briefly
+- improve for this platform
+- make it more human
+- tips must be practical and short
 
 Return JSON only.
 `;
@@ -526,21 +463,14 @@ app.post("/api/analyze-post", async (req, res) => {
     }
 
     const safeLanguage = normalizeLanguage(language);
-    const platformText = getPlatformText(platform, safeLanguage);
+    const safePlatform = normalizePlatform(platform);
+    const platformRules = getPlatformRules(safePlatform, safeLanguage);
 
     const systemPrompt = `
-You are an elite social media analyst with deep platform awareness, emotional intelligence, editorial judgment, and strategic communication skill.
-
-Write like a real human, not like AI.
-
-Core rules:
-- no robotic summaries
-- no generic advice
-- no cliché analysis language
-- be specific, sharp, and useful
-- analyze the text according to the selected platform
-
-Always return valid JSON only.
+You are an elite social media analyst.
+Analyze performance by platform.
+Be concise, specific, and human.
+Return valid JSON only.
 
 Required JSON structure:
 {
@@ -561,25 +491,25 @@ Required JSON structure:
     const userPrompt = `
 Analyze this post.
 
-IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
-- DO NOT use any other language
-- If Hebrew is selected -> everything must be in Hebrew
-- If English is selected -> everything must be in English
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
 
-${platformText}
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
 
 Post:
 ${post}
 
-Instructions:
-- evaluate the post according to the selected platform
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
 - all scores must be 0-100
-- judge hook quality, clarity, emotional pull, authenticity, viral potential, and CTA fit
-- explain what works specifically for that platform
-- explain what hurts performance specifically for that platform
-- improved version must be more native to that platform
-- keep the summary insightful and concise
+- be realistic
+- keep summary short and useful
+- explain what works on this platform
+- explain what hurts performance on this platform
+- improved version must fit this platform
 
 Return JSON only.
 `;
