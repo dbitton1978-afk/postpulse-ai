@@ -131,12 +131,30 @@ function getPlatformRules(platform, language) {
   return PLATFORM_MAP[safePlatform][safeLanguage];
 }
 
-function safeJsonParse(text) {
+function tryParseJson(text) {
   try {
     return JSON.parse(text);
   } catch {
     return null;
   }
+}
+
+function safeJsonParse(text) {
+  if (!text) return null;
+
+  const direct = tryParseJson(text);
+  if (direct) return direct;
+
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const sliced = text.slice(firstBrace, lastBrace + 1);
+    const parsed = tryParseJson(sliced);
+    if (parsed) return parsed;
+  }
+
+  return null;
 }
 
 function clampScore(value) {
@@ -203,7 +221,6 @@ function normalizeAnalyzeResponse(data) {
     ctaScore: clampScore(data?.ctaScore),
 
     summary: cleanString(data?.summary),
-
     whatWorks: cleanArray(data?.whatWorks),
     whatHurts: cleanArray(data?.whatHurts),
     improvements: cleanArray(data?.improvements),
@@ -220,15 +237,16 @@ function normalizeAnalyzeResponse(data) {
 async function askAI(systemPrompt, userPrompt) {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.4,
-    max_completion_tokens: 450,
+    temperature: 0.3,
+    max_completion_tokens: 700,
     response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
         content: `${systemPrompt}
-Keep the JSON concise and high quality.
-Avoid extra wording.
+Return JSON only.
+No markdown.
+No code fences.
 `
       },
       { role: "user", content: userPrompt }
@@ -285,9 +303,8 @@ app.post("/api/generate-post", async (req, res) => {
 
     const systemPrompt = `
 You are an elite social media writer.
-Write like a real human, not like AI.
-Be specific, natural, clear, and platform-native.
-Return valid JSON only.
+Write like a real human.
+Be platform-native, clear, sharp, and concise.
 
 Required JSON structure:
 {
@@ -324,10 +341,7 @@ Rules:
 - natural CTA
 - avoid generic AI tone
 - make it feel human and native to the platform
-
-Return JSON only.
 `;
-
     const raw = await askAI(systemPrompt, userPrompt);
     const parsed = safeJsonParse(raw);
 
@@ -387,7 +401,6 @@ app.post("/api/improve-post", async (req, res) => {
 You are an elite social media editor.
 Improve text by platform.
 Be sharp, useful, human, and concise.
-Return valid JSON only.
 
 Required JSON structure:
 {
@@ -423,8 +436,6 @@ Rules:
 - improve for this platform
 - make it more human
 - tips must be practical and short
-
-Return JSON only.
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
@@ -479,7 +490,6 @@ app.post("/api/analyze-post", async (req, res) => {
 You are an elite social media analyst.
 Analyze by platform.
 Be concise, specific, human, and practical.
-Return valid JSON only.
 
 Required JSON structure:
 {
@@ -524,8 +534,6 @@ Rules:
 - explain what works on this platform
 - explain what hurts performance on this platform
 - improved version must fit this platform
-
-Also:
 - give specific actions to raise viral score
 - give specific actions to raise authenticity score
 - give specific actions to raise emotional score
@@ -535,8 +543,6 @@ Curiosity score means:
 - how much the post creates interest
 - how much it makes people want to keep reading
 - how much it creates tension, intrigue, surprise, or pull
-
-Return JSON only.
 `;
 
     const raw = await askAI(systemPrompt, userPrompt);
