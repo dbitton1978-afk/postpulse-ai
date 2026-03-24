@@ -268,6 +268,72 @@ function buildExportFilename(result) {
   return "postpulse-export.txt";
 }
 
+function getWeakestArea(data, t) {
+  if (!data) return null;
+
+  const options = [
+    {
+      key: "hook",
+      score: Number(data.hookScore ?? 0),
+      label: t.hookScore,
+      actionLabel: t.quickFixHook,
+      goal: t.goalPresetFixHook,
+      message: t.smartWeakHook
+    },
+    {
+      key: "cta",
+      score: Number(data.ctaScore ?? 0),
+      label: t.ctaScore,
+      actionLabel: t.quickFixCta,
+      goal: t.goalPresetFixCta,
+      message: t.smartWeakCta
+    },
+    {
+      key: "viral",
+      score: Number(data.viralScore ?? 0),
+      label: t.viralScore,
+      actionLabel: t.quickMakeViral,
+      goal: t.goalPresetMoreViral,
+      message: t.smartWeakViral
+    },
+    {
+      key: "authenticity",
+      score: Number(data.authenticityScore ?? 0),
+      label: t.authenticityScore,
+      actionLabel: t.quickMakeHuman,
+      goal: t.goalPresetMoreHuman,
+      message: t.smartWeakAuthenticity
+    },
+    {
+      key: "emotional",
+      score: Number(data.emotionalScore ?? 0),
+      label: t.emotionalScore,
+      actionLabel: t.quickMakeEmotional,
+      goal: t.goalPresetMoreEmotional,
+      message: t.smartWeakEmotional
+    },
+    {
+      key: "curiosity",
+      score: Number(data.curiosityScore ?? 0),
+      label: t.curiosityScore,
+      actionLabel: t.quickMakeCurious,
+      goal: t.goalPresetMoreCurious,
+      message: t.smartWeakCuriosity
+    },
+    {
+      key: "clarity",
+      score: Number(data.clarityScore ?? 0),
+      label: t.clarityScore,
+      actionLabel: t.quickMakeClear,
+      goal: t.goalPresetMoreClear,
+      message: t.smartWeakClarity
+    }
+  ];
+
+  options.sort((a, b) => a.score - b.score);
+  return options[0];
+}
+
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
@@ -301,7 +367,8 @@ export default function App() {
       t.goalPresetMoreSharp,
       t.goalPresetMoreProfessional,
       t.goalPresetFixHook,
-      t.goalPresetFixCta
+      t.goalPresetFixCta,
+      t.goalPresetMoreCurious
     ],
     [t]
   );
@@ -341,6 +408,11 @@ export default function App() {
     language === "he" ? "העבר חזרה ל־Improve" : "Move Back to Improve";
   const analyzeFromImproveLabel =
     language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
+
+  const weakestArea =
+    result && result.type === "analyze"
+      ? getWeakestArea(result.data, t)
+      : null;
 
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
@@ -1195,6 +1267,24 @@ export default function App() {
                   <ScoreCard label={t.hookScore} value={result.data?.hookScore || 0} />
                   <ScoreCard label={t.ctaScore} value={result.data?.ctaScore || 0} />
                 </div>
+
+                {weakestArea ? (
+                  <div className="smart-recommendation-box">
+                    <div className="smart-recommendation-label">
+                      {t.smartRecommendationTitle}
+                    </div>
+                    <div className="smart-recommendation-text">
+                      {weakestArea.message}
+                    </div>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => moveAnalyzeImprovedToImprove(weakestArea.goal)}
+                    >
+                      {weakestArea.actionLabel}
+                    </button>
+                  </div>
+                ) : null}
 
                 <Section title={t.summary}>
                   <div className="text-card">{result.data?.summary || ""}</div>
