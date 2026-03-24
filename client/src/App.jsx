@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { analyzePost, generatePost, improvePost } from "./api";
 import { translations } from "./translations";
-import StoryEditor from "./components/StoryEditor";
 
 const styles = [
   { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
@@ -19,7 +18,7 @@ const platforms = [
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy, onSendToStory }) {
+function Section({ title, children, onCopy }) {
   return (
     <div className="result-section">
       <div
@@ -33,19 +32,11 @@ function Section({ title, children, onCopy, onSendToStory }) {
       >
         <h3>{title}</h3>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {onSendToStory && (
-            <button className="copy-btn" onClick={onSendToStory}>
-              שלח לעורך
-            </button>
-          )}
-
-          {onCopy && (
-            <button className="copy-btn" onClick={onCopy}>
-              Copy
-            </button>
-          )}
-        </div>
+        {onCopy && (
+          <button className="copy-btn" onClick={onCopy} type="button">
+            Copy
+          </button>
+        )}
       </div>
 
       {children}
@@ -54,21 +45,23 @@ function Section({ title, children, onCopy, onSendToStory }) {
 }
 
 function ListBlock({ items }) {
-  if (!items?.length) return null;
+  if (!Array.isArray(items) || items.length === 0) return null;
 
   return (
     <ul className="result-list">
       {items.map((item, index) => (
-        <li key={`${item}-${index}`}>{item}</li>
+        <li key={`${String(item)}-${index}`}>{item}</li>
       ))}
     </ul>
   );
 }
 
 function ScoreCard({ label, value }) {
+  const safeValue = Number.isFinite(Number(value)) ? Number(value) : 0;
+
   return (
     <div className="score-card">
-      <div className="score-value">{Number.isFinite(value) ? value : 0}%</div>
+      <div className="score-value">{safeValue}%</div>
       <div className="score-label">{label}</div>
     </div>
   );
@@ -77,6 +70,10 @@ function ScoreCard({ label, value }) {
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
 
@@ -99,15 +96,17 @@ export default function App() {
     platform: "instagram"
   });
 
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
+  const setBuildField = (field, value) => {
+    setBuildForm((prev) => ({ ...prev, [field]: value }));
+  };
 
-  const [storyText, setStoryText] = useState("");
-  const [storyTextToken, setStoryTextToken] = useState(0);
+  const setImproveField = (field, value) => {
+    setImproveForm((prev) => ({ ...prev, [field]: value }));
+  };
 
-  const [exportFn, setExportFn] = useState(null);
-  const [platform, setPlatform] = useState("instagram");
+  const setAnalyzeField = (field, value) => {
+    setAnalyzeForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   const copyText = async (text) => {
     try {
@@ -117,42 +116,15 @@ export default function App() {
     }
   };
 
-  const sendToStory = (text) => {
-    if (!text || !String(text).trim()) return;
-    setStoryText(String(text));
-    setStoryTextToken(Date.now());
+  const resetStateBeforeRequest = () => {
+    setError("");
+    setResult(null);
+    setLoading(true);
   };
 
-  async function shareToSocial() {
-    if (!exportFn) return;
-
-    try {
-      const dataUrl = await exportFn();
-      if (!dataUrl) return;
-
-      if (navigator.share) {
-        try {
-          const blob = await (await fetch(dataUrl)).blob();
-          const file = new File([blob], "story.png", { type: "image/png" });
-
-          await navigator.share({
-            files: [file],
-            title: "PostPulse Story"
-          });
-          return;
-        } catch (shareErr) {
-          console.error("Share failed, falling back to download:", shareErr);
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `${platform}-story.png`;
-      link.click();
-    } catch (err) {
-      console.error("Export/share failed:", err);
-    }
-  }
+  const finishRequest = () => {
+    setLoading(false);
+  };
 
   const handleBuild = async () => {
     if (!buildForm.topic.trim()) {
@@ -160,9 +132,7 @@ export default function App() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setResult(null);
+    resetStateBeforeRequest();
 
     try {
       const res = await generatePost({
@@ -170,11 +140,14 @@ export default function App() {
         language
       });
 
-      setResult({ type: "build", data: res.data });
+      setResult({
+        type: "build",
+        data: res?.data || {}
+      });
     } catch (err) {
-      setError(err.message || "Error");
+      setError(err?.message || "Error");
     } finally {
-      setLoading(false);
+      finishRequest();
     }
   };
 
@@ -184,9 +157,7 @@ export default function App() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setResult(null);
+    resetStateBeforeRequest();
 
     try {
       const res = await improvePost({
@@ -194,11 +165,14 @@ export default function App() {
         language
       });
 
-      setResult({ type: "improve", data: res.data });
+      setResult({
+        type: "improve",
+        data: res?.data || {}
+      });
     } catch (err) {
-      setError(err.message || "Error");
+      setError(err?.message || "Error");
     } finally {
-      setLoading(false);
+      finishRequest();
     }
   };
 
@@ -208,9 +182,7 @@ export default function App() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setResult(null);
+    resetStateBeforeRequest();
 
     try {
       const res = await analyzePost({
@@ -218,11 +190,14 @@ export default function App() {
         language
       });
 
-      setResult({ type: "analyze", data: res.data });
+      setResult({
+        type: "analyze",
+        data: res?.data || {}
+      });
     } catch (err) {
-      setError(err.message || "Error");
+      setError(err?.message || "Error");
     } finally {
-      setLoading(false);
+      finishRequest();
     }
   };
 
@@ -233,7 +208,11 @@ export default function App() {
           result.data?.hook || "",
           result.data?.body || "",
           result.data?.cta || "",
-          (result.data?.hashtags || []).join(" ")
+          Array.isArray(result.data?.hashtags)
+            ? result.data.hashtags.join(" ")
+            : "",
+          result.data?.shortVersion || "",
+          result.data?.alternativeVersion || ""
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -267,12 +246,15 @@ export default function App() {
 
         <div className="lang-switch">
           <button
+            type="button"
             className={language === "en" ? "active" : ""}
             onClick={() => setLanguage("en")}
           >
             {t.english}
           </button>
+
           <button
+            type="button"
             className={language === "he" ? "active" : ""}
             onClick={() => setLanguage("he")}
           >
@@ -283,18 +265,23 @@ export default function App() {
 
       <nav className="tabs">
         <button
+          type="button"
           className={tab === "build" ? "active" : ""}
           onClick={() => setTab("build")}
         >
           {t.build}
         </button>
+
         <button
+          type="button"
           className={tab === "improve" ? "active" : ""}
           onClick={() => setTab("improve")}
         >
           {t.improve}
         </button>
+
         <button
+          type="button"
           className={tab === "analyze" ? "active" : ""}
           onClick={() => setTab("analyze")}
         >
@@ -311,9 +298,7 @@ export default function App() {
                 <textarea
                   rows={4}
                   value={buildForm.topic}
-                  onChange={(e) =>
-                    setBuildForm({ ...buildForm, topic: e.target.value })
-                  }
+                  onChange={(e) => setBuildField("topic", e.target.value)}
                 />
               </div>
 
@@ -322,10 +307,7 @@ export default function App() {
                 <input
                   value={buildForm.targetAudience}
                   onChange={(e) =>
-                    setBuildForm({
-                      ...buildForm,
-                      targetAudience: e.target.value
-                    })
+                    setBuildField("targetAudience", e.target.value)
                   }
                 />
               </div>
@@ -334,9 +316,7 @@ export default function App() {
                 <label>{t.goal}</label>
                 <input
                   value={buildForm.goal}
-                  onChange={(e) =>
-                    setBuildForm({ ...buildForm, goal: e.target.value })
-                  }
+                  onChange={(e) => setBuildField("goal", e.target.value)}
                 />
               </div>
 
@@ -345,9 +325,7 @@ export default function App() {
                   <label>{t.style}</label>
                   <select
                     value={buildForm.style}
-                    onChange={(e) =>
-                      setBuildForm({ ...buildForm, style: e.target.value })
-                    }
+                    onChange={(e) => setBuildField("style", e.target.value)}
                   >
                     {styles.map((style) => (
                       <option key={style.value} value={style.value}>
@@ -361,9 +339,7 @@ export default function App() {
                   <label>{t.platform}</label>
                   <select
                     value={buildForm.platform}
-                    onChange={(e) =>
-                      setBuildForm({ ...buildForm, platform: e.target.value })
-                    }
+                    onChange={(e) => setBuildField("platform", e.target.value)}
                   >
                     {platforms.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -374,16 +350,13 @@ export default function App() {
                 </div>
               </div>
 
-              <button className="primary-btn" onClick={handleBuild}>
-                {loading ? t.loading : t.generate}
-              </button>
-
               <button
                 className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(buildForm.topic)}
+                onClick={handleBuild}
+                type="button"
+                disabled={loading}
               >
-                שלח את הנושא לעורך
+                {loading ? t.loading : t.generate}
               </button>
             </>
           )}
@@ -395,9 +368,7 @@ export default function App() {
                 <textarea
                   rows={8}
                   value={improveForm.post}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, post: e.target.value })
-                  }
+                  onChange={(e) => setImproveField("post", e.target.value)}
                 />
               </div>
 
@@ -405,9 +376,7 @@ export default function App() {
                 <label>{t.goal}</label>
                 <input
                   value={improveForm.goal}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, goal: e.target.value })
-                  }
+                  onChange={(e) => setImproveField("goal", e.target.value)}
                 />
               </div>
 
@@ -415,9 +384,7 @@ export default function App() {
                 <label>{t.style}</label>
                 <select
                   value={improveForm.style}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, style: e.target.value })
-                  }
+                  onChange={(e) => setImproveField("style", e.target.value)}
                 >
                   {styles.map((style) => (
                     <option key={style.value} value={style.value}>
@@ -427,16 +394,13 @@ export default function App() {
                 </select>
               </div>
 
-              <button className="primary-btn" onClick={handleImprove}>
-                {loading ? t.loading : t.improveBtn}
-              </button>
-
               <button
                 className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(improveForm.post)}
+                onClick={handleImprove}
+                type="button"
+                disabled={loading}
               >
-                שלח את הטקסט שכתבתי לעורך
+                {loading ? t.loading : t.improveBtn}
               </button>
             </>
           )}
@@ -448,9 +412,7 @@ export default function App() {
                 <textarea
                   rows={8}
                   value={analyzeForm.post}
-                  onChange={(e) =>
-                    setAnalyzeForm({ ...analyzeForm, post: e.target.value })
-                  }
+                  onChange={(e) => setAnalyzeField("post", e.target.value)}
                 />
               </div>
 
@@ -458,12 +420,7 @@ export default function App() {
                 <label>{t.platform}</label>
                 <select
                   value={analyzeForm.platform}
-                  onChange={(e) =>
-                    setAnalyzeForm({
-                      ...analyzeForm,
-                      platform: e.target.value
-                    })
-                  }
+                  onChange={(e) => setAnalyzeField("platform", e.target.value)}
                 >
                   {platforms.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -473,16 +430,13 @@ export default function App() {
                 </select>
               </div>
 
-              <button className="primary-btn" onClick={handleAnalyze}>
-                {loading ? t.loading : t.analyzeBtn}
-              </button>
-
               <button
                 className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(analyzeForm.post)}
+                onClick={handleAnalyze}
+                type="button"
+                disabled={loading}
               >
-                שלח את הטקסט שכתבתי לעורך
+                {loading ? t.loading : t.analyzeBtn}
               </button>
             </>
           )}
@@ -500,7 +454,6 @@ export default function App() {
               <Section
                 title={t.title}
                 onCopy={() => copyText(result.data?.title || "")}
-                onSendToStory={() => sendToStory(result.data?.title || "")}
               >
                 <div className="text-card">{result.data?.title || ""}</div>
               </Section>
@@ -508,7 +461,6 @@ export default function App() {
               <Section
                 title={t.hook}
                 onCopy={() => copyText(result.data?.hook || "")}
-                onSendToStory={() => sendToStory(result.data?.hook || "")}
               >
                 <div className="text-card">{result.data?.hook || ""}</div>
               </Section>
@@ -516,7 +468,6 @@ export default function App() {
               <Section
                 title={t.body}
                 onCopy={() => copyText(result.data?.body || "")}
-                onSendToStory={() => sendToStory(result.data?.body || "")}
               >
                 <div className="text-card">{result.data?.body || ""}</div>
               </Section>
@@ -524,21 +475,23 @@ export default function App() {
               <Section
                 title={t.cta}
                 onCopy={() => copyText(result.data?.cta || "")}
-                onSendToStory={() => sendToStory(result.data?.cta || "")}
               >
                 <div className="text-card">{result.data?.cta || ""}</div>
               </Section>
 
               <Section
                 title={t.hashtags}
-                onCopy={() => copyText((result.data?.hashtags || []).join(" "))}
-                onSendToStory={() =>
-                  sendToStory((result.data?.hashtags || []).join(" "))
+                onCopy={() =>
+                  copyText(
+                    Array.isArray(result.data?.hashtags)
+                      ? result.data.hashtags.join(" ")
+                      : ""
+                  )
                 }
               >
                 <div className="hashtags">
                   {(result.data?.hashtags || []).map((tag, index) => (
-                    <span key={`${tag}-${index}`}>#{tag.replace(/^#/, "")}</span>
+                    <span key={`${tag}-${index}`}>#{String(tag).replace(/^#/, "")}</span>
                   ))}
                 </div>
               </Section>
@@ -546,17 +499,15 @@ export default function App() {
               <Section
                 title={t.shortVersion}
                 onCopy={() => copyText(result.data?.shortVersion || "")}
-                onSendToStory={() => sendToStory(result.data?.shortVersion || "")}
               >
-                <div className="text-card">{result.data?.shortVersion || ""}</div>
+                <div className="text-card">
+                  {result.data?.shortVersion || ""}
+                </div>
               </Section>
 
               <Section
                 title={t.alternativeVersion}
                 onCopy={() => copyText(result.data?.alternativeVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.alternativeVersion || "")
-                }
               >
                 <div className="text-card">
                   {result.data?.alternativeVersion || ""}
@@ -567,16 +518,9 @@ export default function App() {
                 className="primary-btn"
                 style={{ marginTop: 10 }}
                 onClick={() => copyText(buildCopyText)}
+                type="button"
               >
                 Copy Full Post
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(buildCopyText)}
-              >
-                שלח פוסט מלא לעורך
               </button>
             </div>
           )}
@@ -594,7 +538,6 @@ export default function App() {
               <Section
                 title={t.improvedVersion}
                 onCopy={() => copyText(result.data?.improvedPost || "")}
-                onSendToStory={() => sendToStory(result.data?.improvedPost || "")}
               >
                 <div className="text-card">{result.data?.improvedPost || ""}</div>
               </Section>
@@ -602,9 +545,6 @@ export default function App() {
               <Section
                 title={t.moreViralVersion}
                 onCopy={() => copyText(result.data?.moreViralVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.moreViralVersion || "")
-                }
               >
                 <div className="text-card">
                   {result.data?.moreViralVersion || ""}
@@ -613,9 +553,8 @@ export default function App() {
 
               <Section
                 title={t.moreAuthenticVersion}
-                onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.moreAuthenticVersion || "")
+                onCopy={() =>
+                  copyText(result.data?.moreAuthenticVersion || "")
                 }
               >
                 <div className="text-card">
@@ -631,16 +570,9 @@ export default function App() {
                 className="primary-btn"
                 style={{ marginTop: 10 }}
                 onClick={() => copyText(improveCopyText)}
+                type="button"
               >
                 Copy Improved Versions
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(improveCopyText)}
-              >
-                שלח לעורך
               </button>
             </div>
           )}
@@ -650,34 +582,28 @@ export default function App() {
               <div className="scores-grid">
                 <ScoreCard
                   label={t.viralScore}
-                  value={result.data?.viralScore ?? 0}
+                  value={result.data?.viralScore}
                 />
                 <ScoreCard
                   label={t.authenticityScore}
-                  value={result.data?.authenticityScore ?? 0}
+                  value={result.data?.authenticityScore}
                 />
                 <ScoreCard
                   label={t.clarityScore}
-                  value={result.data?.clarityScore ?? 0}
+                  value={result.data?.clarityScore}
                 />
                 <ScoreCard
                   label={t.emotionalScore}
-                  value={result.data?.emotionalScore ?? 0}
+                  value={result.data?.emotionalScore}
                 />
                 <ScoreCard
                   label={t.hookScore}
-                  value={result.data?.hookScore ?? 0}
+                  value={result.data?.hookScore}
                 />
-                <ScoreCard
-                  label={t.ctaScore}
-                  value={result.data?.ctaScore ?? 0}
-                />
+                <ScoreCard label={t.ctaScore} value={result.data?.ctaScore} />
               </div>
 
-              <Section
-                title={t.summary}
-                onSendToStory={() => sendToStory(result.data?.summary || "")}
-              >
+              <Section title={t.summary}>
                 <div className="text-card">{result.data?.summary || ""}</div>
               </Section>
 
@@ -696,7 +622,6 @@ export default function App() {
               <Section
                 title={t.improvedVersion}
                 onCopy={() => copyText(analyzeCopyText)}
-                onSendToStory={() => sendToStory(analyzeCopyText)}
               >
                 <div className="text-card">
                   {result.data?.improvedVersion || ""}
@@ -707,49 +632,14 @@ export default function App() {
                 className="primary-btn"
                 style={{ marginTop: 10 }}
                 onClick={() => copyText(analyzeCopyText)}
+                type="button"
               >
                 Copy Improved Version
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(analyzeCopyText)}
-              >
-                שלח לעורך
               </button>
             </div>
           )}
         </section>
       </main>
-
-      <section className="panel glass" style={{ marginTop: 24 }}>
-        <h2 style={{ marginBottom: 16 }}>
-          {language === "he" ? "עורך סטורי" : "Story Editor"}
-        </h2>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          <select
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
-          >
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="tiktok">TikTok</option>
-          </select>
-
-          <button className="primary-btn" onClick={shareToSocial}>
-            🚀 העלה לרשת
-          </button>
-        </div>
-
-        <StoryEditor
-          incomingText={storyText}
-          incomingTextToken={storyTextToken}
-          onExportReady={setExportFn}
-        />
-      </section>
     </div>
   );
 }
