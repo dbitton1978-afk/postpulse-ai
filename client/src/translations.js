@@ -65,6 +65,7 @@ export const translations = {
     improveAction: "Improve",
     viralBoost: "Viral Boost",
     analyzeAction: "Analyze",
+
     publishAction: "Publish",
     publishToInstagram: "Publish to Instagram",
     publishToFacebook: "Publish to Facebook",
@@ -142,6 +143,7 @@ export const translations = {
     improveAction: "שפר",
     viralBoost: "בוסט ויראלי",
     analyzeAction: "נתח",
+
     publishAction: "פרסם",
     publishToInstagram: "פרסם לאינסטגרם",
     publishToFacebook: "פרסם לפייסבוק",
