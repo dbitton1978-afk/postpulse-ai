@@ -44,8 +44,14 @@ export const translations = {
     authenticityScore: "Authenticity Score",
     clarityScore: "Clarity Score",
     emotionalScore: "Emotional Score",
+    curiosityScore: "Interest Score",
     hookScore: "Hook Score",
     ctaScore: "CTA Score",
+
+    raiseViralScore: "How to Raise Viral Score",
+    raiseAuthenticityScore: "How to Raise Authenticity Score",
+    raiseEmotionalScore: "How to Raise Emotional Score",
+    raiseCuriosityScore: "How to Raise Interest Score",
 
     hebrew: "עברית",
     english: "English",
@@ -109,8 +115,14 @@ export const translations = {
     authenticityScore: "ציון אותנטיות",
     clarityScore: "ציון בהירות",
     emotionalScore: "ציון רגשי",
+    curiosityScore: "ציון עניין",
     hookScore: "ציון פתיחה",
     ctaScore: "ציון CTA",
+
+    raiseViralScore: "איך להעלות ויראליות",
+    raiseAuthenticityScore: "איך להעלות אותנטיות",
+    raiseEmotionalScore: "איך להעלות רגש",
+    raiseCuriosityScore: "איך להעלות עניין",
 
     hebrew: "עברית",
     english: "English",
