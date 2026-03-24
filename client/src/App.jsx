@@ -1,458 +1,670 @@
-:root {
-  color-scheme: dark;
-  --bg: #0b0f14;
-  --bg2: #121923;
-  --card: rgba(20, 26, 36, 0.78);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --text: #f3f7fb;
-  --muted: #9fb0c3;
-  --primary: #00ffcc;
-  --primary-dark: #00d7ac;
-  --danger: #ff6b6b;
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-  --radius: 22px;
+import { useMemo, useState } from "react";
+import { analyzePost, generatePost, improvePost } from "./api";
+import { translations } from "./translations";
+import "./App.css";
+
+const styles = [
+  { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
+  { value: "mentor", he: "מנטור", en: "Mentor" },
+  { value: "humorous", he: "הומוריסטי", en: "Humorous" },
+  { value: "spiritual", he: "רוחני", en: "Spiritual" },
+  { value: "emotional", he: "רגשי", en: "Emotional" },
+  { value: "professional", he: "מקצועי", en: "Professional" }
+];
+
+const platforms = [
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "tiktok", label: "TikTok" }
+];
+
+function Section({ title, children, onCopy, copyLabel }) {
+  return (
+    <div className="result-section">
+      <div className="section-header">
+        <h3>{title}</h3>
+
+        {onCopy ? (
+          <button className="copy-btn" onClick={onCopy} type="button">
+            {copyLabel}
+          </button>
+        ) : null}
+      </div>
+
+      {children}
+    </div>
+  );
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(0, 255, 204, 0.12), transparent 28%),
-    radial-gradient(circle at top right, rgba(0, 153, 255, 0.12), transparent 25%),
-    linear-gradient(180deg, var(--bg), var(--bg2));
-  color: var(--text);
-  font-family: Inter, Arial, Helvetica, sans-serif;
-}
-
-body {
-  min-height: 100vh;
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-.app {
-  position: relative;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-.app-shell {
-  position: relative;
-  z-index: 2;
-  max-width: 1380px;
-  margin: 0 auto;
-  padding: 34px 20px 60px;
-}
-
-.bg-orb {
-  position: fixed;
-  z-index: 0;
-  border-radius: 999px;
-  filter: blur(70px);
-  opacity: 0.25;
-  pointer-events: none;
-}
-
-.orb-1 {
-  width: 280px;
-  height: 280px;
-  background: #00ffcc;
-  top: 70px;
-  left: -80px;
-}
-
-.orb-2 {
-  width: 260px;
-  height: 260px;
-  background: #2d7cff;
-  top: 180px;
-  right: -70px;
-}
-
-.orb-3 {
-  width: 220px;
-  height: 220px;
-  background: #8f5bff;
-  bottom: 40px;
-  left: 20%;
-}
-
-.glass {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(16px);
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 22px;
-}
-
-.hero-copy {
-  max-width: 760px;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  margin-bottom: 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 255, 204, 0.24);
-  background: rgba(0, 255, 204, 0.08);
-  color: var(--primary);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.hero h1 {
-  margin: 0 0 10px;
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.hero p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-.lang-switch {
-  display: inline-flex;
-  gap: 8px;
-  padding: 6px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--card-border);
-}
-
-.lang-switch button,
-.tabs button,
-.copy-btn,
-.primary-btn {
-  border: 0;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.lang-switch button {
-  min-width: 90px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.lang-switch button.active {
-  background: rgba(0, 255, 204, 0.14);
-  color: var(--text);
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 22px;
-  flex-wrap: wrap;
-}
-
-.tabs button {
-  padding: 12px 18px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--muted);
-  border: 1px solid var(--card-border);
-  font-weight: 700;
-}
-
-.tabs button.active {
-  background: linear-gradient(135deg, rgba(0, 255, 204, 0.18), rgba(45, 124, 255, 0.16));
-  color: var(--text);
-  border-color: rgba(0, 255, 204, 0.28);
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 460px minmax(0, 1fr);
-  gap: 22px;
-  align-items: start;
-}
-
-.panel {
-  border-radius: var(--radius);
-  padding: 22px;
-}
-
-.panel-title {
-  margin-bottom: 18px;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.field {
-  margin-bottom: 16px;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.field input,
-.field textarea,
-.field select {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  border-radius: 16px;
-  padding: 14px 16px;
-  outline: none;
-}
-
-.field input::placeholder,
-.field textarea::placeholder {
-  color: #7f90a3;
-}
-
-.field input:focus,
-.field textarea:focus,
-.field select:focus {
-  border-color: rgba(0, 255, 204, 0.5);
-  box-shadow: 0 0 0 4px rgba(0, 255, 204, 0.08);
-}
-
-textarea {
-  resize: vertical;
-  min-height: 120px;
-}
-
-select {
-  appearance: none;
-}
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.primary-btn {
-  width: 100%;
-  padding: 15px 18px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary), #59ffd9);
-  color: #03120f;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.primary-btn:hover {
-  transform: translateY(-1px);
-  background: linear-gradient(135deg, #59ffd9, var(--primary));
-}
-
-.primary-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.error-box {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 107, 107, 0.12);
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  color: #ffd1d1;
-  font-weight: 700;
-}
-
-.empty-state {
-  min-height: 360px;
-  display: grid;
-  place-items: center;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  color: var(--muted);
-  font-size: 18px;
-  text-align: center;
-  padding: 24px;
-}
-
-.result-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.result-section {
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.copy-btn {
-  padding: 9px 12px;
-  border-radius: 12px;
-  background: rgba(0, 255, 204, 0.08);
-  color: var(--primary);
-  border: 1px solid rgba(0, 255, 204, 0.15);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.text-card {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.7;
-  color: var(--text);
-  font-size: 15px;
-}
-
-.result-list {
-  margin: 0;
-  padding-inline-start: 18px;
-  color: var(--text);
-}
-
-.result-list li {
-  margin-bottom: 10px;
-  line-height: 1.7;
-  color: var(--text);
-}
-
-.hashtags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.hashtags span {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(45, 124, 255, 0.14);
-  border: 1px solid rgba(45, 124, 255, 0.22);
-  color: #cfe2ff;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.scores-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.score-card {
-  padding: 18px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
-}
-
-.score-value {
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--primary);
-  margin-bottom: 8px;
-}
-
-.score-label {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: 1fr;
+function ListBlock({ items }) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return null;
   }
 
-  .empty-state {
-    min-height: 220px;
-  }
+  return (
+    <ul className="result-list">
+      {items.map((item, index) => (
+        <li key={`${String(item)}-${index}`}>{item}</li>
+      ))}
+    </ul>
+  );
 }
 
-@media (max-width: 720px) {
-  .app-shell {
-    padding: 20px 14px 40px;
-  }
+function ScoreCard({ label, value }) {
+  const numericValue = Number(value);
+  const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
 
-  .hero {
-    flex-direction: column;
-  }
-
-  .lang-switch {
-    width: 100%;
-  }
-
-  .lang-switch button {
-    flex: 1;
-  }
-
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .scores-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .panel {
-    padding: 16px;
-    border-radius: 18px;
-  }
+  return (
+    <div className="score-card">
+      <div className="score-value">{safeValue}%</div>
+      <div className="score-label">{label}</div>
+    </div>
+  );
 }
 
-@media (max-width: 520px) {
-  .scores-grid {
-    grid-template-columns: 1fr;
-  }
+export default function App() {
+  const [language, setLanguage] = useState("en");
+  const [tab, setTab] = useState("build");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-  .tabs button {
-    flex: 1 1 100%;
-  }
+  const t = useMemo(() => translations[language], [language]);
+  const dir = language === "he" ? "rtl" : "ltr";
+
+  const [buildForm, setBuildForm] = useState({
+    topic: "",
+    targetAudience: "",
+    goal: "",
+    style: "professional",
+    platform: "instagram"
+  });
+
+  const [improveForm, setImproveForm] = useState({
+    post: "",
+    goal: "",
+    style: "professional"
+  });
+
+  const [analyzeForm, setAnalyzeForm] = useState({
+    post: "",
+    platform: "instagram"
+  });
+
+  const setBuildField = (field, value) => {
+    setBuildForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const setImproveField = (field, value) => {
+    setImproveForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const setAnalyzeField = (field, value) => {
+    setAnalyzeForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text || "");
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  const resetStateBeforeRequest = () => {
+    setError("");
+    setResult(null);
+    setLoading(true);
+  };
+
+  const finishRequest = () => {
+    setLoading(false);
+  };
+
+  const handleBuild = async () => {
+    if (!buildForm.topic.trim()) {
+      setError(t.errorTopic);
+      return;
+    }
+
+    resetStateBeforeRequest();
+
+    try {
+      const res = await generatePost({
+        ...buildForm,
+        language
+      });
+
+      setResult({
+        type: "build",
+        data: res?.data || {}
+      });
+    } catch (err) {
+      setError(err?.message || "Error");
+    } finally {
+      finishRequest();
+    }
+  };
+
+  const handleImprove = async () => {
+    if (!improveForm.post.trim()) {
+      setError(t.errorPost);
+      return;
+    }
+
+    resetStateBeforeRequest();
+
+    try {
+      const res = await improvePost({
+        ...improveForm,
+        language
+      });
+
+      setResult({
+        type: "improve",
+        data: res?.data || {}
+      });
+    } catch (err) {
+      setError(err?.message || "Error");
+    } finally {
+      finishRequest();
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!analyzeForm.post.trim()) {
+      setError(t.errorPost);
+      return;
+    }
+
+    resetStateBeforeRequest();
+
+    try {
+      const res = await analyzePost({
+        ...analyzeForm,
+        language
+      });
+
+      setResult({
+        type: "analyze",
+        data: res?.data || {}
+      });
+    } catch (err) {
+      setError(err?.message || "Error");
+    } finally {
+      finishRequest();
+    }
+  };
+
+  const buildCopyText =
+    result?.type === "build"
+      ? [
+          result?.data?.title || "",
+          result?.data?.hook || "",
+          result?.data?.body || "",
+          result?.data?.cta || "",
+          Array.isArray(result?.data?.hashtags)
+            ? result.data.hashtags.join(" ")
+            : "",
+          result?.data?.shortVersion || "",
+          result?.data?.alternativeVersion || ""
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
+
+  const improveCopyText =
+    result?.type === "improve"
+      ? [
+          result?.data?.improvedPost || "",
+          result?.data?.moreViralVersion || "",
+          result?.data?.moreAuthenticVersion || ""
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
+
+  const analyzeCopyText =
+    result?.type === "analyze" ? result?.data?.improvedVersion || "" : "";
+
+  const buildTitlePlaceholder =
+    language === "he" ? "על מה הפוסט?" : "What is the post about?";
+  const buildAudiencePlaceholder =
+    language === "he" ? "למי הפוסט מיועד?" : "Who is this for?";
+  const buildGoalPlaceholder =
+    language === "he" ? "מה המטרה?" : "What is the goal?";
+  const improvePlaceholder =
+    language === "he" ? "הדבק כאן את הפוסט לשיפור" : "Paste the post to improve";
+  const improveGoalPlaceholder =
+    language === "he" ? "מה לשפר?" : "What should improve?";
+  const analyzePlaceholder =
+    language === "he" ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
+
+  return (
+    <div className="app" dir={dir}>
+      <div className="bg-orb orb-1" />
+      <div className="bg-orb orb-2" />
+      <div className="bg-orb orb-3" />
+
+      <div className="app-shell">
+        <header className="hero">
+          <div className="hero-copy">
+            <div className="hero-badge">AI Content Engine</div>
+            <h1>{t.appName}</h1>
+            <p>{t.subtitle}</p>
+          </div>
+
+          <div className="lang-switch">
+            <button
+              type="button"
+              className={language === "en" ? "active" : ""}
+              onClick={() => setLanguage("en")}
+            >
+              {t.english}
+            </button>
+
+            <button
+              type="button"
+              className={language === "he" ? "active" : ""}
+              onClick={() => setLanguage("he")}
+            >
+              {t.hebrew}
+            </button>
+          </div>
+        </header>
+
+        <nav className="tabs">
+          <button
+            type="button"
+            className={tab === "build" ? "active" : ""}
+            onClick={() => setTab("build")}
+          >
+            {t.build}
+          </button>
+
+          <button
+            type="button"
+            className={tab === "improve" ? "active" : ""}
+            onClick={() => setTab("improve")}
+          >
+            {t.improve}
+          </button>
+
+          <button
+            type="button"
+            className={tab === "analyze" ? "active" : ""}
+            onClick={() => setTab("analyze")}
+          >
+            {t.analyze}
+          </button>
+        </nav>
+
+        <main className="layout">
+          <section className="panel glass">
+            <div className="panel-title">
+              {tab === "build" && t.build}
+              {tab === "improve" && t.improve}
+              {tab === "analyze" && t.analyze}
+            </div>
+
+            {tab === "build" && (
+              <>
+                <div className="field">
+                  <label>{t.topic}</label>
+                  <textarea
+                    rows={5}
+                    value={buildForm.topic}
+                    onChange={(e) => setBuildField("topic", e.target.value)}
+                    placeholder={buildTitlePlaceholder}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{t.targetAudience}</label>
+                  <input
+                    type="text"
+                    value={buildForm.targetAudience}
+                    onChange={(e) => setBuildField("targetAudience", e.target.value)}
+                    placeholder={buildAudiencePlaceholder}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{t.goal}</label>
+                  <input
+                    type="text"
+                    value={buildForm.goal}
+                    onChange={(e) => setBuildField("goal", e.target.value)}
+                    placeholder={buildGoalPlaceholder}
+                  />
+                </div>
+
+                <div className="grid-2">
+                  <div className="field">
+                    <label>{t.style}</label>
+                    <select
+                      value={buildForm.style}
+                      onChange={(e) => setBuildField("style", e.target.value)}
+                    >
+                      {styles.map((style) => (
+                        <option key={style.value} value={style.value}>
+                          {language === "he" ? style.he : style.en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>{t.platform}</label>
+                    <select
+                      value={buildForm.platform}
+                      onChange={(e) => setBuildField("platform", e.target.value)}
+                    >
+                      {platforms.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  className="primary-btn"
+                  onClick={handleBuild}
+                  type="button"
+                  disabled={loading}
+                >
+                  {loading ? t.loading : t.generate}
+                </button>
+              </>
+            )}
+
+            {tab === "improve" && (
+              <>
+                <div className="field">
+                  <label>{t.postText}</label>
+                  <textarea
+                    rows={10}
+                    value={improveForm.post}
+                    onChange={(e) => setImproveField("post", e.target.value)}
+                    placeholder={improvePlaceholder}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{t.goal}</label>
+                  <input
+                    type="text"
+                    value={improveForm.goal}
+                    onChange={(e) => setImproveField("goal", e.target.value)}
+                    placeholder={improveGoalPlaceholder}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{t.style}</label>
+                  <select
+                    value={improveForm.style}
+                    onChange={(e) => setImproveField("style", e.target.value)}
+                  >
+                    {styles.map((style) => (
+                      <option key={style.value} value={style.value}>
+                        {language === "he" ? style.he : style.en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  className="primary-btn"
+                  onClick={handleImprove}
+                  type="button"
+                  disabled={loading}
+                >
+                  {loading ? t.loading : t.improveBtn}
+                </button>
+              </>
+            )}
+
+            {tab === "analyze" && (
+              <>
+                <div className="field">
+                  <label>{t.postText}</label>
+                  <textarea
+                    rows={10}
+                    value={analyzeForm.post}
+                    onChange={(e) => setAnalyzeField("post", e.target.value)}
+                    placeholder={analyzePlaceholder}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{t.platform}</label>
+                  <select
+                    value={analyzeForm.platform}
+                    onChange={(e) => setAnalyzeField("platform", e.target.value)}
+                  >
+                    {platforms.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <button
+                  className="primary-btn"
+                  onClick={handleAnalyze}
+                  type="button"
+                  disabled={loading}
+                >
+                  {loading ? t.loading : t.analyzeBtn}
+                </button>
+              </>
+            )}
+
+            {error ? <div className="error-box">{error}</div> : null}
+          </section>
+
+          <section className="panel glass">
+            <div className="panel-title">{t.result}</div>
+
+            {!result ? <div className="empty-state">{t.emptyState}</div> : null}
+
+            {result?.type === "build" && (
+              <div className="result-wrap">
+                <Section
+                  title={t.title}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.title || "")}
+                >
+                  <div className="text-card">{result?.data?.title || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.hook}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.hook || "")}
+                >
+                  <div className="text-card">{result?.data?.hook || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.body}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.body || "")}
+                >
+                  <div className="text-card">{result?.data?.body || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.cta}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.cta || "")}
+                >
+                  <div className="text-card">{result?.data?.cta || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.hashtags}
+                  copyLabel={t.copy}
+                  onCopy={() =>
+                    copyText(
+                      Array.isArray(result?.data?.hashtags)
+                        ? result.data.hashtags.join(" ")
+                        : ""
+                    )
+                  }
+                >
+                  <div className="hashtags">
+                    {(result?.data?.hashtags || []).map((tag, index) => (
+                      <span key={`${String(tag)}-${index}`}>
+                        #{String(tag).replace(/^#/, "")}
+                      </span>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section
+                  title={t.shortVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.shortVersion || "")}
+                >
+                  <div className="text-card">{result?.data?.shortVersion || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.alternativeVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.alternativeVersion || "")}
+                >
+                  <div className="text-card">
+                    {result?.data?.alternativeVersion || ""}
+                  </div>
+                </Section>
+
+                <button
+                  className="primary-btn"
+                  style={{ marginTop: 10 }}
+                  onClick={() => copyText(buildCopyText)}
+                  type="button"
+                >
+                  {t.copyFullPost}
+                </button>
+              </div>
+            )}
+
+            {result?.type === "improve" && (
+              <div className="result-wrap">
+                <Section title={t.strengths}>
+                  <ListBlock items={result?.data?.strengths || []} />
+                </Section>
+
+                <Section title={t.weaknesses}>
+                  <ListBlock items={result?.data?.weaknesses || []} />
+                </Section>
+
+                <Section
+                  title={t.improvedVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.improvedPost || "")}
+                >
+                  <div className="text-card">{result?.data?.improvedPost || ""}</div>
+                </Section>
+
+                <Section
+                  title={t.moreViralVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.moreViralVersion || "")}
+                >
+                  <div className="text-card">
+                    {result?.data?.moreViralVersion || ""}
+                  </div>
+                </Section>
+
+                <Section
+                  title={t.moreAuthenticVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(result?.data?.moreAuthenticVersion || "")}
+                >
+                  <div className="text-card">
+                    {result?.data?.moreAuthenticVersion || ""}
+                  </div>
+                </Section>
+
+                <Section title={t.tips}>
+                  <ListBlock items={result?.data?.tips || []} />
+                </Section>
+
+                <button
+                  className="primary-btn"
+                  style={{ marginTop: 10 }}
+                  onClick={() => copyText(improveCopyText)}
+                  type="button"
+                >
+                  {t.copyImproved}
+                </button>
+              </div>
+            )}
+
+            {result?.type === "analyze" && (
+              <div className="result-wrap">
+                <div className="scores-grid">
+                  <ScoreCard label={t.viralScore} value={result?.data?.viralScore} />
+                  <ScoreCard
+                    label={t.authenticityScore}
+                    value={result?.data?.authenticityScore}
+                  />
+                  <ScoreCard label={t.clarityScore} value={result?.data?.clarityScore} />
+                  <ScoreCard
+                    label={t.emotionalScore}
+                    value={result?.data?.emotionalScore}
+                  />
+                  <ScoreCard label={t.hookScore} value={result?.data?.hookScore} />
+                  <ScoreCard label={t.ctaScore} value={result?.data?.ctaScore} />
+                </div>
+
+                <Section title={t.summary}>
+                  <div className="text-card">{result?.data?.summary || ""}</div>
+                </Section>
+
+                <Section title={t.whatWorks}>
+                  <ListBlock items={result?.data?.whatWorks || []} />
+                </Section>
+
+                <Section title={t.whatHurts}>
+                  <ListBlock items={result?.data?.whatHurts || []} />
+                </Section>
+
+                <Section title={t.improvements}>
+                  <ListBlock items={result?.data?.improvements || []} />
+                </Section>
+
+                <Section
+                  title={t.improvedVersion}
+                  copyLabel={t.copy}
+                  onCopy={() => copyText(analyzeCopyText)}
+                >
+                  <div className="text-card">
+                    {result?.data?.improvedVersion || ""}
+                  </div>
+                </Section>
+
+                <button
+                  className="primary-btn"
+                  style={{ marginTop: 10 }}
+                  onClick={() => copyText(analyzeCopyText)}
+                  type="button"
+                >
+                  {t.copyAnalyze}
+                </button>
+              </div>
+            )}
+          </section>
+        </main>
+      </div>
+    </div>
+  );
 }
