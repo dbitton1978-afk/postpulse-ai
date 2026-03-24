@@ -72,6 +72,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
@@ -129,6 +130,7 @@ export default function App() {
     setError("");
     setResult(null);
     setLoading(true);
+    setPublishOpen(false);
   }
 
   function endRequest() {
@@ -269,6 +271,30 @@ export default function App() {
       .join("\n\n");
   }
 
+  function getCurrentPublishText() {
+    if (!result || !result.data) return "";
+
+    if (result.type === "build") {
+      return getBuildResultFullPost();
+    }
+
+    if (result.type === "improve") {
+      return [
+        result.data.improvedPost || "",
+        result.data.moreViralVersion || "",
+        result.data.moreAuthenticVersion || ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    if (result.type === "analyze") {
+      return result.data.improvedVersion || "";
+    }
+
+    return "";
+  }
+
   function moveBuildResultToImprove(goalValue = "") {
     const fullPost = getBuildResultFullPost();
 
@@ -292,6 +318,19 @@ export default function App() {
     }));
 
     setTab("analyze");
+  }
+
+  function handlePublish(platformLabel) {
+    const text = getCurrentPublishText();
+
+    if (!text) {
+      alert(t.publishComingSoon);
+      return;
+    }
+
+    copyText(text);
+    alert(`${platformLabel}\n\n${t.publishComingSoon}`);
+    setPublishOpen(false);
   }
 
   const topicPlaceholder =
@@ -878,6 +917,54 @@ export default function App() {
                 >
                   {t.copyAnalyze}
                 </button>
+              </div>
+            ) : null}
+
+            {result ? (
+              <div className="publish-menu-wrap">
+                <button
+                  type="button"
+                  className="primary-btn publish-btn"
+                  onClick={() => setPublishOpen((prev) => !prev)}
+                >
+                  {t.publishAction}
+                </button>
+
+                {publishOpen ? (
+                  <div className="publish-menu">
+                    <button
+                      type="button"
+                      className="publish-menu-item"
+                      onClick={() => handlePublish(t.publishToInstagram)}
+                    >
+                      {t.publishToInstagram}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="publish-menu-item"
+                      onClick={() => handlePublish(t.publishToFacebook)}
+                    >
+                      {t.publishToFacebook}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="publish-menu-item"
+                      onClick={() => handlePublish(t.publishToLinkedIn)}
+                    >
+                      {t.publishToLinkedIn}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="publish-menu-item"
+                      onClick={() => handlePublish(t.publishToTikTok)}
+                    >
+                      {t.publishToTikTok}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>
