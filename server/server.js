@@ -248,8 +248,9 @@ function normalizeAnalyzeResponse(data) {
 
 async function askAI(systemPrompt, userPrompt) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    temperature: 1,
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    max_tokens: 800,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
