@@ -1,20 +1,46 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+
+  const config = {
+    method: "GET",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...(options.headers || {})
     },
     ...options
-  });
+  };
 
-  const data = await response.json();
+  try {
+    const response = await fetch(url, config);
 
-  if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    let data = null;
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = text ? { message: text } : {};
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          data?.error ||
+          `Request failed with status ${response.status}`
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("Unable to connect to server");
+    }
+
+    throw error;
   }
-
-  return data;
 }
 
 export async function generatePost(payload) {
