@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function createId() {
   return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -19,12 +19,36 @@ const DEFAULT_TEXT = {
   stroke: false
 };
 
-export default function StoryEditor() {
+export default function StoryEditor({
+  incomingText = "",
+  incomingTextToken = 0
+}) {
   const [images, setImages] = useState([]);
   const [texts, setTexts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [dragItem, setDragItem] = useState(null);
+
+  useEffect(() => {
+    if (!incomingText || !incomingTextToken) return;
+
+    const id = createId();
+
+    setTexts((prev) => [
+      ...prev,
+      {
+        id,
+        ...DEFAULT_TEXT,
+        content: incomingText,
+        x: 180,
+        y: 320,
+        scale: incomingText.length < 60 ? 1.2 : 1
+      }
+    ]);
+
+    setSelectedId(id);
+    setSelectedType("text");
+  }, [incomingText, incomingTextToken]);
 
   function handleUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -186,7 +210,7 @@ export default function StoryEditor() {
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor - Step 6</h2>
+      <h2>Story Editor - Step 7</h2>
 
       <input type="file" accept="image/*" multiple onChange={handleUpload} />
 
@@ -353,6 +377,7 @@ export default function StoryEditor() {
                 border: selectedBorder,
                 cursor: "grab",
                 maxWidth: 240,
+                whiteSpace: "pre-wrap",
                 textShadow
               }}
             >
