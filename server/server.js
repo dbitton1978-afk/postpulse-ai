@@ -131,12 +131,30 @@ function getPlatformRules(platform, language) {
   return PLATFORM_MAP[safePlatform][safeLanguage];
 }
 
-function safeJsonParse(text) {
+function tryParseJson(text) {
   try {
     return JSON.parse(text);
   } catch {
     return null;
   }
+}
+
+function safeJsonParse(text) {
+  if (!text) return null;
+
+  const direct = tryParseJson(text);
+  if (direct) return direct;
+
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const sliced = text.slice(firstBrace, lastBrace + 1);
+    const parsed = tryParseJson(sliced);
+    if (parsed) return parsed;
+  }
+
+  return null;
 }
 
 function clampScore(value) {
@@ -203,7 +221,6 @@ function normalizeAnalyzeResponse(data) {
     ctaScore: clampScore(data?.ctaScore),
 
     summary: cleanString(data?.summary),
-
     whatWorks: cleanArray(data?.whatWorks),
     whatHurts: cleanArray(data?.whatHurts),
     improvements: cleanArray(data?.improvements),
@@ -217,18 +234,19 @@ function normalizeAnalyzeResponse(data) {
   };
 }
 
-async function askAI(systemPrompt, userPrompt) {
+async function askAI(systemPrompt, userPrompt, maxCompletionTokens = 700) {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.4,
-    max_completion_tokens: 450,
+    temperature: 0.3,
+    max_completion_tokens: maxCompletionTokens,
     response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
         content: `${systemPrompt}
-Keep the JSON concise and high quality.
-Avoid extra wording.
+Return JSON only.
+No markdown.
+No code fences.
 `
       },
       { role: "user", content: userPrompt }
@@ -238,9 +256,206 @@ Avoid extra wording.
   return response.choices[0]?.message?.content || "{}";
 }
 
+async function askAIJson(systemPrompt, userPrompt, maxCompletionTokens = 700) {
+  const raw = await askAI(systemPrompt, userPrompt, maxCompletionTokens);
+  return safeJsonParse(raw);
+}
+
 function validateApiKey() {
   return Boolean(process.env.OPENAI_API_KEY);
 }
+
+/**
+ * -----------------------------
+ * INTERNAL ENGINES
+ * -----------------------------
+ */
+
+async function buildGenerateBrief({
+  topic,
+  targetAudience,
+  goal,
+  platform,
+  language,
+  style
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const styleText = getStyleText(style, safeLanguage);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+
+  const systemPrompt = `
+You are a content strategy engine.
+Build a concise content brief before writing.
+Be sharp, specific, and practical.
+
+Required JSON structure:
+{
+  "postType": "",
+  "angle": "",
+  "coreEmotion": "",
+  "hookDirection": "",
+  "ctaDirection": "",
+  "toneNotes": [],
+  "risksToAvoid": []
+}
+`;
+
+  const userPrompt = `
+Create a brief for a social media post.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Topic: ${topic}
+Target audience: ${targetAudience}
+Goal: ${goal}
+Style: ${styleText}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
+
+Rules:
+- choose the best post type
+- define the strongest angle
+- define the strongest emotional direction
+- define how the hook should behave
+- define how the CTA should behave
+- keep it concise and useful
+`;
+
+  const parsed = await askAIJson(systemPrompt, userPrompt, 350);
+
+  return {
+    postType: cleanString(parsed?.postType, "authority"),
+    angle: cleanString(parsed?.angle, topic),
+    coreEmotion: cleanString(parsed?.coreEmotion, "interest"),
+    hookDirection: cleanString(parsed?.hookDirection, "clear and strong"),
+    ctaDirection: cleanString(parsed?.ctaDirection, "natural"),
+    toneNotes: cleanArray(parsed?.toneNotes),
+    risksToAvoid: cleanArray(parsed?.risksToAvoid)
+  };
+}
+
+async function writeGeneratedPost({
+  topic,
+  targetAudience,
+  goal,
+  platform,
+  language,
+  style,
+  brief
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const styleText = getStyleText(style, safeLanguage);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+
+  const systemPrompt = `
+You are an elite social media writer.
+Write like a real human.
+Be platform-native, clear, sharp, and concise.
+
+Required JSON structure:
+{
+  "title": "",
+  "hook": "",
+  "body": "",
+  "cta": "",
+  "hashtags": [],
+  "shortVersion": "",
+  "alternativeVersion": ""
+}
+`;
+
+  const userPrompt = `
+Write one strong social media post.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Topic: ${topic}
+Target audience: ${targetAudience}
+Goal: ${goal}
+Style: ${styleText}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Hashtags: ${platformRules.hashtags}
+- Length: ${platformRules.length}
+
+Internal brief:
+- Post type: ${brief.postType}
+- Angle: ${brief.angle}
+- Core emotion: ${brief.coreEmotion}
+- Hook direction: ${brief.hookDirection}
+- CTA direction: ${brief.ctaDirection}
+- Tone notes: ${brief.toneNotes.join(", ")}
+- Risks to avoid: ${brief.risksToAvoid.join(", ")}
+
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
+- strong hook
+- clear body
+- natural CTA
+- avoid generic AI tone
+- make it feel human and native to the platform
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 700);
+}
+
+async function critiqueGeneratedPost({
+  platform,
+  language,
+  draft
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+
+  const systemPrompt = `
+You are a content critic engine.
+Your job is to improve a generated post without changing its output structure.
+Be concise, practical, and quality-focused.
+
+Required JSON structure:
+{
+  "title": "",
+  "hook": "",
+  "body": "",
+  "cta": "",
+  "hashtags": [],
+  "shortVersion": "",
+  "alternativeVersion": ""
+}
+`;
+
+  const userPrompt = `
+Review this generated post and improve it only if needed.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+
+Improve if:
+- the hook is weak
+- the body is generic
+- the CTA is flat
+- the text sounds AI-generated
+- the text is not sharp enough for the platform
+
+Current draft:
+${JSON.stringify(draft)}
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 700);
+}
+
+/**
+ * -----------------------------
+ * ROUTES
+ * -----------------------------
+ */
 
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
@@ -278,67 +493,42 @@ app.post("/api/generate-post", async (req, res) => {
       });
     }
 
-    const safeLanguage = normalizeLanguage(language);
     const safePlatform = normalizePlatform(platform);
-    const styleText = getStyleText(style, safeLanguage);
-    const platformRules = getPlatformRules(safePlatform, safeLanguage);
 
-    const systemPrompt = `
-You are an elite social media writer.
-Write like a real human, not like AI.
-Be specific, natural, clear, and platform-native.
-Return valid JSON only.
+    const brief = await buildGenerateBrief({
+      topic,
+      targetAudience,
+      goal,
+      platform: safePlatform,
+      language,
+      style
+    });
 
-Required JSON structure:
-{
-  "title": "",
-  "hook": "",
-  "body": "",
-  "cta": "",
-  "hashtags": [],
-  "shortVersion": "",
-  "alternativeVersion": ""
-}
-`;
+    const firstDraft = await writeGeneratedPost({
+      topic,
+      targetAudience,
+      goal,
+      platform: safePlatform,
+      language,
+      style,
+      brief
+    });
 
-    const userPrompt = `
-Write one strong social media post.
-
-Language: ${getLanguageLabel(safeLanguage)}
-Platform: ${safePlatform}
-Topic: ${topic}
-Target audience: ${targetAudience}
-Goal: ${goal}
-Style: ${styleText}
-
-Platform rules:
-- Tone: ${platformRules.tone}
-- CTA: ${platformRules.cta}
-- Hashtags: ${platformRules.hashtags}
-- Length: ${platformRules.length}
-
-Rules:
-- everything must be in ${getLanguageLabel(safeLanguage)}
-- strong hook
-- clear body
-- natural CTA
-- avoid generic AI tone
-- make it feel human and native to the platform
-
-Return JSON only.
-`;
-
-    const raw = await askAI(systemPrompt, userPrompt);
-    const parsed = safeJsonParse(raw);
-
-    if (!parsed) {
+    if (!firstDraft) {
       return res.status(500).json({
         success: false,
         message: "Failed to parse AI response"
       });
     }
 
-    const normalized = normalizeGenerateResponse(parsed, safePlatform);
+    const criticDraft = await critiqueGeneratedPost({
+      platform: safePlatform,
+      language,
+      draft: firstDraft
+    });
+
+    const finalDraft = criticDraft || firstDraft;
+    const normalized = normalizeGenerateResponse(finalDraft, safePlatform);
 
     return res.json({
       success: true,
@@ -387,7 +577,6 @@ app.post("/api/improve-post", async (req, res) => {
 You are an elite social media editor.
 Improve text by platform.
 Be sharp, useful, human, and concise.
-Return valid JSON only.
 
 Required JSON structure:
 {
@@ -423,12 +612,9 @@ Rules:
 - improve for this platform
 - make it more human
 - tips must be practical and short
-
-Return JSON only.
 `;
 
-    const raw = await askAI(systemPrompt, userPrompt);
-    const parsed = safeJsonParse(raw);
+    const parsed = await askAIJson(systemPrompt, userPrompt, 700);
 
     if (!parsed) {
       return res.status(500).json({
@@ -479,7 +665,6 @@ app.post("/api/analyze-post", async (req, res) => {
 You are an elite social media analyst.
 Analyze by platform.
 Be concise, specific, human, and practical.
-Return valid JSON only.
 
 Required JSON structure:
 {
@@ -524,8 +709,6 @@ Rules:
 - explain what works on this platform
 - explain what hurts performance on this platform
 - improved version must fit this platform
-
-Also:
 - give specific actions to raise viral score
 - give specific actions to raise authenticity score
 - give specific actions to raise emotional score
@@ -535,12 +718,9 @@ Curiosity score means:
 - how much the post creates interest
 - how much it makes people want to keep reading
 - how much it creates tension, intrigue, surprise, or pull
-
-Return JSON only.
 `;
 
-    const raw = await askAI(systemPrompt, userPrompt);
-    const parsed = safeJsonParse(raw);
+    const parsed = await askAIJson(systemPrompt, userPrompt, 700);
 
     if (!parsed) {
       return res.status(500).json({
