@@ -252,7 +252,43 @@ export default function App() {
     result.data.improvedVersion
       ? result.data.improvedVersion
       : "";
+function getBuildResultFullPost() {
+  if (!result || result.type !== "build" || !result.data) {
+    return "";
+  }
 
+  return [
+    result.data.title || "",
+    result.data.hook || "",
+    result.data.body || "",
+    result.data.cta || ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function moveBuildResultToImprove(goalValue = "") {
+  const fullPost = getBuildResultFullPost();
+
+  setImproveForm((prev) => ({
+    ...prev,
+    post: fullPost,
+    goal: goalValue || prev.goal
+  }));
+
+  setTab("improve");
+}
+
+function moveBuildResultToAnalyze() {
+  const fullPost = getBuildResultFullPost();
+
+  setAnalyzeForm((prev) => ({
+    ...prev,
+    post: fullPost
+  }));
+
+  setTab("analyze");
+}
   const topicPlaceholder =
     language === "he" ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
@@ -592,52 +628,19 @@ export default function App() {
                 >
                   {t.copyFullPost}
                 </button>
-                <div className="action-row">
+               <div className="action-row">
   <button
     type="button"
     className="primary-btn"
-    onClick={() => {
-      const fullPost = [
-        result.data ? result.data.title : "",
-        result.data ? result.data.hook : "",
-        result.data ? result.data.body : "",
-        result.data ? result.data.cta : ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
-      setImproveForm((prev) => ({
-        ...prev,
-        post: fullPost
-      }));
-
-      setTab("improve");
-    }}
+    onClick={() => moveBuildResultToImprove("")}
   >
     Improve
   </button>
 
   <button
     type="button"
-    className="primary-btn"
-    onClick={() => {
-      const fullPost = [
-        result.data ? result.data.title : "",
-        result.data ? result.data.hook : "",
-        result.data ? result.data.body : "",
-        result.data ? result.data.cta : ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
-      setImproveForm((prev) => ({
-        ...prev,
-        post: fullPost,
-        goal: "Make it more viral"
-      }));
-
-      setTab("improve");
-    }}
+    className="primary-btn primary-btn-viral"
+    onClick={() => moveBuildResultToImprove("Make it more viral")}
   >
     Viral Boost
   </button>
@@ -645,23 +648,7 @@ export default function App() {
   <button
     type="button"
     className="primary-btn"
-    onClick={() => {
-      const fullPost = [
-        result.data ? result.data.title : "",
-        result.data ? result.data.hook : "",
-        result.data ? result.data.body : "",
-        result.data ? result.data.cta : ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: fullPost
-      }));
-
-      setTab("analyze");
-    }}
+    onClick={moveBuildResultToAnalyze}
   >
     Analyze
   </button>
