@@ -1234,6 +1234,38 @@ export default function App() {
                   <div className="text-card">{analyzeCopyText}</div>
                 </Section>
 
+                <div className="quick-actions-title">{t.quickActionsTitle}</div>
+                <div className="quick-actions-grid">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetFixHook)}
+                  >
+                    {t.quickFixHook}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetFixCta)}
+                  >
+                    {t.quickFixCta}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetMoreViral)}
+                  >
+                    {t.quickMakeViral}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetMoreHuman)}
+                  >
+                    {t.quickMakeHuman}
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   className="primary-btn"
