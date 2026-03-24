@@ -175,10 +175,17 @@ function cleanString(value, fallback = "") {
   return value.trim();
 }
 
+function truncateText(value, maxLength = 1200) {
+  const text = cleanString(value);
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
+}
+
 function normalizeHashtagsByPlatform(hashtags, platform) {
   const safePlatform = normalizePlatform(platform);
   const normalized = cleanArray(hashtags).map((tag) =>
-    tag.startsWith("#") ? tag : `#${tag}`
+    tag.startsWith("#") ? tag : `#${tag.replace(/^#+/, "")}`
   );
 
   if (safePlatform === "linkedin") return normalized.slice(0, 5);
@@ -234,10 +241,80 @@ function normalizeAnalyzeResponse(data) {
   };
 }
 
+function validateGeneratePayload(body = {}) {
+  return {
+    topic: truncateText(body?.topic, 500),
+    targetAudience: truncateText(body?.targetAudience, 300),
+    goal: truncateText(body?.goal, 300),
+    language: normalizeLanguage(body?.language),
+    style: body?.style || "professional",
+    platform: normalizePlatform(body?.platform)
+  };
+}
+
+function hasEnoughGeneratedContent(data) {
+  if (!data) return false;
+
+  const title = cleanString(data?.title);
+  const hook = cleanString(data?.hook);
+  const body = cleanString(data?.body);
+  const cta = cleanString(data?.cta);
+
+  return Boolean(hook && body && cta && (title || body.length > 30));
+}
+
+function fillGenerateFallbacks(data, { topic, platform, language }) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const normalized = normalizeGenerateResponse(data || {}, safePlatform);
+
+  const fallbackTitle =
+    safeLanguage === "he" ? `פוסט על ${topic}` : `Post about ${topic}`;
+
+  const fallbackHook =
+    safeLanguage === "he"
+      ? `יש רגעים שבהם שינוי קטן בדרך שבה אנחנו מסתכלים על ${topic} משנה הכול.`
+      : `Sometimes a small shift in how we look at ${topic} changes everything.`;
+
+  const fallbackBody =
+    safeLanguage === "he"
+      ? `כשמדברים על ${topic}, רוב האנשים נשארים ברמה הכללית. אבל כדי לבלוט באמת צריך להביא זווית ברורה, מסר חד ותחושה אנושית שמתחברת לקוראים. כאן בדיוק מתחיל ההבדל בין עוד פוסט רגיל לבין פוסט שאנשים באמת עוצרים עליו.`
+      : `When people talk about ${topic}, most stay generic. But standing out requires a clear angle, a sharp message, and a human tone that people can actually connect with. That is the difference between an ordinary post and one that genuinely makes people stop and read.`;
+
+  const fallbackCta =
+    safeLanguage === "he"
+      ? safePlatform === "linkedin"
+        ? "מה דעתכם על זה?"
+        : "אם זה דיבר אליכם, כתבו לי בתגובות."
+      : safePlatform === "linkedin"
+        ? "What is your take on this?"
+        : "If this resonated, share your thoughts in the comments.";
+
+  const fallbackShort =
+    safeLanguage === "he"
+      ? `מבט חד יותר על ${topic} יכול לשנות את כל הדרך שבה אנשים מגיבים אליו.`
+      : `A sharper angle on ${topic} can completely change how people respond to it.`;
+
+  const fallbackAlternative =
+    safeLanguage === "he"
+      ? `לפעמים לא צריך לכתוב יותר על ${topic} — צריך לכתוב נכון יותר.`
+      : `Sometimes the answer is not writing more about ${topic} — it is writing about it better.`;
+
+  return {
+    title: normalized.title || fallbackTitle,
+    hook: normalized.hook || fallbackHook,
+    body: normalized.body || fallbackBody,
+    cta: normalized.cta || fallbackCta,
+    hashtags: normalized.hashtags,
+    shortVersion: normalized.shortVersion || fallbackShort,
+    alternativeVersion: normalized.alternativeVersion || fallbackAlternative
+  };
+}
+
 async function askAI(systemPrompt, userPrompt, maxCompletionTokens = 700) {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0.3,
+    temperature: 0.35,
     max_completion_tokens: maxCompletionTokens,
     response_format: { type: "json_object" },
     messages: [
@@ -285,30 +362,33 @@ async function buildGenerateBrief({
   const platformRules = getPlatformRules(safePlatform, safeLanguage);
 
   const systemPrompt = `
-You are a content strategy engine.
-Build a concise content brief before writing.
-Be sharp, specific, and practical.
+You are a senior content strategist.
+Build a concise but smart internal brief before writing.
+Focus on strategic clarity, emotional direction, and platform fit.
+Avoid vague ideas and generic wording.
 
 Required JSON structure:
 {
   "postType": "",
   "angle": "",
   "coreEmotion": "",
+  "primaryPromise": "",
   "hookDirection": "",
   "ctaDirection": "",
   "toneNotes": [],
+  "keywordsToUse": [],
   "risksToAvoid": []
 }
 `;
 
   const userPrompt = `
-Create a brief for a social media post.
+Create a sharp internal brief for a social media post.
 
 Language: ${getLanguageLabel(safeLanguage)}
 Platform: ${safePlatform}
 Topic: ${topic}
-Target audience: ${targetAudience}
-Goal: ${goal}
+Target audience: ${targetAudience || "general audience"}
+Goal: ${goal || "create a strong post"}
 Style: ${styleText}
 
 Platform rules:
@@ -317,23 +397,29 @@ Platform rules:
 - Length: ${platformRules.length}
 
 Rules:
-- choose the best post type
-- define the strongest angle
-- define the strongest emotional direction
-- define how the hook should behave
-- define how the CTA should behave
-- keep it concise and useful
+- choose the strongest post type for this case
+- define one strong angle, not 3 weak ones
+- define the core emotion that should lead the reader
+- define one clear promise/value for the audience
+- define the hook direction
+- define the CTA direction
+- add 3-6 tone notes
+- add 3-6 keywords/phrases the writer should naturally use
+- add 3-6 risks to avoid
+- keep it concise but practical
 `;
 
-  const parsed = await askAIJson(systemPrompt, userPrompt, 350);
+  const parsed = await askAIJson(systemPrompt, userPrompt, 450);
 
   return {
     postType: cleanString(parsed?.postType, "authority"),
     angle: cleanString(parsed?.angle, topic),
     coreEmotion: cleanString(parsed?.coreEmotion, "interest"),
+    primaryPromise: cleanString(parsed?.primaryPromise, "clear value"),
     hookDirection: cleanString(parsed?.hookDirection, "clear and strong"),
-    ctaDirection: cleanString(parsed?.ctaDirection, "natural"),
+    ctaDirection: cleanString(parsed?.ctaDirection, "natural and relevant"),
     toneNotes: cleanArray(parsed?.toneNotes),
+    keywordsToUse: cleanArray(parsed?.keywordsToUse),
     risksToAvoid: cleanArray(parsed?.risksToAvoid)
   };
 }
@@ -354,8 +440,9 @@ async function writeGeneratedPost({
 
   const systemPrompt = `
 You are an elite social media writer.
-Write like a real human.
-Be platform-native, clear, sharp, and concise.
+You write like a real human, not like AI.
+You must be platform-native, clear, sharp, emotional when needed, and never generic.
+The post must feel publishable.
 
 Required JSON structure:
 {
@@ -375,8 +462,8 @@ Write one strong social media post.
 Language: ${getLanguageLabel(safeLanguage)}
 Platform: ${safePlatform}
 Topic: ${topic}
-Target audience: ${targetAudience}
-Goal: ${goal}
+Target audience: ${targetAudience || "general audience"}
+Goal: ${goal || "create a strong post"}
 Style: ${styleText}
 
 Platform rules:
@@ -389,35 +476,39 @@ Internal brief:
 - Post type: ${brief.postType}
 - Angle: ${brief.angle}
 - Core emotion: ${brief.coreEmotion}
+- Primary promise: ${brief.primaryPromise}
 - Hook direction: ${brief.hookDirection}
 - CTA direction: ${brief.ctaDirection}
 - Tone notes: ${brief.toneNotes.join(", ")}
+- Keywords to use naturally: ${brief.keywordsToUse.join(", ")}
 - Risks to avoid: ${brief.risksToAvoid.join(", ")}
 
-Rules:
+Writing rules:
 - everything must be in ${getLanguageLabel(safeLanguage)}
-- strong hook
-- clear body
-- natural CTA
-- avoid generic AI tone
-- make it feel human and native to the platform
+- title should be useful and clean, not clickbait
+- hook must make people want to continue reading
+- body must deliver real value, not filler
+- CTA must feel natural and platform-appropriate
+- avoid robotic phrasing
+- avoid repeating the same idea twice
+- avoid generic motivational fluff
+- shortVersion must be genuinely shorter, not a copy
+- alternativeVersion must use a different phrasing angle
+- hashtags must be relevant and natural
 `;
 
-  return askAIJson(systemPrompt, userPrompt, 700);
+  return askAIJson(systemPrompt, userPrompt, 900);
 }
 
-async function critiqueGeneratedPost({
-  platform,
-  language,
-  draft
-}) {
+async function critiqueGeneratedPost({ platform, language, draft, brief }) {
   const safeLanguage = normalizeLanguage(language);
   const safePlatform = normalizePlatform(platform);
 
   const systemPrompt = `
-You are a content critic engine.
-Your job is to improve a generated post without changing its output structure.
-Be concise, practical, and quality-focused.
+You are a senior content critic.
+Your job is to upgrade a generated post without changing its JSON structure.
+Keep what is strong. Improve only what is weak.
+Focus on hook strength, body sharpness, clarity, human tone, and platform fit.
 
 Required JSON structure:
 {
@@ -432,23 +523,92 @@ Required JSON structure:
 `;
 
   const userPrompt = `
-Review this generated post and improve it only if needed.
+Review this generated post and improve it where needed.
 
 Language: ${getLanguageLabel(safeLanguage)}
 Platform: ${safePlatform}
 
+Internal brief for quality control:
+- Angle: ${brief?.angle || ""}
+- Core emotion: ${brief?.coreEmotion || ""}
+- Primary promise: ${brief?.primaryPromise || ""}
+- Hook direction: ${brief?.hookDirection || ""}
+- CTA direction: ${brief?.ctaDirection || ""}
+
 Improve if:
-- the hook is weak
-- the body is generic
-- the CTA is flat
-- the text sounds AI-generated
-- the text is not sharp enough for the platform
+- the hook is too generic
+- the body is too broad or sounds like AI
+- the CTA is flat or forced
+- the wording lacks emotional pull
+- the post is not sharp enough for the platform
+- shortVersion is too similar to the main version
+- alternativeVersion is not meaningfully different
 
 Current draft:
 ${JSON.stringify(draft)}
 `;
 
-  return askAIJson(systemPrompt, userPrompt, 700);
+  return askAIJson(systemPrompt, userPrompt, 900);
+}
+
+async function generatePostWithQualityLoop({
+  topic,
+  targetAudience,
+  goal,
+  platform,
+  language,
+  style
+}) {
+  const brief = await buildGenerateBrief({
+    topic,
+    targetAudience,
+    goal,
+    platform,
+    language,
+    style
+  });
+
+  const firstDraft = await writeGeneratedPost({
+    topic,
+    targetAudience,
+    goal,
+    platform,
+    language,
+    style,
+    brief
+  });
+
+  if (!firstDraft || !hasEnoughGeneratedContent(firstDraft)) {
+    return {
+      brief,
+      finalDraft: fillGenerateFallbacks(firstDraft, {
+        topic,
+        platform,
+        language
+      })
+    };
+  }
+
+  const criticDraft = await critiqueGeneratedPost({
+    platform,
+    language,
+    draft: firstDraft,
+    brief
+  });
+
+  const selectedDraft =
+    criticDraft && hasEnoughGeneratedContent(criticDraft) ? criticDraft : firstDraft;
+
+  const finalDraft = fillGenerateFallbacks(selectedDraft, {
+    topic,
+    platform,
+    language
+  });
+
+  return {
+    brief,
+    finalDraft
+  };
 }
 
 /**
@@ -478,13 +638,13 @@ app.post("/api/generate-post", async (req, res) => {
     }
 
     const {
-      topic = "",
-      targetAudience = "",
-      language = "en",
-      style = "professional",
-      goal = "",
-      platform = "instagram"
-    } = req.body || {};
+      topic,
+      targetAudience,
+      goal,
+      language,
+      style,
+      platform
+    } = validateGeneratePayload(req.body || {});
 
     if (!String(topic).trim()) {
       return res.status(400).json({
@@ -493,42 +653,16 @@ app.post("/api/generate-post", async (req, res) => {
       });
     }
 
-    const safePlatform = normalizePlatform(platform);
-
-    const brief = await buildGenerateBrief({
+    const { finalDraft } = await generatePostWithQualityLoop({
       topic,
       targetAudience,
       goal,
-      platform: safePlatform,
+      platform,
       language,
       style
     });
 
-    const firstDraft = await writeGeneratedPost({
-      topic,
-      targetAudience,
-      goal,
-      platform: safePlatform,
-      language,
-      style,
-      brief
-    });
-
-    if (!firstDraft) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to parse AI response"
-      });
-    }
-
-    const criticDraft = await critiqueGeneratedPost({
-      platform: safePlatform,
-      language,
-      draft: firstDraft
-    });
-
-    const finalDraft = criticDraft || firstDraft;
-    const normalized = normalizeGenerateResponse(finalDraft, safePlatform);
+    const normalized = normalizeGenerateResponse(finalDraft, platform);
 
     return res.json({
       success: true,
