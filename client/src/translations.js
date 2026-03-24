@@ -84,6 +84,20 @@ export const translations = {
     exportTxt: "Export TXT",
     exportReady: "TXT downloaded",
 
+    goalPresetViral: "Make it viral",
+    goalPresetHuman: "Make it human",
+    goalPresetProfessional: "Make it professional",
+    goalPresetEmotional: "Make it emotional",
+    goalPresetSales: "Drive action",
+    goalPresetEngagement: "Increase engagement",
+
+    goalPresetMoreViral: "Make it more viral",
+    goalPresetMoreHuman: "Make it more human",
+    goalPresetMoreClear: "Make it clearer",
+    goalPresetMoreEmotional: "Make it more emotional",
+    goalPresetMoreSharp: "Make it sharper",
+    goalPresetMoreProfessional: "Make it more professional",
+
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
   },
@@ -172,6 +186,20 @@ export const translations = {
 
     exportTxt: "ייצא TXT",
     exportReady: "קובץ TXT ירד",
+
+    goalPresetViral: "לעשות אותו ויראלי",
+    goalPresetHuman: "לעשות אותו אנושי",
+    goalPresetProfessional: "לעשות אותו מקצועי",
+    goalPresetEmotional: "לעשות אותו רגשי",
+    goalPresetSales: "להניע לפעולה",
+    goalPresetEngagement: "להגדיל מעורבות",
+
+    goalPresetMoreViral: "לעשות אותו יותר ויראלי",
+    goalPresetMoreHuman: "לעשות אותו יותר אנושי",
+    goalPresetMoreClear: "לעשות אותו יותר ברור",
+    goalPresetMoreEmotional: "לעשות אותו יותר רגשי",
+    goalPresetMoreSharp: "לעשות אותו יותר חד",
+    goalPresetMoreProfessional: "לעשות אותו יותר מקצועי",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
