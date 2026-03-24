@@ -254,6 +254,46 @@ export default function App() {
       ? result.data.improvedVersion
       : "";
 
+  function getBuildResultFullPost() {
+    if (!result || result.type !== "build" || !result.data) {
+      return "";
+    }
+
+    return [
+      result.data.title || "",
+      result.data.hook || "",
+      result.data.body || "",
+      result.data.cta || ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  function moveBuildResultToImprove(goalValue = "") {
+    const fullPost = getBuildResultFullPost();
+
+    setImproveForm((prev) => ({
+      ...prev,
+      post: fullPost,
+      goal: goalValue || prev.goal,
+      platform: buildForm.platform
+    }));
+
+    setTab("improve");
+  }
+
+  function moveBuildResultToAnalyze() {
+    const fullPost = getBuildResultFullPost();
+
+    setAnalyzeForm((prev) => ({
+      ...prev,
+      post: fullPost,
+      platform: buildForm.platform
+    }));
+
+    setTab("analyze");
+  }
+
   const topicPlaceholder =
     language === "he" ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
@@ -613,6 +653,32 @@ export default function App() {
                 >
                   {t.copyFullPost}
                 </button>
+
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => moveBuildResultToImprove("")}
+                  >
+                    {t.improveAction}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="primary-btn primary-btn-viral"
+                    onClick={() => moveBuildResultToImprove("Make it more viral")}
+                  >
+                    {t.viralBoost}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={moveBuildResultToAnalyze}
+                  >
+                    {t.analyzeAction}
+                  </button>
+                </div>
               </div>
             ) : null}
 
