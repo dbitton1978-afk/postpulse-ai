@@ -337,3 +337,9 @@ textarea {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+
+.primary-btn-viral {
+  background: linear-gradient(135deg, #ffb347, #ffcc33);
+  color: #1f1400;
+  font-weight: 800;
+}
