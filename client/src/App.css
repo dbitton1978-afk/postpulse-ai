@@ -1,345 +1,37 @@
-:root {
-  --bg: #0f1115;
-  --panel: #171b22;
-  --panel-2: #1d2330;
-  --border: #2b3342;
-  --text: #ffffff;
-  --muted: #a9b4c2;
-  --primary: #00ffcc;
-  --danger: #ff6b6b;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-  background: linear-gradient(180deg, #0b0d11 0%, #121722 100%);
-  color: var(--text);
-  font-family: Arial, sans-serif;
-}
-
-body {
-  min-height: 100vh;
-}
-
-.app {
-  min-height: 100vh;
-  padding: 24px;
-}
-
-.app-shell {
-  max-width: 1280px;
-  margin: 0 auto;
-}
-
-.hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.hero-copy h1 {
-  margin: 0 0 10px;
-  font-size: 42px;
-}
-
-.hero-copy p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 18px;
-}
-
-.hero-badge {
-  display: inline-block;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(0, 255, 204, 0.1);
-  color: var(--primary);
-  border: 1px solid rgba(0, 255, 204, 0.2);
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.lang-switch {
-  display: flex;
-  gap: 8px;
-}
-
-.lang-switch button,
-.tabs button,
-.copy-btn,
-.primary-btn {
-  cursor: pointer;
-  border: none;
-}
-
-.lang-switch button {
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--panel);
-  color: var(--muted);
-}
-
-.lang-switch button.active {
-  background: var(--primary);
-  color: #03120f;
-  font-weight: bold;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.tabs button {
-  padding: 12px 18px;
-  border-radius: 12px;
-  background: var(--panel);
-  color: var(--muted);
-  border: 1px solid var(--border);
-}
-
-.tabs button.active {
-  background: var(--panel-2);
-  color: var(--text);
-  border-color: var(--primary);
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 420px 1fr;
-  gap: 20px;
-}
-
-.panel {
-  background: rgba(23, 27, 34, 0.95);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-}
-
-.panel-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 18px;
-}
-
-.field {
-  margin-bottom: 16px;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
-  color: var(--text);
-}
-
-.field input,
-.field textarea,
-.field select {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: #10141c;
-  color: var(--text);
-  outline: none;
-}
-
-.field input::placeholder,
-.field textarea::placeholder {
-  color: #7f8a99;
-}
-
-textarea {
-  resize: vertical;
-}
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.primary-btn {
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--primary);
-  color: #03120f;
-  font-weight: bold;
-  font-size: 15px;
-}
-
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.error-box {
+.publish-menu-wrap {
+  position: relative;
   margin-top: 14px;
+}
+
+.publish-btn {
+  width: 100%;
+}
+
+.publish-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #11161f;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.publish-menu-item {
+  width: 100%;
+  text-align: start;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 107, 107, 0.12);
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  color: #ffd6d6;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
-.empty-state {
-  min-height: 260px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: 16px;
-  text-align: center;
-  padding: 20px;
-}
-
-.result-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.result-section {
-  background: #11161f;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.copy-btn {
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(0, 255, 204, 0.12);
-  color: var(--primary);
-  border: 1px solid rgba(0, 255, 204, 0.2);
-}
-
-.text-card {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.7;
-}
-
-.result-list {
-  margin: 0;
-  padding-inline-start: 20px;
-}
-
-.result-list li {
-  margin-bottom: 8px;
-  line-height: 1.6;
-}
-
-.hashtags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.hashtags span {
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #192231;
-  color: #b8d8ff;
-  border: 1px solid #2c3a52;
-}
-
-.scores-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.score-card {
-  background: #11161f;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  text-align: center;
-}
-
-.score-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--primary);
-  margin-bottom: 8px;
-}
-
-.score-label {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 700px) {
-  .app {
-    padding: 14px;
-  }
-
-  .hero {
-    flex-direction: column;
-  }
-
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  .scores-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 520px) {
-  .scores-grid {
-    grid-template-columns: 1fr;
-  }
-    .action-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.action-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-.primary-btn-viral {
-  background: linear-gradient(135deg, #ffb347, #ffcc33);
-  color: #1f1400;
-  font-weight: 800;
+.publish-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
