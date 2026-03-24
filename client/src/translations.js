@@ -65,6 +65,12 @@ export const translations = {
     improveAction: "Improve",
     viralBoost: "Viral Boost",
     analyzeAction: "Analyze",
+    publishAction: "Publish",
+    publishToInstagram: "Publish to Instagram",
+    publishToFacebook: "Publish to Facebook",
+    publishToLinkedIn: "Publish to LinkedIn",
+    publishToTikTok: "Publish to TikTok",
+    publishComingSoon: "Publishing will be connected soon",
 
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
@@ -136,6 +142,12 @@ export const translations = {
     improveAction: "שפר",
     viralBoost: "בוסט ויראלי",
     analyzeAction: "נתח",
+    publishAction: "פרסם",
+    publishToInstagram: "פרסם לאינסטגרם",
+    publishToFacebook: "פרסם לפייסבוק",
+    publishToLinkedIn: "פרסם ללינקדאין",
+    publishToTikTok: "פרסם לטיקטוק",
+    publishComingSoon: "החיבור לפרסום יתווסף בקרוב",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
