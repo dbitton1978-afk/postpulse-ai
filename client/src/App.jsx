@@ -634,7 +634,7 @@ function moveBuildResultToAnalyze() {
     className="primary-btn"
     onClick={() => moveBuildResultToImprove("")}
   >
-    Improve
+    {t.improveAction}
   </button>
 
   <button
@@ -642,7 +642,7 @@ function moveBuildResultToAnalyze() {
     className="primary-btn primary-btn-viral"
     onClick={() => moveBuildResultToImprove("Make it more viral")}
   >
-    Viral Boost
+    {t.viralBoost}
   </button>
 
   <button
@@ -650,7 +650,7 @@ function moveBuildResultToAnalyze() {
     className="primary-btn"
     onClick={moveBuildResultToAnalyze}
   >
-    Analyze
+    {t.analyzeAction}
   </button>
 </div>
               </div>
