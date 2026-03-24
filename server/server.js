@@ -252,6 +252,16 @@ function validateGeneratePayload(body = {}) {
   };
 }
 
+function validateImprovePayload(body = {}) {
+  return {
+    post: truncateText(body?.post, 5000),
+    language: normalizeLanguage(body?.language),
+    style: body?.style || "professional",
+    goal: truncateText(body?.goal, 300) || "make it stronger",
+    platform: normalizePlatform(body?.platform)
+  };
+}
+
 function hasEnoughGeneratedContent(data) {
   if (!data) return false;
 
@@ -261,6 +271,16 @@ function hasEnoughGeneratedContent(data) {
   const cta = cleanString(data?.cta);
 
   return Boolean(hook && body && cta && (title || body.length > 30));
+}
+
+function hasEnoughImprovedContent(data) {
+  if (!data) return false;
+
+  const improvedPost = cleanString(data?.improvedPost);
+  const moreViralVersion = cleanString(data?.moreViralVersion);
+  const moreAuthenticVersion = cleanString(data?.moreAuthenticVersion);
+
+  return Boolean(improvedPost && (moreViralVersion || moreAuthenticVersion));
 }
 
 function fillGenerateFallbacks(data, { topic, platform, language }) {
@@ -309,6 +329,118 @@ function fillGenerateFallbacks(data, { topic, platform, language }) {
     shortVersion: normalized.shortVersion || fallbackShort,
     alternativeVersion: normalized.alternativeVersion || fallbackAlternative
   };
+}
+
+function fillImproveFallbacks(data, { post, goal, language, platform }) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const normalized = normalizeImproveResponse(data || {});
+  const original = cleanString(post);
+
+  const fallbackStrengths =
+    safeLanguage === "he"
+      ? ["יש כאן בסיס רעיוני טוב", "הנושא ברור", "יש פוטנציאל לחיבור עם הקהל"]
+      : ["There is a solid core idea", "The topic is clear", "There is audience connection potential"];
+
+  const fallbackWeaknesses =
+    safeLanguage === "he"
+      ? ["הניסוח עדיין מעט כללי", "הפתיחה לא מספיק חזקה", "אפשר לחזק את התחושה האנושית"]
+      : ["The wording is still a bit generic", "The opening is not strong enough", "The human tone can be stronger"];
+
+  const fallbackImproved =
+    safeLanguage === "he"
+      ? `${original}\n\nכדי להפוך את המסר לחזק יותר, צריך לחדד את הזווית, לדבר בצורה יותר אנושית וישירה, ולתת לקורא סיבה אמיתית להמשיך לקרוא ולהגיב.`
+      : `${original}\n\nTo make this stronger, the message should be sharper, more human, and more direct, while giving the reader a real reason to keep reading and respond.`;
+
+  const fallbackViral =
+    safeLanguage === "he"
+      ? safePlatform === "tiktok"
+        ? `אם אתה עדיין כותב פוסטים בצורה הרגילה שלך — כנראה שאתה מפספס את מה שבאמת גורם לאנשים לעצור. הנה ההבדל שעושה שינוי.`
+        : `רוב האנשים מפרסמים תוכן ואז מקווים לטוב. אבל כשמשנים רק כמה דברים קטנים בניסוח, כל התגובה של הקהל יכולה להשתנות.`
+      : safePlatform === "tiktok"
+        ? `If you are still posting the usual way, you are probably missing what actually makes people stop. Here is the shift that changes everything.`
+        : `Most people publish content and hope for the best. But changing just a few things in the wording can completely change how people respond.`;
+
+  const fallbackAuthentic =
+    safeLanguage === "he"
+      ? `האמת היא שלא תמיד צריך לכתוב יותר טוב — לפעמים פשוט צריך לכתוב יותר אמיתי, יותר ברור, ובלי לנסות להרשים בכוח.`
+      : `The truth is, you do not always need to write better — sometimes you just need to sound more real, clearer, and less like you are trying too hard.`;
+
+  const fallbackTips =
+    safeLanguage === "he"
+      ? [
+          "לחזק את המשפט הראשון",
+          "לדבר פשוט יותר",
+          "לחדד את הערך לקורא",
+          `ליישר את הניסוח למטרה: ${goal || "חיזוק הפוסט"}`
+        ]
+      : [
+          "Strengthen the first line",
+          "Use simpler wording",
+          "Clarify the value for the reader",
+          `Align the wording to the goal: ${goal || "make the post stronger"}`
+        ];
+
+  return {
+    strengths: normalized.strengths.length ? normalized.strengths : fallbackStrengths,
+    weaknesses: normalized.weaknesses.length ? normalized.weaknesses : fallbackWeaknesses,
+    improvedPost: normalized.improvedPost || fallbackImproved,
+    moreViralVersion: normalized.moreViralVersion || fallbackViral,
+    moreAuthenticVersion: normalized.moreAuthenticVersion || fallbackAuthentic,
+    tips: normalized.tips.length ? normalized.tips : fallbackTips
+  };
+}
+
+function buildGoalInterpretation(goal, language) {
+  const safeLanguage = normalizeLanguage(language);
+  const rawGoal = cleanString(goal).toLowerCase();
+
+  if (!rawGoal) {
+    return safeLanguage === "he"
+      ? "לחזק את הפוסט בצורה כללית: יותר חד, יותר אנושי, יותר ברור"
+      : "strengthen the post overall: sharper, more human, clearer";
+  }
+
+  const goalMap = [
+    {
+      keys: ["viral", "ויראל", "virality"],
+      he: "להעלות סיכוי לעצירה, עניין, תגובות ושיתופים בלי להישמע זול",
+      en: "increase stopping power, curiosity, comments, and shares without sounding cheap"
+    },
+    {
+      keys: ["authentic", "human", "אותנט", "אנושי"],
+      he: "להישמע יותר אמיתי, אישי, טבעי ופחות כמו AI",
+      en: "sound more real, personal, natural, and less AI-like"
+    },
+    {
+      keys: ["emotion", "emotional", "רגש"],
+      he: "לחזק חיבור רגשי בלי להיות דרמטי מדי",
+      en: "strengthen emotional connection without sounding overdramatic"
+    },
+    {
+      keys: ["professional", "מקצוע", "authority"],
+      he: "לחזק סמכות, אמינות וחדות מקצועית",
+      en: "increase authority, credibility, and professional sharpness"
+    },
+    {
+      keys: ["clear", "clarity", "ברור", "חד"],
+      he: "לחדד את המסר כדי שיהיה ברור ומהיר להבנה",
+      en: "make the message clearer and faster to understand"
+    },
+    {
+      keys: ["cta", "convert", "conversion", "ממיר", "תגובה", "מכירה"],
+      he: "לחזק כוונת פעולה ותגובה טבעית מהקהל",
+      en: "strengthen action intent and natural audience response"
+    }
+  ];
+
+  for (const item of goalMap) {
+    if (item.keys.some((key) => rawGoal.includes(key))) {
+      return safeLanguage === "he" ? item.he : item.en;
+    }
+  }
+
+  return goal;
 }
 
 async function askAI(systemPrompt, userPrompt, maxCompletionTokens = 700) {
@@ -611,6 +743,266 @@ async function generatePostWithQualityLoop({
   };
 }
 
+async function buildImproveBrief({
+  post,
+  goal,
+  platform,
+  language,
+  style
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const styleText = getStyleText(style, safeLanguage);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+  const interpretedGoal = buildGoalInterpretation(goal, safeLanguage);
+
+  const systemPrompt = `
+You are a senior post improvement strategist.
+Before rewriting, build a short internal improvement brief.
+Focus on what is weak, what should stay, and what the rewrite should optimize.
+
+Required JSON structure:
+{
+  "mainProblem": "",
+  "improvementAngle": "",
+  "primaryGoal": "",
+  "toneDirection": "",
+  "hookFix": "",
+  "ctaFix": "",
+  "keepElements": [],
+  "removeElements": []
+}
+`;
+
+  const userPrompt = `
+Build an internal brief for improving this post.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Desired style: ${styleText}
+Improvement goal: ${interpretedGoal}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
+
+Original post:
+${post}
+
+Rules:
+- identify the main weakness
+- choose one strong improvement angle
+- define what should be preserved
+- define what should be removed or reduced
+- define how to fix the hook
+- define how to fix the CTA
+- keep it concise and practical
+`;
+
+  const parsed = await askAIJson(systemPrompt, userPrompt, 450);
+
+  return {
+    mainProblem: cleanString(parsed?.mainProblem, "the post is too generic"),
+    improvementAngle: cleanString(parsed?.improvementAngle, "make it sharper and more human"),
+    primaryGoal: cleanString(parsed?.primaryGoal, interpretedGoal),
+    toneDirection: cleanString(parsed?.toneDirection, styleText),
+    hookFix: cleanString(parsed?.hookFix, "make the opening stronger"),
+    ctaFix: cleanString(parsed?.ctaFix, "make the CTA more natural"),
+    keepElements: cleanArray(parsed?.keepElements),
+    removeElements: cleanArray(parsed?.removeElements)
+  };
+}
+
+async function writeImprovedPost({
+  post,
+  goal,
+  platform,
+  language,
+  style,
+  brief
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const styleText = getStyleText(style, safeLanguage);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+
+  const systemPrompt = `
+You are an elite social media editor.
+You improve posts in a way that feels human, publishable, and platform-native.
+Do not just rewrite randomly. Improve strategically.
+
+Required JSON structure:
+{
+  "strengths": [],
+  "weaknesses": [],
+  "improvedPost": "",
+  "moreViralVersion": "",
+  "moreAuthenticVersion": "",
+  "tips": []
+}
+`;
+
+  const userPrompt = `
+Analyze and improve this post strategically.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Desired style: ${styleText}
+Improvement goal: ${brief.primaryGoal}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
+
+Internal improvement brief:
+- Main problem: ${brief.mainProblem}
+- Improvement angle: ${brief.improvementAngle}
+- Tone direction: ${brief.toneDirection}
+- Hook fix: ${brief.hookFix}
+- CTA fix: ${brief.ctaFix}
+- Keep elements: ${brief.keepElements.join(", ")}
+- Remove or reduce: ${brief.removeElements.join(", ")}
+
+Original post:
+${post}
+
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
+- strengths must be short and real
+- weaknesses must be short and real
+- improvedPost = strongest balanced version
+- moreViralVersion = more stopping power, curiosity, tension, shareability
+- moreAuthenticVersion = more human, more natural, less AI, less forced
+- do not make all three versions too similar
+- do not overdo emojis
+- do not make it cringe
+- tips must be practical and short
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 1000);
+}
+
+async function critiqueImprovedPost({
+  post,
+  goal,
+  platform,
+  language,
+  draft,
+  brief
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+
+  const systemPrompt = `
+You are a senior content critic for rewritten posts.
+Your job is to upgrade the improvement result without changing the JSON structure.
+Keep what is strong. Fix what is weak.
+
+Required JSON structure:
+{
+  "strengths": [],
+  "weaknesses": [],
+  "improvedPost": "",
+  "moreViralVersion": "",
+  "moreAuthenticVersion": "",
+  "tips": []
+}
+`;
+
+  const userPrompt = `
+Review this improved output and make it stronger where needed.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+Improvement goal: ${buildGoalInterpretation(goal, safeLanguage)}
+
+Original post:
+${post}
+
+Internal brief for quality control:
+- Main problem: ${brief.mainProblem}
+- Improvement angle: ${brief.improvementAngle}
+- Hook fix: ${brief.hookFix}
+- CTA fix: ${brief.ctaFix}
+
+Improve if:
+- improvedPost is still generic
+- moreViralVersion is not punchy enough
+- moreAuthenticVersion still sounds too polished or AI-like
+- the versions are too similar
+- the CTA feels forced
+- the output is not clearly better than the original
+
+Current draft:
+${JSON.stringify(draft)}
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 1000);
+}
+
+async function improvePostWithQualityLoop({
+  post,
+  goal,
+  platform,
+  language,
+  style
+}) {
+  const brief = await buildImproveBrief({
+    post,
+    goal,
+    platform,
+    language,
+    style
+  });
+
+  const firstDraft = await writeImprovedPost({
+    post,
+    goal,
+    platform,
+    language,
+    style,
+    brief
+  });
+
+  if (!firstDraft || !hasEnoughImprovedContent(firstDraft)) {
+    return {
+      brief,
+      finalDraft: fillImproveFallbacks(firstDraft, {
+        post,
+        goal,
+        language,
+        platform
+      })
+    };
+  }
+
+  const criticDraft = await critiqueImprovedPost({
+    post,
+    goal,
+    platform,
+    language,
+    draft: firstDraft,
+    brief
+  });
+
+  const selectedDraft =
+    criticDraft && hasEnoughImprovedContent(criticDraft) ? criticDraft : firstDraft;
+
+  const finalDraft = fillImproveFallbacks(selectedDraft, {
+    post,
+    goal,
+    language,
+    platform
+  });
+
+  return {
+    brief,
+    finalDraft
+  };
+}
+
 /**
  * -----------------------------
  * ROUTES
@@ -688,12 +1080,12 @@ app.post("/api/improve-post", async (req, res) => {
     }
 
     const {
-      post = "",
-      language = "en",
-      style = "professional",
-      goal = "make it stronger",
-      platform = "instagram"
-    } = req.body || {};
+      post,
+      language,
+      style,
+      goal,
+      platform
+    } = validateImprovePayload(req.body || {});
 
     if (!String(post).trim()) {
       return res.status(400).json({
@@ -702,62 +1094,15 @@ app.post("/api/improve-post", async (req, res) => {
       });
     }
 
-    const safeLanguage = normalizeLanguage(language);
-    const safePlatform = normalizePlatform(platform);
-    const styleText = getStyleText(style, safeLanguage);
-    const platformRules = getPlatformRules(safePlatform, safeLanguage);
+    const { finalDraft } = await improvePostWithQualityLoop({
+      post,
+      goal,
+      platform,
+      language,
+      style
+    });
 
-    const systemPrompt = `
-You are an elite social media editor.
-Improve text by platform.
-Be sharp, useful, human, and concise.
-
-Required JSON structure:
-{
-  "strengths": [],
-  "weaknesses": [],
-  "improvedPost": "",
-  "moreViralVersion": "",
-  "moreAuthenticVersion": "",
-  "tips": []
-}
-`;
-
-    const userPrompt = `
-Analyze and improve this post.
-
-Language: ${getLanguageLabel(safeLanguage)}
-Platform: ${safePlatform}
-Desired style: ${styleText}
-Improvement goal: ${goal}
-
-Platform rules:
-- Tone: ${platformRules.tone}
-- CTA: ${platformRules.cta}
-- Length: ${platformRules.length}
-
-Original post:
-${post}
-
-Rules:
-- everything must be in ${getLanguageLabel(safeLanguage)}
-- explain strengths briefly
-- explain weaknesses briefly
-- improve for this platform
-- make it more human
-- tips must be practical and short
-`;
-
-    const parsed = await askAIJson(systemPrompt, userPrompt, 700);
-
-    if (!parsed) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to parse AI response"
-      });
-    }
-
-    const normalized = normalizeImproveResponse(parsed);
+    const normalized = normalizeImproveResponse(finalDraft);
 
     return res.json({
       success: true,
