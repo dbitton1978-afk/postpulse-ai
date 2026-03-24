@@ -18,7 +18,7 @@ const platforms = [
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy }) {
+function Section({ title, children, onCopy, copyLabel }) {
   return (
     <div className="result-section">
       <div
@@ -34,7 +34,7 @@ function Section({ title, children, onCopy }) {
 
         {onCopy && (
           <button className="copy-btn" onClick={onCopy} type="button">
-            Copy
+            {copyLabel}
           </button>
         )}
       </div>
@@ -128,7 +128,7 @@ export default function App() {
 
   const handleBuild = async () => {
     if (!buildForm.topic.trim()) {
-      setError(language === "he" ? "יש להזין נושא" : "Please enter a topic");
+      setError(t.errorTopic);
       return;
     }
 
@@ -153,7 +153,7 @@ export default function App() {
 
   const handleImprove = async () => {
     if (!improveForm.post.trim()) {
-      setError(language === "he" ? "יש להזין פוסט" : "Please enter a post");
+      setError(t.errorPost);
       return;
     }
 
@@ -178,7 +178,7 @@ export default function App() {
 
   const handleAnalyze = async () => {
     if (!analyzeForm.post.trim()) {
-      setError(language === "he" ? "יש להזין פוסט" : "Please enter a post");
+      setError(t.errorPost);
       return;
     }
 
@@ -447,12 +447,13 @@ export default function App() {
         <section className="panel glass">
           <h2>{t.result}</h2>
 
-          {!result && <div className="empty-state">PostPulse AI ✨</div>}
+          {!result && <div className="empty-state">{t.emptyState}</div>}
 
           {result?.type === "build" && (
             <div className="result-wrap">
               <Section
                 title={t.title}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.title || "")}
               >
                 <div className="text-card">{result.data?.title || ""}</div>
@@ -460,6 +461,7 @@ export default function App() {
 
               <Section
                 title={t.hook}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.hook || "")}
               >
                 <div className="text-card">{result.data?.hook || ""}</div>
@@ -467,6 +469,7 @@ export default function App() {
 
               <Section
                 title={t.body}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.body || "")}
               >
                 <div className="text-card">{result.data?.body || ""}</div>
@@ -474,6 +477,7 @@ export default function App() {
 
               <Section
                 title={t.cta}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.cta || "")}
               >
                 <div className="text-card">{result.data?.cta || ""}</div>
@@ -481,6 +485,7 @@ export default function App() {
 
               <Section
                 title={t.hashtags}
+                copyLabel={t.copy}
                 onCopy={() =>
                   copyText(
                     Array.isArray(result.data?.hashtags)
@@ -491,13 +496,16 @@ export default function App() {
               >
                 <div className="hashtags">
                   {(result.data?.hashtags || []).map((tag, index) => (
-                    <span key={`${tag}-${index}`}>#{String(tag).replace(/^#/, "")}</span>
+                    <span key={`${tag}-${index}`}>
+                      #{String(tag).replace(/^#/, "")}
+                    </span>
                   ))}
                 </div>
               </Section>
 
               <Section
                 title={t.shortVersion}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.shortVersion || "")}
               >
                 <div className="text-card">
@@ -507,6 +515,7 @@ export default function App() {
 
               <Section
                 title={t.alternativeVersion}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.alternativeVersion || "")}
               >
                 <div className="text-card">
@@ -520,7 +529,7 @@ export default function App() {
                 onClick={() => copyText(buildCopyText)}
                 type="button"
               >
-                Copy Full Post
+                {t.copyFullPost}
               </button>
             </div>
           )}
@@ -537,6 +546,7 @@ export default function App() {
 
               <Section
                 title={t.improvedVersion}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.improvedPost || "")}
               >
                 <div className="text-card">{result.data?.improvedPost || ""}</div>
@@ -544,6 +554,7 @@ export default function App() {
 
               <Section
                 title={t.moreViralVersion}
+                copyLabel={t.copy}
                 onCopy={() => copyText(result.data?.moreViralVersion || "")}
               >
                 <div className="text-card">
@@ -553,6 +564,7 @@ export default function App() {
 
               <Section
                 title={t.moreAuthenticVersion}
+                copyLabel={t.copy}
                 onCopy={() =>
                   copyText(result.data?.moreAuthenticVersion || "")
                 }
@@ -572,7 +584,7 @@ export default function App() {
                 onClick={() => copyText(improveCopyText)}
                 type="button"
               >
-                Copy Improved Versions
+                {t.copyImproved}
               </button>
             </div>
           )}
@@ -621,6 +633,7 @@ export default function App() {
 
               <Section
                 title={t.improvedVersion}
+                copyLabel={t.copy}
                 onCopy={() => copyText(analyzeCopyText)}
               >
                 <div className="text-card">
@@ -634,7 +647,7 @@ export default function App() {
                 onClick={() => copyText(analyzeCopyText)}
                 type="button"
               >
-                Copy Improved Version
+                {t.copyAnalyze}
               </button>
             </div>
           )}
