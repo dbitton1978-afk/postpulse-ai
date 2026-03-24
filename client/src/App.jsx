@@ -72,7 +72,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  const [publishOpen, setPublishOpen] = useState(false);
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
@@ -130,7 +129,6 @@ export default function App() {
     setError("");
     setResult(null);
     setLoading(true);
-    setPublishOpen(false);
   }
 
   function endRequest() {
@@ -256,83 +254,6 @@ export default function App() {
       ? result.data.improvedVersion
       : "";
 
-  function getBuildResultFullPost() {
-    if (!result || result.type !== "build" || !result.data) {
-      return "";
-    }
-
-    return [
-      result.data.title || "",
-      result.data.hook || "",
-      result.data.body || "",
-      result.data.cta || ""
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
-  function getCurrentPublishText() {
-    if (!result || !result.data) return "";
-
-    if (result.type === "build") {
-      return getBuildResultFullPost();
-    }
-
-    if (result.type === "improve") {
-      return [
-        result.data.improvedPost || "",
-        result.data.moreViralVersion || "",
-        result.data.moreAuthenticVersion || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-    }
-
-    if (result.type === "analyze") {
-      return result.data.improvedVersion || "";
-    }
-
-    return "";
-  }
-
-  function moveBuildResultToImprove(goalValue = "") {
-    const fullPost = getBuildResultFullPost();
-
-    setImproveForm((prev) => ({
-      ...prev,
-      post: fullPost,
-      goal: goalValue || prev.goal,
-      platform: buildForm.platform
-    }));
-
-    setTab("improve");
-  }
-
-  function moveBuildResultToAnalyze() {
-    const fullPost = getBuildResultFullPost();
-
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      post: fullPost,
-      platform: buildForm.platform
-    }));
-
-    setTab("analyze");
-  }
-
-  function handlePublish(platformLabel) {
-    const text = getCurrentPublishText();
-
-    if (!text) {
-      alert(t.publishComingSoon);
-      return;
-    }
-
-    copyText(text);
-    alert(`${platformLabel}\n\n${t.publishComingSoon}`);
-    setPublishOpen(false);
-  }
-
   const topicPlaceholder =
     language === "he" ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
@@ -348,6 +269,10 @@ export default function App() {
 
   return (
     <div className="app" dir={dir}>
+      <div className="bg-orb orb-1" />
+      <div className="bg-orb orb-2" />
+      <div className="bg-orb orb-3" />
+
       <div className="app-shell">
         <header className="hero">
           <div className="hero-copy">
@@ -399,7 +324,7 @@ export default function App() {
         </nav>
 
         <main className="layout">
-          <section className="panel">
+          <section className="panel glass">
             <div className="panel-title">
               {tab === "build" ? t.build : null}
               {tab === "improve" ? t.improve : null}
@@ -584,7 +509,7 @@ export default function App() {
             {error ? <div className="error-box">{error}</div> : null}
           </section>
 
-          <section className="panel">
+          <section className="panel glass">
             <div className="panel-title">{t.result}</div>
 
             {!result ? <div className="empty-state">{t.emptyState}</div> : null}
@@ -688,32 +613,6 @@ export default function App() {
                 >
                   {t.copyFullPost}
                 </button>
-
-                <div className="action-row">
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={() => moveBuildResultToImprove("")}
-                  >
-                    {t.improveAction}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-btn primary-btn-viral"
-                    onClick={() => moveBuildResultToImprove("Make it more viral")}
-                  >
-                    {t.viralBoost}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={moveBuildResultToAnalyze}
-                  >
-                    {t.analyzeAction}
-                  </button>
-                </div>
               </div>
             ) : null}
 
@@ -917,54 +816,6 @@ export default function App() {
                 >
                   {t.copyAnalyze}
                 </button>
-              </div>
-            ) : null}
-
-            {result ? (
-              <div className="publish-menu-wrap">
-                <button
-                  type="button"
-                  className="primary-btn publish-btn"
-                  onClick={() => setPublishOpen((prev) => !prev)}
-                >
-                  {t.publishAction}
-                </button>
-
-                {publishOpen ? (
-                  <div className="publish-menu">
-                    <button
-                      type="button"
-                      className="publish-menu-item"
-                      onClick={() => handlePublish(t.publishToInstagram)}
-                    >
-                      {t.publishToInstagram}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="publish-menu-item"
-                      onClick={() => handlePublish(t.publishToFacebook)}
-                    >
-                      {t.publishToFacebook}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="publish-menu-item"
-                      onClick={() => handlePublish(t.publishToLinkedIn)}
-                    >
-                      {t.publishToLinkedIn}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="publish-menu-item"
-                      onClick={() => handlePublish(t.publishToTikTok)}
-                    >
-                      {t.publishToTikTok}
-                    </button>
-                  </div>
-                ) : null}
               </div>
             ) : null}
           </section>
