@@ -299,7 +299,9 @@ export default function App() {
       t.goalPresetMoreClear,
       t.goalPresetMoreEmotional,
       t.goalPresetMoreSharp,
-      t.goalPresetMoreProfessional
+      t.goalPresetMoreProfessional,
+      t.goalPresetFixHook,
+      t.goalPresetFixCta
     ],
     [t]
   );
@@ -1243,6 +1245,7 @@ export default function App() {
                   >
                     {t.quickFixHook}
                   </button>
+
                   <button
                     type="button"
                     className="secondary-btn"
@@ -1250,6 +1253,7 @@ export default function App() {
                   >
                     {t.quickFixCta}
                   </button>
+
                   <button
                     type="button"
                     className="secondary-btn"
@@ -1257,6 +1261,7 @@ export default function App() {
                   >
                     {t.quickMakeViral}
                   </button>
+
                   <button
                     type="button"
                     className="secondary-btn"
