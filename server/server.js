@@ -8,7 +8,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: false
+  })
+);
+
 app.use(express.json({ limit: "15mb" }));
 
 const openai = new OpenAI({
@@ -46,6 +52,15 @@ function getLanguageLabel(language) {
   return language === "he" ? "Hebrew" : "English";
 }
 
+function normalizeLanguage(language) {
+  return language === "he" ? "he" : "en";
+}
+
+function getStyleText(style, language) {
+  const safeLanguage = normalizeLanguage(language);
+  return STYLE_MAP[style]?.[safeLanguage] || STYLE_MAP.professional[safeLanguage];
+}
+
 function safeJsonParse(text) {
   try {
     return JSON.parse(text);
@@ -54,10 +69,69 @@ function safeJsonParse(text) {
   }
 }
 
+function clampScore(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+
+function cleanArray(value, fallback = []) {
+  if (!Array.isArray(value)) return fallback;
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function cleanString(value, fallback = "") {
+  if (typeof value !== "string") return fallback;
+  return value.trim();
+}
+
+function normalizeGenerateResponse(data) {
+  return {
+    title: cleanString(data?.title),
+    hook: cleanString(data?.hook),
+    body: cleanString(data?.body),
+    cta: cleanString(data?.cta),
+    hashtags: cleanArray(data?.hashtags).map((tag) =>
+      tag.startsWith("#") ? tag : `#${tag}`
+    ),
+    shortVersion: cleanString(data?.shortVersion),
+    alternativeVersion: cleanString(data?.alternativeVersion)
+  };
+}
+
+function normalizeImproveResponse(data) {
+  return {
+    strengths: cleanArray(data?.strengths),
+    weaknesses: cleanArray(data?.weaknesses),
+    improvedPost: cleanString(data?.improvedPost),
+    moreViralVersion: cleanString(data?.moreViralVersion),
+    moreAuthenticVersion: cleanString(data?.moreAuthenticVersion),
+    tips: cleanArray(data?.tips)
+  };
+}
+
+function normalizeAnalyzeResponse(data) {
+  return {
+    viralScore: clampScore(data?.viralScore),
+    authenticityScore: clampScore(data?.authenticityScore),
+    clarityScore: clampScore(data?.clarityScore),
+    emotionalScore: clampScore(data?.emotionalScore),
+    hookScore: clampScore(data?.hookScore),
+    ctaScore: clampScore(data?.ctaScore),
+    summary: cleanString(data?.summary),
+    whatWorks: cleanArray(data?.whatWorks),
+    whatHurts: cleanArray(data?.whatHurts),
+    improvements: cleanArray(data?.improvements),
+    improvedVersion: cleanString(data?.improvedVersion)
+  };
+}
+
 async function askAI(systemPrompt, userPrompt) {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
-    temperature: 1.0,
+    temperature: 1,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
@@ -68,16 +142,30 @@ async function askAI(systemPrompt, userPrompt) {
   return response.choices[0]?.message?.content || "{}";
 }
 
+function validateApiKey() {
+  return Boolean(process.env.OPENAI_API_KEY);
+}
+
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "PostPulse API is running" });
+  res.json({
+    success: true,
+    message: "PostPulse API is running"
+  });
 });
 
 app.post("/api/generate-post", async (req, res) => {
   try {
+    if (!validateApiKey()) {
+      return res.status(500).json({
+        success: false,
+        message: "Missing OPENAI_API_KEY"
+      });
+    }
+
     const {
       topic = "",
       targetAudience = "",
@@ -85,17 +173,17 @@ app.post("/api/generate-post", async (req, res) => {
       style = "professional",
       goal = "",
       platform = "instagram"
-    } = req.body;
+    } = req.body || {};
 
-    if (!topic.trim()) {
+    if (!String(topic).trim()) {
       return res.status(400).json({
         success: false,
         message: "topic is required"
       });
     }
 
-    const styleText =
-      STYLE_MAP[style]?.[language] || STYLE_MAP.professional[language];
+    const safeLanguage = normalizeLanguage(language);
+    const styleText = getStyleText(style, safeLanguage);
 
     const systemPrompt = `
 You are an elite social media writer with exceptional emotional intelligence, psychological insight, human sensitivity, and stylistic maturity.
@@ -107,7 +195,7 @@ Avoid generic social media writing. Every output must feel original, deep, emoti
 The text must feel:
 - natural and conversational
 - emotionally real
-- imperfect in a human way (not too polished)
+- imperfect in a human way
 - varied in rhythm and sentence length
 - written by a person with real thoughts and feelings
 
@@ -151,7 +239,7 @@ Required JSON structure:
 Write a strong ${platform} social media post.
 
 IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(language)}
+- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
 - DO NOT use any other language
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
@@ -199,34 +287,47 @@ Rules:
       });
     }
 
-    return res.json({ success: true, data: parsed });
+    const normalized = normalizeGenerateResponse(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
   } catch (error) {
     console.error("generate-post error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to generate post"
+      message: error?.message || "Failed to generate post"
     });
   }
 });
 
 app.post("/api/improve-post", async (req, res) => {
   try {
+    if (!validateApiKey()) {
+      return res.status(500).json({
+        success: false,
+        message: "Missing OPENAI_API_KEY"
+      });
+    }
+
     const {
       post = "",
       language = "en",
       style = "professional",
       goal = "make it stronger"
-    } = req.body;
+    } = req.body || {};
 
-    if (!post.trim()) {
+    if (!String(post).trim()) {
       return res.status(400).json({
         success: false,
         message: "post is required"
       });
     }
 
-    const styleText =
-      STYLE_MAP[style]?.[language] || STYLE_MAP.professional[language];
+    const safeLanguage = normalizeLanguage(language);
+    const styleText = getStyleText(style, safeLanguage);
 
     const systemPrompt = `
 You are an elite social media strategist, editor, and emotional writing expert.
@@ -238,7 +339,7 @@ Avoid generic social media writing. Every output must feel original, deep, emoti
 The text must feel:
 - natural and conversational
 - emotionally real
-- imperfect in a human way (not too polished)
+- imperfect in a human way
 - varied in rhythm and sentence length
 - written by a person with real thoughts and feelings
 
@@ -279,7 +380,7 @@ Required JSON structure:
 Analyze and improve this social media post.
 
 IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(language)}
+- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
 - DO NOT use any other language
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
@@ -332,26 +433,41 @@ Rules:
       });
     }
 
-    return res.json({ success: true, data: parsed });
+    const normalized = normalizeImproveResponse(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
   } catch (error) {
     console.error("improve-post error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to improve post"
+      message: error?.message || "Failed to improve post"
     });
   }
 });
 
 app.post("/api/analyze-post", async (req, res) => {
   try {
-    const { post = "", language = "en", platform = "instagram" } = req.body;
+    if (!validateApiKey()) {
+      return res.status(500).json({
+        success: false,
+        message: "Missing OPENAI_API_KEY"
+      });
+    }
 
-    if (!post.trim()) {
+    const { post = "", language = "en", platform = "instagram" } = req.body || {};
+
+    if (!String(post).trim()) {
       return res.status(400).json({
         success: false,
         message: "post is required"
       });
     }
+
+    const safeLanguage = normalizeLanguage(language);
 
     const systemPrompt = `
 You are an elite social media analyst with deep emotional intelligence, editorial sensitivity, psychological understanding, and strategic communication skill.
@@ -363,7 +479,7 @@ Avoid generic social media writing. Every output must feel original, deep, emoti
 The text must feel:
 - natural and conversational
 - emotionally real
-- imperfect in a human way (not too polished)
+- imperfect in a human way
 - varied in rhythm and sentence length
 - written by a person with real thoughts and feelings
 
@@ -408,7 +524,7 @@ Required JSON structure:
 Analyze this ${platform} social media post.
 
 IMPORTANT:
-- You MUST respond ONLY in ${getLanguageLabel(language)}
+- You MUST respond ONLY in ${getLanguageLabel(safeLanguage)}
 - DO NOT use any other language
 - If Hebrew is selected -> everything must be in Hebrew
 - If English is selected -> everything must be in English
@@ -455,14 +571,36 @@ Rules:
       });
     }
 
-    return res.json({ success: true, data: parsed });
+    const normalized = normalizeAnalyzeResponse(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
   } catch (error) {
     console.error("analyze-post error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to analyze post"
+      message: error?.message || "Failed to analyze post"
     });
   }
+});
+
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: "Route not found"
+  });
+});
+
+app.use((error, req, res, next) => {
+  console.error("server error:", error);
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error"
+  });
 });
 
 app.listen(PORT, () => {
