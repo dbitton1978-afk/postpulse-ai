@@ -358,6 +358,9 @@ select {
 
 .result-tools {
   margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .result-wrap {
@@ -604,6 +607,14 @@ select {
 
   .history-actions .secondary-btn,
   .history-actions .danger-btn {
+    width: 100%;
+  }
+
+  .result-tools {
+    flex-direction: column;
+  }
+
+  .result-tools .secondary-btn {
     width: 100%;
   }
 }
