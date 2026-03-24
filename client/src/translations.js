@@ -73,6 +73,14 @@ export const translations = {
     publishToTikTok: "Publish to TikTok",
     publishComingSoon: "Publishing will be connected soon",
 
+    historyTitle: "History",
+    historyEmpty: "Saved results will appear here",
+    saveToHistory: "Save to History",
+    savedToHistory: "Saved to history",
+    loadHistory: "Load",
+    clearHistory: "Clear History",
+    deleteHistoryItem: "Delete",
+
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
   },
@@ -150,6 +158,14 @@ export const translations = {
     publishToLinkedIn: "פרסם ללינקדאין",
     publishToTikTok: "פרסם לטיקטוק",
     publishComingSoon: "החיבור לפרסום יתווסף בקרוב",
+
+    historyTitle: "היסטוריה",
+    historyEmpty: "התוצאות השמורות יופיעו כאן",
+    saveToHistory: "שמור להיסטוריה",
+    savedToHistory: "נשמר להיסטוריה",
+    loadHistory: "טען",
+    clearHistory: "נקה היסטוריה",
+    deleteHistoryItem: "מחק",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
