@@ -1,7 +1,7 @@
 export const translations = {
   en: {
     appName: "PostPulse AI",
-    subtitle: "Build, improve and analyze social media posts",
+    subtitle: "Build, improve, and analyze social media posts",
 
     build: "Build Post",
     improve: "Improve Post",
@@ -44,14 +44,14 @@ export const translations = {
     authenticityScore: "Authenticity Score",
     clarityScore: "Clarity Score",
     emotionalScore: "Emotional Score",
-    curiosityScore: "Interest Score",
+    curiosityScore: "Curiosity Score",
     hookScore: "Hook Score",
     ctaScore: "CTA Score",
 
     raiseViralScore: "How to Raise Viral Score",
     raiseAuthenticityScore: "How to Raise Authenticity Score",
     raiseEmotionalScore: "How to Raise Emotional Score",
-    raiseCuriosityScore: "How to Raise Interest Score",
+    raiseCuriosityScore: "How to Raise Curiosity Score",
 
     hebrew: "עברית",
     english: "English",
@@ -79,7 +79,7 @@ export const translations = {
 
   he: {
     appName: "PostPulse AI",
-    subtitle: "בנה, שפר ונתח פוסטים לרשתות החברתיות",
+    subtitle: "צור, שפר ונתח פוסטים לרשתות החברתיות",
 
     build: "יצירת פוסט",
     improve: "שיפור פוסט",
@@ -110,8 +110,8 @@ export const translations = {
     weaknesses: "חולשות",
     tips: "טיפים",
     improvedVersion: "גרסה משופרת",
-    moreViralVersion: "גרסה יותר ויראלית",
-    moreAuthenticVersion: "גרסה יותר אותנטית",
+    moreViralVersion: "גרסה ויראלית יותר",
+    moreAuthenticVersion: "גרסה אותנטית יותר",
 
     summary: "סיכום",
     whatWorks: "מה עובד טוב",
@@ -121,15 +121,15 @@ export const translations = {
     viralScore: "ציון ויראליות",
     authenticityScore: "ציון אותנטיות",
     clarityScore: "ציון בהירות",
-    emotionalScore: "ציון רגשי",
-    curiosityScore: "ציון עניין",
+    emotionalScore: "ציון רגש",
+    curiosityScore: "ציון סקרנות",
     hookScore: "ציון פתיחה",
     ctaScore: "ציון CTA",
 
     raiseViralScore: "איך להעלות ויראליות",
     raiseAuthenticityScore: "איך להעלות אותנטיות",
     raiseEmotionalScore: "איך להעלות רגש",
-    raiseCuriosityScore: "איך להעלות עניין",
+    raiseCuriosityScore: "איך להעלות סקרנות",
 
     hebrew: "עברית",
     english: "English",
