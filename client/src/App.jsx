@@ -630,6 +630,31 @@ export default function App() {
         .filter(Boolean)
         .join("\n\n");
 
+      setImproveForm((prev) => ({
+        ...prev,
+        post: fullPost,
+        goal: "Make it more viral"
+      }));
+
+      setTab("improve");
+    }}
+  >
+    Viral Boost
+  </button>
+
+  <button
+    type="button"
+    className="primary-btn"
+    onClick={() => {
+      const fullPost = [
+        result.data ? result.data.title : "",
+        result.data ? result.data.hook : "",
+        result.data ? result.data.body : "",
+        result.data ? result.data.cta : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       setAnalyzeForm((prev) => ({
         ...prev,
         post: fullPost
