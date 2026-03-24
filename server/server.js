@@ -198,12 +198,21 @@ function normalizeAnalyzeResponse(data) {
     authenticityScore: clampScore(data?.authenticityScore),
     clarityScore: clampScore(data?.clarityScore),
     emotionalScore: clampScore(data?.emotionalScore),
+    curiosityScore: clampScore(data?.curiosityScore),
     hookScore: clampScore(data?.hookScore),
     ctaScore: clampScore(data?.ctaScore),
+
     summary: cleanString(data?.summary),
+
     whatWorks: cleanArray(data?.whatWorks),
     whatHurts: cleanArray(data?.whatHurts),
     improvements: cleanArray(data?.improvements),
+
+    raiseViralScore: cleanArray(data?.raiseViralScore),
+    raiseAuthenticityScore: cleanArray(data?.raiseAuthenticityScore),
+    raiseEmotionalScore: cleanArray(data?.raiseEmotionalScore),
+    raiseCuriosityScore: cleanArray(data?.raiseCuriosityScore),
+
     improvedVersion: cleanString(data?.improvedVersion)
   };
 }
@@ -468,8 +477,8 @@ app.post("/api/analyze-post", async (req, res) => {
 
     const systemPrompt = `
 You are an elite social media analyst.
-Analyze performance by platform.
-Be concise, specific, and human.
+Analyze by platform.
+Be concise, specific, human, and practical.
 Return valid JSON only.
 
 Required JSON structure:
@@ -478,12 +487,17 @@ Required JSON structure:
   "authenticityScore": 0,
   "clarityScore": 0,
   "emotionalScore": 0,
+  "curiosityScore": 0,
   "hookScore": 0,
   "ctaScore": 0,
   "summary": "",
   "whatWorks": [],
   "whatHurts": [],
   "improvements": [],
+  "raiseViralScore": [],
+  "raiseAuthenticityScore": [],
+  "raiseEmotionalScore": [],
+  "raiseCuriosityScore": [],
   "improvedVersion": ""
 }
 `;
@@ -510,6 +524,17 @@ Rules:
 - explain what works on this platform
 - explain what hurts performance on this platform
 - improved version must fit this platform
+
+Also:
+- give specific actions to raise viral score
+- give specific actions to raise authenticity score
+- give specific actions to raise emotional score
+- give specific actions to raise curiosity score
+
+Curiosity score means:
+- how much the post creates interest
+- how much it makes people want to keep reading
+- how much it creates tension, intrigue, surprise, or pull
 
 Return JSON only.
 `;
