@@ -147,12 +147,14 @@ function formatHistoryTime(timestamp, language) {
 }
 
 function slugifyFileName(value) {
-  return String(value || "postpulse")
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s-_]+/gu, "")
-    .replace(/\s+/g, "-")
-    .slice(0, 50) || "postpulse";
+  return (
+    String(value || "postpulse")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0590-\u05FF\s_-]+/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 50) || "postpulse"
+  );
 }
 
 function downloadTextFile(filename, content) {
@@ -265,7 +267,9 @@ function buildExportFilename(result, language) {
   }
 
   if (result.type === "improve") {
-    return isHebrew ? "postpulse-improved-post.txt" : "postpulse-improved-post.txt";
+    return isHebrew
+      ? "postpulse-improved-post.txt"
+      : "postpulse-improved-post.txt";
   }
 
   if (result.type === "analyze") {
@@ -998,7 +1002,11 @@ export default function App() {
                   title={t.hashtags}
                   copyLabel={t.copy}
                   onCopy={() =>
-                    copyText(Array.isArray(result.data?.hashtags) ? result.data.hashtags.join(" ") : "")
+                    copyText(
+                      Array.isArray(result.data?.hashtags)
+                        ? result.data.hashtags.join(" ")
+                        : ""
+                    )
                   }
                 >
                   <div className="hashtags">
