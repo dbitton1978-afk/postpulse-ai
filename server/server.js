@@ -1416,14 +1416,102 @@ app.post("/api/generate-post", async (req, res) => {
   }
 });
 
-app.post("/api/improve-post", async (req, res) => {
+app.post("/generate-post", async (req, res) => {
   try {
-    if (!validateApiKey()) {
-      return res.status(500).json({
-        success: false,
-        message: "Missing OPENAI_API_KEY"
-      });
+    const { topic, targetAudience, goal, style, platform, language } = req.body;
+
+    const isHebrew = language === "he";
+
+    const systemPrompt = `
+You are a world-class social media content strategist.
+
+You NEVER generate generic AI text.
+
+You ALWAYS:
+- Think before writing
+- Build a strategic brief
+- Write like a human
+- Optimize for engagement and platform behavior
+
+You specialize in:
+- Viral hooks
+- Emotional storytelling
+- High-conversion CTAs
+- Platform-native writing
+`;
+
+    const userPrompt = `
+INPUT:
+Topic: ${topic}
+Audience: ${targetAudience}
+Goal: ${goal}
+Style: ${style}
+Platform: ${platform}
+Language: ${isHebrew ? "Hebrew" : "English"}
+
+STEP 1 — BUILD INTERNAL BRIEF (do not show to user):
+- What is the angle?
+- What emotion leads?
+- What triggers curiosity?
+- What makes people stop scrolling?
+
+STEP 2 — WRITE POST:
+Return JSON only:
+
+{
+  "title": "",
+  "hook": "",
+  "body": "",
+  "cta": "",
+  "hashtags": [],
+  "shortVersion": "",
+  "alternativeVersion": ""
+}
+
+RULES:
+- Hook must be powerful and scroll-stopping
+- Body must feel HUMAN (not AI)
+- CTA must be action-driven
+- Avoid generic phrases
+- Adapt to platform (${platform})
+- Write in ${isHebrew ? "Hebrew" : "English"}
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.85,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ]
+    });
+
+    const raw = completion.choices[0].message.content;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.log("Parse failed, fallback triggered");
+
+      parsed = {
+        title: "",
+        hook: raw,
+        body: raw,
+        cta: "",
+        hashtags: [],
+        shortVersion: raw,
+        alternativeVersion: raw
+      };
     }
+
+    return res.json({ data: parsed });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Generate failed" });
+  }
+});
 
     const {
       post,
