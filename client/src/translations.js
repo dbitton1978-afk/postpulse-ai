@@ -81,6 +81,9 @@ export const translations = {
     clearHistory: "Clear History",
     deleteHistoryItem: "Delete",
 
+    exportTxt: "Export TXT",
+    exportReady: "TXT downloaded",
+
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
   },
@@ -166,6 +169,9 @@ export const translations = {
     loadHistory: "טען",
     clearHistory: "נקה היסטוריה",
     deleteHistoryItem: "מחק",
+
+    exportTxt: "ייצא TXT",
+    exportReady: "קובץ TXT ירד",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
