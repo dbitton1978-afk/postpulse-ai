@@ -66,12 +66,17 @@ function ScoreCard(props) {
   );
 }
 
+function safeText(value) {
+  return typeof value === "string" ? value : "";
+}
+
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
@@ -96,6 +101,16 @@ export default function App() {
     platform: "instagram"
   });
 
+  const improveFromBuildLabel =
+    language === "he" ? "העבר ל־Improve" : "Move to Improve";
+  const analyzeFromBuildLabel =
+    language === "he" ? "העבר ל־Analyze" : "Move to Analyze";
+  const analyzeFromImproveLabel =
+    language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
+  const improveFromAnalyzeLabel =
+    language === "he" ? "העבר חזרה ל־Improve" : "Move Back to Improve";
+  const copiedLabel = language === "he" ? "הועתק" : "Copied";
+
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
       ...prev,
@@ -117,9 +132,19 @@ export default function App() {
     }));
   }
 
+  function switchTab(nextTab) {
+    setError("");
+    setTab(nextTab);
+  }
+
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text || "");
+      setCopyMessage(copiedLabel);
+
+      setTimeout(() => {
+        setCopyMessage("");
+      }, 1800);
     } catch (err) {
       console.error("Copy failed", err);
     }
@@ -127,6 +152,7 @@ export default function App() {
 
   function startRequest() {
     setError("");
+    setCopyMessage("");
     setResult(null);
     setLoading(true);
   }
@@ -269,6 +295,22 @@ export default function App() {
       .join("\n\n");
   }
 
+  function getImprovePrimaryText() {
+    if (!result || result.type !== "improve" || !result.data) {
+      return "";
+    }
+
+    return safeText(result.data.improvedPost);
+  }
+
+  function getAnalyzeImprovedText() {
+    if (!result || result.type !== "analyze" || !result.data) {
+      return "";
+    }
+
+    return safeText(result.data.improvedVersion);
+  }
+
   function moveBuildResultToImprove(goalValue = "") {
     const fullPost = getBuildResultFullPost();
 
@@ -279,6 +321,7 @@ export default function App() {
       platform: buildForm.platform
     }));
 
+    setError("");
     setTab("improve");
   }
 
@@ -291,7 +334,35 @@ export default function App() {
       platform: buildForm.platform
     }));
 
+    setError("");
     setTab("analyze");
+  }
+
+  function moveImproveResultToAnalyze() {
+    const improvedPost = getImprovePrimaryText();
+
+    setAnalyzeForm((prev) => ({
+      ...prev,
+      post: improvedPost,
+      platform: improveForm.platform
+    }));
+
+    setError("");
+    setTab("analyze");
+  }
+
+  function moveAnalyzeImprovedToImprove(goalValue = "") {
+    const improvedVersion = getAnalyzeImprovedText();
+
+    setImproveForm((prev) => ({
+      ...prev,
+      post: improvedVersion,
+      goal: goalValue || prev.goal,
+      platform: analyzeForm.platform
+    }));
+
+    setError("");
+    setTab("improve");
   }
 
   const topicPlaceholder =
@@ -343,21 +414,21 @@ export default function App() {
           <button
             type="button"
             className={tab === "build" ? "active" : ""}
-            onClick={() => setTab("build")}
+            onClick={() => switchTab("build")}
           >
             {t.build}
           </button>
           <button
             type="button"
             className={tab === "improve" ? "active" : ""}
-            onClick={() => setTab("improve")}
+            onClick={() => switchTab("improve")}
           >
             {t.improve}
           </button>
           <button
             type="button"
             className={tab === "analyze" ? "active" : ""}
-            onClick={() => setTab("analyze")}
+            onClick={() => switchTab("analyze")}
           >
             {t.analyze}
           </button>
@@ -547,6 +618,7 @@ export default function App() {
             ) : null}
 
             {error ? <div className="error-box">{error}</div> : null}
+            {copyMessage ? <div className="success-box">{copyMessage}</div> : null}
           </section>
 
           <section className="panel glass">
@@ -660,7 +732,7 @@ export default function App() {
                     className="primary-btn"
                     onClick={() => moveBuildResultToImprove("")}
                   >
-                    {t.improveAction}
+                    {t.improveAction || improveFromBuildLabel}
                   </button>
 
                   <button
@@ -676,7 +748,7 @@ export default function App() {
                     className="primary-btn"
                     onClick={moveBuildResultToAnalyze}
                   >
-                    {t.analyzeAction}
+                    {t.analyzeAction || analyzeFromBuildLabel}
                   </button>
                 </div>
               </div>
@@ -755,6 +827,16 @@ export default function App() {
                 >
                   {t.copyImproved}
                 </button>
+
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={moveImproveResultToAnalyze}
+                  >
+                    {analyzeFromImproveLabel}
+                  </button>
+                </div>
               </div>
             ) : null}
 
@@ -882,6 +964,24 @@ export default function App() {
                 >
                   {t.copyAnalyze}
                 </button>
+
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => moveAnalyzeImprovedToImprove("")}
+                  >
+                    {improveFromAnalyzeLabel}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="primary-btn primary-btn-viral"
+                    onClick={() => moveAnalyzeImprovedToImprove("Make it more viral")}
+                  >
+                    {t.viralBoost}
+                  </button>
+                </div>
               </div>
             ) : null}
           </section>
