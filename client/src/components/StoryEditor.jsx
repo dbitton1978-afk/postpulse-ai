@@ -14,7 +14,9 @@ const DEFAULT_TEXT = {
   bgOpacity: 0.4,
   align: "center",
   font: "Arial",
-  styleType: "box" // box / transparent / outline
+  styleType: "box",
+  shadow: true,
+  stroke: false
 };
 
 export default function StoryEditor() {
@@ -78,6 +80,7 @@ export default function StoryEditor() {
 
     setSelectedId(null);
     setSelectedType(null);
+    setDragItem(null);
   }
 
   function handleMouseDown(id, type) {
@@ -183,7 +186,7 @@ export default function StoryEditor() {
 
   return (
     <div style={{ marginTop: 30 }}>
-      <h2>Story Editor - Step 5</h2>
+      <h2>Story Editor - Step 6</h2>
 
       <input type="file" accept="image/*" multiple onChange={handleUpload} />
 
@@ -238,7 +241,6 @@ export default function StoryEditor() {
             <option>Courier New</option>
           </select>
 
-          {/* 🔥 סוג מסגרת */}
           <select
             value={selectedText.styleType}
             onChange={(e) => updateStyle("styleType", e.target.value)}
@@ -247,6 +249,24 @@ export default function StoryEditor() {
             <option value="transparent">ללא רקע</option>
             <option value="outline">מסגרת</option>
           </select>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={selectedText.shadow}
+              onChange={(e) => updateStyle("shadow", e.target.checked)}
+            />
+            shadow
+          </label>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={selectedText.stroke}
+              onChange={(e) => updateStyle("stroke", e.target.checked)}
+            />
+            stroke
+          </label>
         </div>
       )}
 
@@ -293,10 +313,27 @@ export default function StoryEditor() {
               ? hexToRgba(txt.bgColor, txt.bgOpacity)
               : "transparent";
 
-          const border =
+          const baseBorder =
             txt.styleType === "outline"
               ? `2px solid ${txt.bgColor}`
               : "none";
+
+          const selectedBorder =
+            selectedId === txt.id && selectedType === "text"
+              ? "2px solid #00ffcc"
+              : baseBorder;
+
+          const textShadow = txt.stroke
+            ? `
+              -1px -1px 0 #000,
+               1px -1px 0 #000,
+              -1px  1px 0 #000,
+               1px  1px 0 #000,
+               0px  2px 6px rgba(0,0,0,0.6)
+            `
+            : txt.shadow
+            ? "0px 2px 6px rgba(0,0,0,0.6)"
+            : "none";
 
           return (
             <div
@@ -313,12 +350,10 @@ export default function StoryEditor() {
                 borderRadius: 20,
                 textAlign: txt.align,
                 fontFamily: txt.font,
-                border:
-                  selectedId === txt.id && selectedType === "text"
-                    ? "2px solid #00ffcc"
-                    : border,
+                border: selectedBorder,
                 cursor: "grab",
-                maxWidth: 240
+                maxWidth: 240,
+                textShadow
               }}
             >
               {txt.content}
