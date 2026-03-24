@@ -3,7 +3,7 @@ import { analyzePost, generatePost, improvePost } from "./api";
 import { translations } from "./translations";
 import "./App.css";
 
-const styles = [
+const styleOptions = [
   { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
   { value: "mentor", he: "מנטור", en: "Mentor" },
   { value: "humorous", he: "הומוריסטי", en: "Humorous" },
@@ -12,32 +12,34 @@ const styles = [
   { value: "professional", he: "מקצועי", en: "Professional" }
 ];
 
-const platforms = [
+const platformOptions = [
   { value: "instagram", label: "Instagram" },
   { value: "facebook", label: "Facebook" },
   { value: "linkedin", label: "LinkedIn" },
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy, copyLabel }) {
+function Section(props) {
+  const { title, children, onCopy, copyLabel } = props;
+
   return (
     <div className="result-section">
       <div className="section-header">
         <h3>{title}</h3>
-
         {onCopy ? (
-          <button className="copy-btn" onClick={onCopy} type="button">
+          <button type="button" className="copy-btn" onClick={onCopy}>
             {copyLabel}
           </button>
         ) : null}
       </div>
-
       {children}
     </div>
   );
 }
 
-function ListBlock({ items }) {
+function ListBlock(props) {
+  const { items } = props;
+
   if (!Array.isArray(items) || items.length === 0) {
     return null;
   }
@@ -51,9 +53,10 @@ function ListBlock({ items }) {
   );
 }
 
-function ScoreCard({ label, value }) {
-  const numericValue = Number(value);
-  const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
+function ScoreCard(props) {
+  const { label, value } = props;
+  const num = Number(value);
+  const safeValue = Number.isFinite(num) ? Math.round(num) : 0;
 
   return (
     <div className="score-card">
@@ -92,161 +95,179 @@ export default function App() {
     platform: "instagram"
   });
 
-  const setBuildField = (field, value) => {
-    setBuildForm((prev) => ({ ...prev, [field]: value }));
-  };
+  function setBuildField(field, value) {
+    setBuildForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  }
 
-  const setImproveField = (field, value) => {
-    setImproveForm((prev) => ({ ...prev, [field]: value }));
-  };
+  function setImproveField(field, value) {
+    setImproveForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  }
 
-  const setAnalyzeField = (field, value) => {
-    setAnalyzeForm((prev) => ({ ...prev, [field]: value }));
-  };
+  function setAnalyzeField(field, value) {
+    setAnalyzeForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  }
 
-  const copyText = async (text) => {
+  async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text || "");
     } catch (err) {
-      console.error("Copy failed:", err);
+      console.error("Copy failed", err);
     }
-  };
+  }
 
-  const resetStateBeforeRequest = () => {
+  function startRequest() {
     setError("");
     setResult(null);
     setLoading(true);
-  };
+  }
 
-  const finishRequest = () => {
+  function endRequest() {
     setLoading(false);
-  };
+  }
 
-  const handleBuild = async () => {
+  async function handleBuild() {
     if (!buildForm.topic.trim()) {
       setError(t.errorTopic);
       return;
     }
 
-    resetStateBeforeRequest();
+    startRequest();
 
     try {
-      const res = await generatePost({
+      const response = await generatePost({
         ...buildForm,
         language
       });
 
       setResult({
         type: "build",
-        data: res?.data || {}
+        data: response && response.data ? response.data : {}
       });
     } catch (err) {
-      setError(err?.message || "Error");
+      setError((err && err.message) || "Error");
     } finally {
-      finishRequest();
+      endRequest();
     }
-  };
+  }
 
-  const handleImprove = async () => {
+  async function handleImprove() {
     if (!improveForm.post.trim()) {
       setError(t.errorPost);
       return;
     }
 
-    resetStateBeforeRequest();
+    startRequest();
 
     try {
-      const res = await improvePost({
+      const response = await improvePost({
         ...improveForm,
         language
       });
 
       setResult({
         type: "improve",
-        data: res?.data || {}
+        data: response && response.data ? response.data : {}
       });
     } catch (err) {
-      setError(err?.message || "Error");
+      setError((err && err.message) || "Error");
     } finally {
-      finishRequest();
+      endRequest();
     }
-  };
+  }
 
-  const handleAnalyze = async () => {
+  async function handleAnalyze() {
     if (!analyzeForm.post.trim()) {
       setError(t.errorPost);
       return;
     }
 
-    resetStateBeforeRequest();
+    startRequest();
 
     try {
-      const res = await analyzePost({
+      const response = await analyzePost({
         ...analyzeForm,
         language
       });
 
       setResult({
         type: "analyze",
-        data: res?.data || {}
+        data: response && response.data ? response.data : {}
       });
     } catch (err) {
-      setError(err?.message || "Error");
+      setError((err && err.message) || "Error");
     } finally {
-      finishRequest();
+      endRequest();
     }
-  };
+  }
 
   const buildCopyText =
-    result?.type === "build"
+    result && result.type === "build"
       ? [
-          result?.data?.title || "",
-          result?.data?.hook || "",
-          result?.data?.body || "",
-          result?.data?.cta || "",
-          Array.isArray(result?.data?.hashtags)
+          result.data && result.data.title ? result.data.title : "",
+          result.data && result.data.hook ? result.data.hook : "",
+          result.data && result.data.body ? result.data.body : "",
+          result.data && result.data.cta ? result.data.cta : "",
+          result.data &&
+          result.data.hashtags &&
+          Array.isArray(result.data.hashtags)
             ? result.data.hashtags.join(" ")
             : "",
-          result?.data?.shortVersion || "",
-          result?.data?.alternativeVersion || ""
+          result.data && result.data.shortVersion ? result.data.shortVersion : "",
+          result.data && result.data.alternativeVersion
+            ? result.data.alternativeVersion
+            : ""
         ]
           .filter(Boolean)
           .join("\n\n")
       : "";
 
   const improveCopyText =
-    result?.type === "improve"
+    result && result.type === "improve"
       ? [
-          result?.data?.improvedPost || "",
-          result?.data?.moreViralVersion || "",
-          result?.data?.moreAuthenticVersion || ""
+          result.data && result.data.improvedPost ? result.data.improvedPost : "",
+          result.data && result.data.moreViralVersion
+            ? result.data.moreViralVersion
+            : "",
+          result.data && result.data.moreAuthenticVersion
+            ? result.data.moreAuthenticVersion
+            : ""
         ]
           .filter(Boolean)
           .join("\n\n")
       : "";
 
   const analyzeCopyText =
-    result?.type === "analyze" ? result?.data?.improvedVersion || "" : "";
+    result &&
+    result.type === "analyze" &&
+    result.data &&
+    result.data.improvedVersion
+      ? result.data.improvedVersion
+      : "";
 
-  const buildTitlePlaceholder =
+  const topicPlaceholder =
     language === "he" ? "על מה הפוסט?" : "What is the post about?";
-  const buildAudiencePlaceholder =
+  const audiencePlaceholder =
     language === "he" ? "למי הפוסט מיועד?" : "Who is this for?";
-  const buildGoalPlaceholder =
+  const goalPlaceholder =
     language === "he" ? "מה המטרה?" : "What is the goal?";
-  const improvePlaceholder =
+  const improvePostPlaceholder =
     language === "he" ? "הדבק כאן את הפוסט לשיפור" : "Paste the post to improve";
   const improveGoalPlaceholder =
     language === "he" ? "מה לשפר?" : "What should improve?";
-  const analyzePlaceholder =
+  const analyzePostPlaceholder =
     language === "he" ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
 
   return (
     <div className="app" dir={dir}>
-      <div className="bg-orb orb-1" />
-      <div className="bg-orb orb-2" />
-      <div className="bg-orb orb-3" />
-
       <div className="app-shell">
         <header className="hero">
           <div className="hero-copy">
@@ -263,7 +284,6 @@ export default function App() {
             >
               {t.english}
             </button>
-
             <button
               type="button"
               className={language === "he" ? "active" : ""}
@@ -282,7 +302,6 @@ export default function App() {
           >
             {t.build}
           </button>
-
           <button
             type="button"
             className={tab === "improve" ? "active" : ""}
@@ -290,7 +309,6 @@ export default function App() {
           >
             {t.improve}
           </button>
-
           <button
             type="button"
             className={tab === "analyze" ? "active" : ""}
@@ -301,22 +319,22 @@ export default function App() {
         </nav>
 
         <main className="layout">
-          <section className="panel glass">
+          <section className="panel">
             <div className="panel-title">
-              {tab === "build" && t.build}
-              {tab === "improve" && t.improve}
-              {tab === "analyze" && t.analyze}
+              {tab === "build" ? t.build : null}
+              {tab === "improve" ? t.improve : null}
+              {tab === "analyze" ? t.analyze : null}
             </div>
 
-            {tab === "build" && (
+            {tab === "build" ? (
               <>
                 <div className="field">
                   <label>{t.topic}</label>
                   <textarea
-                    rows={5}
+                    rows="5"
                     value={buildForm.topic}
                     onChange={(e) => setBuildField("topic", e.target.value)}
-                    placeholder={buildTitlePlaceholder}
+                    placeholder={topicPlaceholder}
                   />
                 </div>
 
@@ -325,8 +343,10 @@ export default function App() {
                   <input
                     type="text"
                     value={buildForm.targetAudience}
-                    onChange={(e) => setBuildField("targetAudience", e.target.value)}
-                    placeholder={buildAudiencePlaceholder}
+                    onChange={(e) =>
+                      setBuildField("targetAudience", e.target.value)
+                    }
+                    placeholder={audiencePlaceholder}
                   />
                 </div>
 
@@ -336,7 +356,7 @@ export default function App() {
                     type="text"
                     value={buildForm.goal}
                     onChange={(e) => setBuildField("goal", e.target.value)}
-                    placeholder={buildGoalPlaceholder}
+                    placeholder={goalPlaceholder}
                   />
                 </div>
 
@@ -347,9 +367,9 @@ export default function App() {
                       value={buildForm.style}
                       onChange={(e) => setBuildField("style", e.target.value)}
                     >
-                      {styles.map((style) => (
-                        <option key={style.value} value={style.value}>
-                          {language === "he" ? style.he : style.en}
+                      {styleOptions.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {language === "he" ? item.he : item.en}
                         </option>
                       ))}
                     </select>
@@ -361,7 +381,7 @@ export default function App() {
                       value={buildForm.platform}
                       onChange={(e) => setBuildField("platform", e.target.value)}
                     >
-                      {platforms.map((item) => (
+                      {platformOptions.map((item) => (
                         <option key={item.value} value={item.value}>
                           {item.label}
                         </option>
@@ -371,25 +391,25 @@ export default function App() {
                 </div>
 
                 <button
+                  type="button"
                   className="primary-btn"
                   onClick={handleBuild}
-                  type="button"
                   disabled={loading}
                 >
                   {loading ? t.loading : t.generate}
                 </button>
               </>
-            )}
+            ) : null}
 
-            {tab === "improve" && (
+            {tab === "improve" ? (
               <>
                 <div className="field">
                   <label>{t.postText}</label>
                   <textarea
-                    rows={10}
+                    rows="10"
                     value={improveForm.post}
                     onChange={(e) => setImproveField("post", e.target.value)}
-                    placeholder={improvePlaceholder}
+                    placeholder={improvePostPlaceholder}
                   />
                 </div>
 
@@ -409,34 +429,34 @@ export default function App() {
                     value={improveForm.style}
                     onChange={(e) => setImproveField("style", e.target.value)}
                   >
-                    {styles.map((style) => (
-                      <option key={style.value} value={style.value}>
-                        {language === "he" ? style.he : style.en}
+                    {styleOptions.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {language === "he" ? item.he : item.en}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <button
+                  type="button"
                   className="primary-btn"
                   onClick={handleImprove}
-                  type="button"
                   disabled={loading}
                 >
                   {loading ? t.loading : t.improveBtn}
                 </button>
               </>
-            )}
+            ) : null}
 
-            {tab === "analyze" && (
+            {tab === "analyze" ? (
               <>
                 <div className="field">
                   <label>{t.postText}</label>
                   <textarea
-                    rows={10}
+                    rows="10"
                     value={analyzeForm.post}
                     onChange={(e) => setAnalyzeField("post", e.target.value)}
-                    placeholder={analyzePlaceholder}
+                    placeholder={analyzePostPlaceholder}
                   />
                 </div>
 
@@ -446,7 +466,7 @@ export default function App() {
                     value={analyzeForm.platform}
                     onChange={(e) => setAnalyzeField("platform", e.target.value)}
                   >
-                    {platforms.map((item) => (
+                    {platformOptions.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
                       </option>
@@ -455,56 +475,64 @@ export default function App() {
                 </div>
 
                 <button
+                  type="button"
                   className="primary-btn"
                   onClick={handleAnalyze}
-                  type="button"
                   disabled={loading}
                 >
                   {loading ? t.loading : t.analyzeBtn}
                 </button>
               </>
-            )}
+            ) : null}
 
             {error ? <div className="error-box">{error}</div> : null}
           </section>
 
-          <section className="panel glass">
+          <section className="panel">
             <div className="panel-title">{t.result}</div>
 
             {!result ? <div className="empty-state">{t.emptyState}</div> : null}
 
-            {result?.type === "build" && (
+            {result && result.type === "build" ? (
               <div className="result-wrap">
                 <Section
                   title={t.title}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.title || "")}
+                  onCopy={() => copyText(result.data ? result.data.title : "")}
                 >
-                  <div className="text-card">{result?.data?.title || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.title : ""}
+                  </div>
                 </Section>
 
                 <Section
                   title={t.hook}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.hook || "")}
+                  onCopy={() => copyText(result.data ? result.data.hook : "")}
                 >
-                  <div className="text-card">{result?.data?.hook || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.hook : ""}
+                  </div>
                 </Section>
 
                 <Section
                   title={t.body}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.body || "")}
+                  onCopy={() => copyText(result.data ? result.data.body : "")}
                 >
-                  <div className="text-card">{result?.data?.body || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.body : ""}
+                  </div>
                 </Section>
 
                 <Section
                   title={t.cta}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.cta || "")}
+                  onCopy={() => copyText(result.data ? result.data.cta : "")}
                 >
-                  <div className="text-card">{result?.data?.cta || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.cta : ""}
+                  </div>
                 </Section>
 
                 <Section
@@ -512,134 +540,200 @@ export default function App() {
                   copyLabel={t.copy}
                   onCopy={() =>
                     copyText(
-                      Array.isArray(result?.data?.hashtags)
+                      result.data &&
+                        result.data.hashtags &&
+                        Array.isArray(result.data.hashtags)
                         ? result.data.hashtags.join(" ")
                         : ""
                     )
                   }
                 >
                   <div className="hashtags">
-                    {(result?.data?.hashtags || []).map((tag, index) => (
-                      <span key={`${String(tag)}-${index}`}>
-                        #{String(tag).replace(/^#/, "")}
-                      </span>
-                    ))}
+                    {result.data &&
+                    result.data.hashtags &&
+                    Array.isArray(result.data.hashtags)
+                      ? result.data.hashtags.map((tag, index) => (
+                          <span key={`${String(tag)}-${index}`}>
+                            #{String(tag).replace(/^#/, "")}
+                          </span>
+                        ))
+                      : null}
                   </div>
                 </Section>
 
                 <Section
                   title={t.shortVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.shortVersion || "")}
+                  onCopy={() =>
+                    copyText(result.data ? result.data.shortVersion : "")
+                  }
                 >
-                  <div className="text-card">{result?.data?.shortVersion || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.shortVersion : ""}
+                  </div>
                 </Section>
 
                 <Section
                   title={t.alternativeVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.alternativeVersion || "")}
+                  onCopy={() =>
+                    copyText(result.data ? result.data.alternativeVersion : "")
+                  }
                 >
                   <div className="text-card">
-                    {result?.data?.alternativeVersion || ""}
+                    {result.data ? result.data.alternativeVersion : ""}
                   </div>
                 </Section>
 
                 <button
-                  className="primary-btn"
-                  style={{ marginTop: 10 }}
-                  onClick={() => copyText(buildCopyText)}
                   type="button"
+                  className="primary-btn"
+                  onClick={() => copyText(buildCopyText)}
                 >
                   {t.copyFullPost}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {result?.type === "improve" && (
+            {result && result.type === "improve" ? (
               <div className="result-wrap">
                 <Section title={t.strengths}>
-                  <ListBlock items={result?.data?.strengths || []} />
+                  <ListBlock
+                    items={
+                      result.data && result.data.strengths
+                        ? result.data.strengths
+                        : []
+                    }
+                  />
                 </Section>
 
                 <Section title={t.weaknesses}>
-                  <ListBlock items={result?.data?.weaknesses || []} />
+                  <ListBlock
+                    items={
+                      result.data && result.data.weaknesses
+                        ? result.data.weaknesses
+                        : []
+                    }
+                  />
                 </Section>
 
                 <Section
                   title={t.improvedVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.improvedPost || "")}
+                  onCopy={() =>
+                    copyText(result.data ? result.data.improvedPost : "")
+                  }
                 >
-                  <div className="text-card">{result?.data?.improvedPost || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.improvedPost : ""}
+                  </div>
                 </Section>
 
                 <Section
                   title={t.moreViralVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.moreViralVersion || "")}
+                  onCopy={() =>
+                    copyText(result.data ? result.data.moreViralVersion : "")
+                  }
                 >
                   <div className="text-card">
-                    {result?.data?.moreViralVersion || ""}
+                    {result.data ? result.data.moreViralVersion : ""}
                   </div>
                 </Section>
 
                 <Section
                   title={t.moreAuthenticVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result?.data?.moreAuthenticVersion || "")}
+                  onCopy={() =>
+                    copyText(
+                      result.data ? result.data.moreAuthenticVersion : ""
+                    )
+                  }
                 >
                   <div className="text-card">
-                    {result?.data?.moreAuthenticVersion || ""}
+                    {result.data ? result.data.moreAuthenticVersion : ""}
                   </div>
                 </Section>
 
                 <Section title={t.tips}>
-                  <ListBlock items={result?.data?.tips || []} />
+                  <ListBlock
+                    items={result.data && result.data.tips ? result.data.tips : []}
+                  />
                 </Section>
 
                 <button
-                  className="primary-btn"
-                  style={{ marginTop: 10 }}
-                  onClick={() => copyText(improveCopyText)}
                   type="button"
+                  className="primary-btn"
+                  onClick={() => copyText(improveCopyText)}
                 >
                   {t.copyImproved}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {result?.type === "analyze" && (
+            {result && result.type === "analyze" ? (
               <div className="result-wrap">
                 <div className="scores-grid">
-                  <ScoreCard label={t.viralScore} value={result?.data?.viralScore} />
+                  <ScoreCard
+                    label={t.viralScore}
+                    value={result.data ? result.data.viralScore : 0}
+                  />
                   <ScoreCard
                     label={t.authenticityScore}
-                    value={result?.data?.authenticityScore}
+                    value={result.data ? result.data.authenticityScore : 0}
                   />
-                  <ScoreCard label={t.clarityScore} value={result?.data?.clarityScore} />
+                  <ScoreCard
+                    label={t.clarityScore}
+                    value={result.data ? result.data.clarityScore : 0}
+                  />
                   <ScoreCard
                     label={t.emotionalScore}
-                    value={result?.data?.emotionalScore}
+                    value={result.data ? result.data.emotionalScore : 0}
                   />
-                  <ScoreCard label={t.hookScore} value={result?.data?.hookScore} />
-                  <ScoreCard label={t.ctaScore} value={result?.data?.ctaScore} />
+                  <ScoreCard
+                    label={t.hookScore}
+                    value={result.data ? result.data.hookScore : 0}
+                  />
+                  <ScoreCard
+                    label={t.ctaScore}
+                    value={result.data ? result.data.ctaScore : 0}
+                  />
                 </div>
 
                 <Section title={t.summary}>
-                  <div className="text-card">{result?.data?.summary || ""}</div>
+                  <div className="text-card">
+                    {result.data ? result.data.summary : ""}
+                  </div>
                 </Section>
 
                 <Section title={t.whatWorks}>
-                  <ListBlock items={result?.data?.whatWorks || []} />
+                  <ListBlock
+                    items={
+                      result.data && result.data.whatWorks
+                        ? result.data.whatWorks
+                        : []
+                    }
+                  />
                 </Section>
 
                 <Section title={t.whatHurts}>
-                  <ListBlock items={result?.data?.whatHurts || []} />
+                  <ListBlock
+                    items={
+                      result.data && result.data.whatHurts
+                        ? result.data.whatHurts
+                        : []
+                    }
+                  />
                 </Section>
 
                 <Section title={t.improvements}>
-                  <ListBlock items={result?.data?.improvements || []} />
+                  <ListBlock
+                    items={
+                      result.data && result.data.improvements
+                        ? result.data.improvements
+                        : []
+                    }
+                  />
                 </Section>
 
                 <Section
@@ -647,21 +741,18 @@ export default function App() {
                   copyLabel={t.copy}
                   onCopy={() => copyText(analyzeCopyText)}
                 >
-                  <div className="text-card">
-                    {result?.data?.improvedVersion || ""}
-                  </div>
+                  <div className="text-card">{analyzeCopyText}</div>
                 </Section>
 
                 <button
-                  className="primary-btn"
-                  style={{ marginTop: 10 }}
-                  onClick={() => copyText(analyzeCopyText)}
                   type="button"
+                  className="primary-btn"
+                  onClick={() => copyText(analyzeCopyText)}
                 >
                   {t.copyAnalyze}
                 </button>
               </div>
-            )}
+            ) : null}
           </section>
         </main>
       </div>
