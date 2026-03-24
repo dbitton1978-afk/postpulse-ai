@@ -4,12 +4,12 @@ import { translations } from "./translations";
 import StoryEditor from "./components/StoryEditor";
 
 const styles = [
-  { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
-  { value: "mentor", he: "מנטור", en: "Mentor" },
-  { value: "humorous", he: "הומוריסטי", en: "Humorous" },
-  { value: "spiritual", he: "רוחני", en: "Spiritual" },
-  { value: "emotional", he: "רגשי", en: "Emotional" },
-  { value: "professional", he: "מקצועי", en: "Professional" }
+  { value: "kabbalist", he: "קבליסט" },
+  { value: "mentor", he: "מנטור" },
+  { value: "humorous", he: "הומוריסטי" },
+  { value: "spiritual", he: "רוחני" },
+  { value: "emotional", he: "רגשי" },
+  { value: "professional", he: "מקצועי" }
 ];
 
 const platforms = [
@@ -19,65 +19,11 @@ const platforms = [
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy, onSendToStory }) {
-  return (
-    <div className="result-section">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap"
-        }}
-      >
-        <h3>{title}</h3>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {onSendToStory && (
-            <button className="copy-btn" onClick={onSendToStory}>
-              שלח לעורך סטורי
-            </button>
-          )}
-
-          {onCopy && (
-            <button className="copy-btn" onClick={onCopy}>
-              Copy
-            </button>
-          )}
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ListBlock({ items }) {
-  if (!items?.length) return null;
-
-  return (
-    <ul className="result-list">
-      {items.map((item, index) => (
-        <li key={`${item}-${index}`}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
-function ScoreCard({ label, value }) {
-  return (
-    <div className="score-card">
-      <div className="score-value">{Number.isFinite(value) ? value : 0}%</div>
-      <div className="score-label">{label}</div>
-    </div>
-  );
-}
-
 export default function App() {
-  const [language, setLanguage] = useState("en");
-  const [tab, setTab] = useState("build");
+  const [language] = useState("he");
   const t = useMemo(() => translations[language], [language]);
-  const dir = language === "he" ? "rtl" : "ltr";
+
+  const [tab, setTab] = useState("build");
 
   const [buildForm, setBuildForm] = useState({
     topic: "",
@@ -98,598 +44,200 @@ export default function App() {
     platform: "instagram"
   });
 
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // 🔥 חיבור לסטורי
   const [storyText, setStoryText] = useState("");
   const [storyTextToken, setStoryTextToken] = useState(0);
 
-  const copyText = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text || "");
-    } catch (err) {
-      console.error("Copy failed:", err);
-    }
-  };
-
-  const sendToStory = (text) => {
+  function sendToStory(text) {
     if (!text || !text.trim()) return;
     setStoryText(text);
     setStoryTextToken(Date.now());
-  };
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text || "");
+  }
+
+  // ===== API =====
 
   const handleBuild = async () => {
-    if (!buildForm.topic.trim()) {
-      setError(language === "he" ? "יש להזין נושא" : "Please enter a topic");
-      return;
-    }
-
     setLoading(true);
-    setError("");
-    setResult(null);
-
     try {
-      const res = await generatePost({
-        ...buildForm,
-        language
-      });
-
+      const res = await generatePost(buildForm);
       setResult({ type: "build", data: res.data });
     } catch (err) {
-      setError(err.message || "Error");
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
+    setLoading(false);
   };
 
   const handleImprove = async () => {
-    if (!improveForm.post.trim()) {
-      setError(language === "he" ? "יש להזין פוסט" : "Please enter a post");
-      return;
-    }
-
     setLoading(true);
-    setError("");
-    setResult(null);
-
     try {
-      const res = await improvePost({
-        ...improveForm,
-        language
-      });
-
+      const res = await improvePost(improveForm);
       setResult({ type: "improve", data: res.data });
     } catch (err) {
-      setError(err.message || "Error");
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
+    setLoading(false);
   };
 
   const handleAnalyze = async () => {
-    if (!analyzeForm.post.trim()) {
-      setError(language === "he" ? "יש להזין פוסט" : "Please enter a post");
-      return;
-    }
-
     setLoading(true);
-    setError("");
-    setResult(null);
-
     try {
-      const res = await analyzePost({
-        ...analyzeForm,
-        language
-      });
-
+      const res = await analyzePost(analyzeForm);
       setResult({ type: "analyze", data: res.data });
     } catch (err) {
-      setError(err.message || "Error");
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
+    setLoading(false);
   };
 
-  const buildCopyText =
-    result?.type === "build"
-      ? [
-          result.data?.title || "",
-          result.data?.hook || "",
-          result.data?.body || "",
-          result.data?.cta || "",
-          (result.data?.hashtags || []).join(" ")
-        ]
-          .filter(Boolean)
-          .join("\n\n")
-      : "";
-
-  const improveCopyText =
-    result?.type === "improve"
-      ? [
-          result.data?.improvedPost || "",
-          result.data?.moreViralVersion || "",
-          result.data?.moreAuthenticVersion || ""
-        ]
-          .filter(Boolean)
-          .join("\n\n")
-      : "";
-
-  const analyzeCopyText =
-    result?.type === "analyze" ? result.data?.improvedVersion || "" : "";
-
   return (
-    <div className="app" dir={dir}>
-      <div className="bg-orb orb-1" />
-      <div className="bg-orb orb-2" />
-      <div className="bg-orb orb-3" />
+    <div className="app" style={{ padding: 20 }}>
+      <h1>PostPulse AI 🚀</h1>
 
-      <header className="hero">
-        <div>
-          <h1>{t.appName}</h1>
-          <p>{t.subtitle}</p>
-        </div>
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={() => setTab("build")}>Build</button>
+        <button onClick={() => setTab("improve")}>Improve</button>
+        <button onClick={() => setTab("analyze")}>Analyze</button>
+      </div>
 
-        <div className="lang-switch">
-          <button
-            className={language === "en" ? "active" : ""}
-            onClick={() => setLanguage("en")}
-          >
-            {t.english}
+      {/* BUILD */}
+      {tab === "build" && (
+        <div style={{ marginTop: 20 }}>
+          <textarea
+            placeholder="נושא"
+            value={buildForm.topic}
+            onChange={(e) =>
+              setBuildForm({ ...buildForm, topic: e.target.value })
+            }
+          />
+
+          <button onClick={handleBuild}>
+            {loading ? "..." : "Generate"}
           </button>
-          <button
-            className={language === "he" ? "active" : ""}
-            onClick={() => setLanguage("he")}
-          >
-            {t.hebrew}
+        </div>
+      )}
+
+      {/* IMPROVE */}
+      {tab === "improve" && (
+        <div style={{ marginTop: 20 }}>
+          <textarea
+            placeholder="הדבק פוסט"
+            value={improveForm.post}
+            onChange={(e) =>
+              setImproveForm({ ...improveForm, post: e.target.value })
+            }
+          />
+
+          <button onClick={handleImprove}>
+            {loading ? "..." : "Improve"}
+          </button>
+
+          <button onClick={() => sendToStory(improveForm.post)}>
+            שלח לסטורי
           </button>
         </div>
-      </header>
+      )}
 
-      <nav className="tabs">
-        <button
-          className={tab === "build" ? "active" : ""}
-          onClick={() => setTab("build")}
-        >
-          {t.build}
-        </button>
-        <button
-          className={tab === "improve" ? "active" : ""}
-          onClick={() => setTab("improve")}
-        >
-          {t.improve}
-        </button>
-        <button
-          className={tab === "analyze" ? "active" : ""}
-          onClick={() => setTab("analyze")}
-        >
-          {t.analyze}
-        </button>
-      </nav>
+      {/* ANALYZE */}
+      {tab === "analyze" && (
+        <div style={{ marginTop: 20 }}>
+          <textarea
+            placeholder="הדבק פוסט"
+            value={analyzeForm.post}
+            onChange={(e) =>
+              setAnalyzeForm({ ...analyzeForm, post: e.target.value })
+            }
+          />
 
-      <main className="layout">
-        <section className="panel glass">
-          {tab === "build" && (
+          <button onClick={handleAnalyze}>
+            {loading ? "..." : "Analyze"}
+          </button>
+
+          <button onClick={() => sendToStory(analyzeForm.post)}>
+            שלח לסטורי
+          </button>
+        </div>
+      )}
+
+      {/* RESULT */}
+      {result && (
+        <div style={{ marginTop: 30 }}>
+          <h2>Result</h2>
+
+          {result.type === "build" && (
             <>
-              <div className="field">
-                <label>{t.topic}</label>
-                <textarea
-                  rows={4}
-                  value={buildForm.topic}
-                  onChange={(e) =>
-                    setBuildForm({ ...buildForm, topic: e.target.value })
-                  }
-                />
+              <div>
+                <h3>Title</h3>
+                <div>{result.data.title}</div>
+                <button onClick={() => sendToStory(result.data.title)}>
+                  שלח לסטורי
+                </button>
               </div>
 
-              <div className="field">
-                <label>{t.targetAudience}</label>
-                <input
-                  value={buildForm.targetAudience}
-                  onChange={(e) =>
-                    setBuildForm({
-                      ...buildForm,
-                      targetAudience: e.target.value
-                    })
-                  }
-                />
+              <div>
+                <h3>Body</h3>
+                <div>{result.data.body}</div>
+                <button onClick={() => sendToStory(result.data.body)}>
+                  שלח לסטורי
+                </button>
               </div>
 
-              <div className="field">
-                <label>{t.goal}</label>
-                <input
-                  value={buildForm.goal}
-                  onChange={(e) =>
-                    setBuildForm({ ...buildForm, goal: e.target.value })
-                  }
-                />
+              <div>
+                <h3>CTA</h3>
+                <div>{result.data.cta}</div>
+                <button onClick={() => sendToStory(result.data.cta)}>
+                  שלח לסטורי
+                </button>
               </div>
-
-              <div className="grid-2">
-                <div className="field">
-                  <label>{t.style}</label>
-                  <select
-                    value={buildForm.style}
-                    onChange={(e) =>
-                      setBuildForm({ ...buildForm, style: e.target.value })
-                    }
-                  >
-                    {styles.map((style) => (
-                      <option key={style.value} value={style.value}>
-                        {language === "he" ? style.he : style.en}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label>{t.platform}</label>
-                  <select
-                    value={buildForm.platform}
-                    onChange={(e) =>
-                      setBuildForm({ ...buildForm, platform: e.target.value })
-                    }
-                  >
-                    {platforms.map((platform) => (
-                      <option key={platform.value} value={platform.value}>
-                        {platform.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <button className="primary-btn" onClick={handleBuild}>
-                {loading ? t.loading : t.generate}
-              </button>
             </>
           )}
 
-          {tab === "improve" && (
-            <>
-              <div className="field">
-                <label>{t.postText}</label>
-                <textarea
-                  rows={8}
-                  value={improveForm.post}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, post: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="field">
-                <label>{t.goal}</label>
-                <input
-                  value={improveForm.goal}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, goal: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="field">
-                <label>{t.style}</label>
-                <select
-                  value={improveForm.style}
-                  onChange={(e) =>
-                    setImproveForm({ ...improveForm, style: e.target.value })
-                  }
-                >
-                  {styles.map((style) => (
-                    <option key={style.value} value={style.value}>
-                      {language === "he" ? style.he : style.en}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button className="primary-btn" onClick={handleImprove}>
-                {loading ? t.loading : t.improveBtn}
-              </button>
-
+          {result.type === "improve" && (
+            <div>
+              <h3>Improved</h3>
+              <div>{result.data.improvedPost}</div>
               <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(improveForm.post)}
-              >
-                שלח את הטקסט שכתבתי לעורך סטורי
-              </button>
-            </>
-          )}
-
-          {tab === "analyze" && (
-            <>
-              <div className="field">
-                <label>{t.postText}</label>
-                <textarea
-                  rows={8}
-                  value={analyzeForm.post}
-                  onChange={(e) =>
-                    setAnalyzeForm({ ...analyzeForm, post: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="field">
-                <label>{t.platform}</label>
-                <select
-                  value={analyzeForm.platform}
-                  onChange={(e) =>
-                    setAnalyzeForm({
-                      ...analyzeForm,
-                      platform: e.target.value
-                    })
-                  }
-                >
-                  {platforms.map((platform) => (
-                    <option key={platform.value} value={platform.value}>
-                      {platform.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button className="primary-btn" onClick={handleAnalyze}>
-                {loading ? t.loading : t.analyzeBtn}
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(analyzeForm.post)}
-              >
-                שלח את הטקסט שכתבתי לעורך סטורי
-              </button>
-            </>
-          )}
-
-          {error && <div className="error-box">{error}</div>}
-        </section>
-
-        <section className="panel glass">
-          <h2>{t.result}</h2>
-
-          {!result && <div className="empty-state">PostPulse AI ✨</div>}
-
-          {result?.type === "build" && (
-            <div className="result-wrap">
-              <Section
-                title={t.title}
-                onCopy={() => copyText(result.data?.title || "")}
-                onSendToStory={() => sendToStory(result.data?.title || "")}
-              >
-                <div className="text-card">{result.data?.title || ""}</div>
-              </Section>
-
-              <Section
-                title={t.hook}
-                onCopy={() => copyText(result.data?.hook || "")}
-                onSendToStory={() => sendToStory(result.data?.hook || "")}
-              >
-                <div className="text-card">{result.data?.hook || ""}</div>
-              </Section>
-
-              <Section
-                title={t.body}
-                onCopy={() => copyText(result.data?.body || "")}
-                onSendToStory={() => sendToStory(result.data?.body || "")}
-              >
-                <div className="text-card">{result.data?.body || ""}</div>
-              </Section>
-
-              <Section
-                title={t.cta}
-                onCopy={() => copyText(result.data?.cta || "")}
-                onSendToStory={() => sendToStory(result.data?.cta || "")}
-              >
-                <div className="text-card">{result.data?.cta || ""}</div>
-              </Section>
-
-              <Section
-                title={t.hashtags}
-                onCopy={() => copyText((result.data?.hashtags || []).join(" "))}
-                onSendToStory={() =>
-                  sendToStory((result.data?.hashtags || []).join(" "))
+                onClick={() =>
+                  sendToStory(result.data.improvedPost || "")
                 }
               >
-                <div className="hashtags">
-                  {(result.data?.hashtags || []).map((tag, index) => (
-                    <span key={`${tag}-${index}`}>#{tag.replace(/^#/, "")}</span>
-                  ))}
-                </div>
-              </Section>
-
-              <Section
-                title={t.shortVersion}
-                onCopy={() => copyText(result.data?.shortVersion || "")}
-                onSendToStory={() => sendToStory(result.data?.shortVersion || "")}
-              >
-                <div className="text-card">{result.data?.shortVersion || ""}</div>
-              </Section>
-
-              <Section
-                title={t.alternativeVersion}
-                onCopy={() => copyText(result.data?.alternativeVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.alternativeVersion || "")
-                }
-              >
-                <div className="text-card">
-                  {result.data?.alternativeVersion || ""}
-                </div>
-              </Section>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => copyText(buildCopyText)}
-              >
-                Copy Full Post
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(buildCopyText)}
-              >
-                שלח פוסט מלא לעורך סטורי
+                שלח לסטורי
               </button>
             </div>
           )}
 
-          {result?.type === "improve" && (
-            <div className="result-wrap">
-              <Section title={t.strengths}>
-                <ListBlock items={result.data?.strengths || []} />
-              </Section>
-
-              <Section title={t.weaknesses}>
-                <ListBlock items={result.data?.weaknesses || []} />
-              </Section>
-
-              <Section
-                title={t.improvedVersion}
-                onCopy={() => copyText(result.data?.improvedPost || "")}
-                onSendToStory={() => sendToStory(result.data?.improvedPost || "")}
-              >
-                <div className="text-card">{result.data?.improvedPost || ""}</div>
-              </Section>
-
-              <Section
-                title={t.moreViralVersion}
-                onCopy={() => copyText(result.data?.moreViralVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.moreViralVersion || "")
+          {result.type === "analyze" && (
+            <div>
+              <h3>Improved Version</h3>
+              <div>{result.data.improvedVersion}</div>
+              <button
+                onClick={() =>
+                  sendToStory(result.data.improvedVersion || "")
                 }
               >
-                <div className="text-card">
-                  {result.data?.moreViralVersion || ""}
-                </div>
-              </Section>
-
-              <Section
-                title={t.moreAuthenticVersion}
-                onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
-                onSendToStory={() =>
-                  sendToStory(result.data?.moreAuthenticVersion || "")
-                }
-              >
-                <div className="text-card">
-                  {result.data?.moreAuthenticVersion || ""}
-                </div>
-              </Section>
-
-              <Section title={t.tips}>
-                <ListBlock items={result.data?.tips || []} />
-              </Section>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => copyText(improveCopyText)}
-              >
-                Copy Improved Versions
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(improveCopyText)}
-              >
-                שלח לעורך סטורי
+                שלח לסטורי
               </button>
             </div>
           )}
+        </div>
+      )}
 
-          {result?.type === "analyze" && (
-            <div className="result-wrap">
-              <div className="scores-grid">
-                <ScoreCard
-                  label={t.viralScore}
-                  value={result.data?.viralScore ?? 0}
-                />
-                <ScoreCard
-                  label={t.authenticityScore}
-                  value={result.data?.authenticityScore ?? 0}
-                />
-                <ScoreCard
-                  label={t.clarityScore}
-                  value={result.data?.clarityScore ?? 0}
-                />
-                <ScoreCard
-                  label={t.emotionalScore}
-                  value={result.data?.emotionalScore ?? 0}
-                />
-                <ScoreCard
-                  label={t.hookScore}
-                  value={result.data?.hookScore ?? 0}
-                />
-                <ScoreCard
-                  label={t.ctaScore}
-                  value={result.data?.ctaScore ?? 0}
-                />
-              </div>
-
-              <Section
-                title={t.summary}
-                onSendToStory={() => sendToStory(result.data?.summary || "")}
-              >
-                <div className="text-card">{result.data?.summary || ""}</div>
-              </Section>
-
-              <Section title={t.whatWorks}>
-                <ListBlock items={result.data?.whatWorks || []} />
-              </Section>
-
-              <Section title={t.whatHurts}>
-                <ListBlock items={result.data?.whatHurts || []} />
-              </Section>
-
-              <Section title={t.improvements}>
-                <ListBlock items={result.data?.improvements || []} />
-              </Section>
-
-              <Section
-                title={t.improvedVersion}
-                onCopy={() => copyText(analyzeCopyText)}
-                onSendToStory={() => sendToStory(analyzeCopyText)}
-              >
-                <div className="text-card">
-                  {result.data?.improvedVersion || ""}
-                </div>
-              </Section>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => copyText(analyzeCopyText)}
-              >
-                Copy Improved Version
-              </button>
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: 10 }}
-                onClick={() => sendToStory(analyzeCopyText)}
-              >
-                שלח לעורך סטורי
-              </button>
-            </div>
-          )}
-        </section>
-      </main>
-
-      <section className="panel glass" style={{ marginTop: 24 }}>
-        <h2 style={{ marginBottom: 16 }}>
-          {language === "he" ? "עורך סטורי" : "Story Editor"}
-        </h2>
+      {/* STORY EDITOR */}
+      <div style={{ marginTop: 40 }}>
+        <h2>Story Editor</h2>
 
         <StoryEditor
           incomingText={storyText}
           incomingTextToken={storyTextToken}
         />
-      </section>
+      </div>
     </div>
   );
 }
