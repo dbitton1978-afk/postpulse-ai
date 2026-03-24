@@ -97,6 +97,14 @@ export const translations = {
     goalPresetMoreEmotional: "Make it more emotional",
     goalPresetMoreSharp: "Make it sharper",
     goalPresetMoreProfessional: "Make it more professional",
+    goalPresetFixHook: "Fix the hook",
+    goalPresetFixCta: "Fix the CTA",
+
+    quickActionsTitle: "Quick Actions",
+    quickFixHook: "Fix Hook",
+    quickFixCta: "Fix CTA",
+    quickMakeViral: "Make More Viral",
+    quickMakeHuman: "Make More Human",
 
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
@@ -200,6 +208,14 @@ export const translations = {
     goalPresetMoreEmotional: "לעשות אותו יותר רגשי",
     goalPresetMoreSharp: "לעשות אותו יותר חד",
     goalPresetMoreProfessional: "לעשות אותו יותר מקצועי",
+    goalPresetFixHook: "לתקן את הפתיחה",
+    goalPresetFixCta: "לתקן את ה-CTA",
+
+    quickActionsTitle: "פעולות מהירות",
+    quickFixHook: "שפר פתיחה",
+    quickFixCta: "שפר CTA",
+    quickMakeViral: "עשה יותר ויראלי",
+    quickMakeHuman: "עשה יותר אנושי",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
