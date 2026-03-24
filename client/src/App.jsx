@@ -87,7 +87,8 @@ export default function App() {
   const [improveForm, setImproveForm] = useState({
     post: "",
     goal: "",
-    style: "professional"
+    style: "professional",
+    platform: "instagram"
   });
 
   const [analyzeForm, setAnalyzeForm] = useState({
@@ -252,43 +253,47 @@ export default function App() {
     result.data.improvedVersion
       ? result.data.improvedVersion
       : "";
-function getBuildResultFullPost() {
-  if (!result || result.type !== "build" || !result.data) {
-    return "";
+
+  function getBuildResultFullPost() {
+    if (!result || result.type !== "build" || !result.data) {
+      return "";
+    }
+
+    return [
+      result.data.title || "",
+      result.data.hook || "",
+      result.data.body || "",
+      result.data.cta || ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
   }
 
-  return [
-    result.data.title || "",
-    result.data.hook || "",
-    result.data.body || "",
-    result.data.cta || ""
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-}
+  function moveBuildResultToImprove(goalValue = "") {
+    const fullPost = getBuildResultFullPost();
 
-function moveBuildResultToImprove(goalValue = "") {
-  const fullPost = getBuildResultFullPost();
+    setImproveForm((prev) => ({
+      ...prev,
+      post: fullPost,
+      goal: goalValue || prev.goal,
+      platform: buildForm.platform
+    }));
 
-  setImproveForm((prev) => ({
-    ...prev,
-    post: fullPost,
-    goal: goalValue || prev.goal
-  }));
+    setTab("improve");
+  }
 
-  setTab("improve");
-}
+  function moveBuildResultToAnalyze() {
+    const fullPost = getBuildResultFullPost();
 
-function moveBuildResultToAnalyze() {
-  const fullPost = getBuildResultFullPost();
+    setAnalyzeForm((prev) => ({
+      ...prev,
+      post: fullPost,
+      platform: buildForm.platform
+    }));
 
-  setAnalyzeForm((prev) => ({
-    ...prev,
-    post: fullPost
-  }));
+    setTab("analyze");
+  }
 
-  setTab("analyze");
-}
   const topicPlaceholder =
     language === "he" ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
@@ -459,18 +464,34 @@ function moveBuildResultToAnalyze() {
                   />
                 </div>
 
-                <div className="field">
-                  <label>{t.style}</label>
-                  <select
-                    value={improveForm.style}
-                    onChange={(e) => setImproveField("style", e.target.value)}
-                  >
-                    {styleOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {language === "he" ? item.he : item.en}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid-2">
+                  <div className="field">
+                    <label>{t.style}</label>
+                    <select
+                      value={improveForm.style}
+                      onChange={(e) => setImproveField("style", e.target.value)}
+                    >
+                      {styleOptions.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {language === "he" ? item.he : item.en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>{t.platform}</label>
+                    <select
+                      value={improveForm.platform}
+                      onChange={(e) => setImproveField("platform", e.target.value)}
+                    >
+                      {platformOptions.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <button
@@ -628,31 +649,32 @@ function moveBuildResultToAnalyze() {
                 >
                   {t.copyFullPost}
                 </button>
-               <div className="action-row">
-  <button
-    type="button"
-    className="primary-btn"
-    onClick={() => moveBuildResultToImprove("")}
-  >
-    {t.improveAction}
-  </button>
 
-  <button
-    type="button"
-    className="primary-btn primary-btn-viral"
-    onClick={() => moveBuildResultToImprove("Make it more viral")}
-  >
-    {t.viralBoost}
-  </button>
+                <div className="action-row">
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => moveBuildResultToImprove("")}
+                  >
+                    {t.improveAction}
+                  </button>
 
-  <button
-    type="button"
-    className="primary-btn"
-    onClick={moveBuildResultToAnalyze}
-  >
-    {t.analyzeAction}
-  </button>
-</div>
+                  <button
+                    type="button"
+                    className="primary-btn primary-btn-viral"
+                    onClick={() => moveBuildResultToImprove("Make it more viral")}
+                  >
+                    {t.viralBoost}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={moveBuildResultToAnalyze}
+                  >
+                    {t.analyzeAction}
+                  </button>
+                </div>
               </div>
             ) : null}
 
@@ -752,6 +774,10 @@ function moveBuildResultToAnalyze() {
                     value={result.data ? result.data.emotionalScore : 0}
                   />
                   <ScoreCard
+                    label={t.curiosityScore}
+                    value={result.data ? result.data.curiosityScore : 0}
+                  />
+                  <ScoreCard
                     label={t.hookScore}
                     value={result.data ? result.data.hookScore : 0}
                   />
@@ -792,6 +818,46 @@ function moveBuildResultToAnalyze() {
                     items={
                       result.data && result.data.improvements
                         ? result.data.improvements
+                        : []
+                    }
+                  />
+                </Section>
+
+                <Section title={t.raiseViralScore}>
+                  <ListBlock
+                    items={
+                      result.data && result.data.raiseViralScore
+                        ? result.data.raiseViralScore
+                        : []
+                    }
+                  />
+                </Section>
+
+                <Section title={t.raiseAuthenticityScore}>
+                  <ListBlock
+                    items={
+                      result.data && result.data.raiseAuthenticityScore
+                        ? result.data.raiseAuthenticityScore
+                        : []
+                    }
+                  />
+                </Section>
+
+                <Section title={t.raiseEmotionalScore}>
+                  <ListBlock
+                    items={
+                      result.data && result.data.raiseEmotionalScore
+                        ? result.data.raiseEmotionalScore
+                        : []
+                    }
+                  />
+                </Section>
+
+                <Section title={t.raiseCuriosityScore}>
+                  <ListBlock
+                    items={
+                      result.data && result.data.raiseCuriosityScore
+                        ? result.data.raiseCuriosityScore
                         : []
                     }
                   />
