@@ -151,7 +151,9 @@ select {
 .lang-switch button,
 .tabs button,
 .copy-btn,
-.primary-btn {
+.primary-btn,
+.secondary-btn,
+.danger-btn {
   border: 0;
   cursor: pointer;
   transition: 0.2s ease;
@@ -296,6 +298,32 @@ select {
   filter: brightness(1.04);
 }
 
+.secondary-btn {
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.danger-btn {
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(255, 123, 123, 0.12);
+  color: #ffd4d4;
+  border: 1px solid rgba(255, 123, 123, 0.18);
+  font-weight: 700;
+}
+
+.danger-btn:hover {
+  background: rgba(255, 123, 123, 0.16);
+}
+
 .error-box,
 .success-box {
   margin-top: 16px;
@@ -326,6 +354,10 @@ select {
   font-size: 18px;
   text-align: center;
   padding: 24px;
+}
+
+.result-tools {
+  margin-bottom: 14px;
 }
 
 .result-wrap {
@@ -439,8 +471,87 @@ select {
   gap: 12px;
 }
 
+.action-row-single {
+  grid-template-columns: 1fr;
+}
+
 .action-row .primary-btn {
   width: 100%;
+}
+
+.history-panel {
+  margin-top: 22px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-empty {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.history-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.history-type {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.history-time {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.history-preview {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 1100px) {
@@ -485,6 +596,15 @@ select {
   .panel {
     padding: 16px;
     border-radius: 18px;
+  }
+
+  .history-actions {
+    flex-direction: column;
+  }
+
+  .history-actions .secondary-btn,
+  .history-actions .danger-btn {
+    width: 100%;
   }
 }
 
