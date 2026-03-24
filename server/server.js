@@ -564,12 +564,6 @@ function validateApiKey() {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
-/**
- * -----------------------------
- * INTERNAL ENGINES
- * -----------------------------
- */
-
 async function buildGenerateBrief({
   topic,
   targetAudience,
@@ -1360,12 +1354,6 @@ async function analyzePostWithQualityLoop({
     finalDraft
   };
 }
-
-/**
- * -----------------------------
- * ROUTES
- * -----------------------------
- */
 
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
