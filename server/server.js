@@ -262,6 +262,14 @@ function validateImprovePayload(body = {}) {
   };
 }
 
+function validateAnalyzePayload(body = {}) {
+  return {
+    post: truncateText(body?.post, 5000),
+    language: normalizeLanguage(body?.language),
+    platform: normalizePlatform(body?.platform)
+  };
+}
+
 function hasEnoughGeneratedContent(data) {
   if (!data) return false;
 
@@ -281,6 +289,17 @@ function hasEnoughImprovedContent(data) {
   const moreAuthenticVersion = cleanString(data?.moreAuthenticVersion);
 
   return Boolean(improvedPost && (moreViralVersion || moreAuthenticVersion));
+}
+
+function hasEnoughAnalyzeContent(data) {
+  if (!data) return false;
+
+  const summary = cleanString(data?.summary);
+  const improvedVersion = cleanString(data?.improvedVersion);
+  const whatWorks = cleanArray(data?.whatWorks);
+  const improvements = cleanArray(data?.improvements);
+
+  return Boolean(summary && improvedVersion && whatWorks.length && improvements.length);
 }
 
 function fillGenerateFallbacks(data, { topic, platform, language }) {
@@ -388,6 +407,77 @@ function fillImproveFallbacks(data, { post, goal, language, platform }) {
     moreViralVersion: normalized.moreViralVersion || fallbackViral,
     moreAuthenticVersion: normalized.moreAuthenticVersion || fallbackAuthentic,
     tips: normalized.tips.length ? normalized.tips : fallbackTips
+  };
+}
+
+function fillAnalyzeFallbacks(data, { post, language, platform }) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const normalized = normalizeAnalyzeResponse(data || {});
+  const original = cleanString(post);
+
+  const fallbackSummary =
+    safeLanguage === "he"
+      ? "הפוסט מעביר כיוון ברור, אבל עדיין אפשר לחזק את החדות, המשיכה והתחושה האנושית שלו."
+      : "The post has a clear direction, but it can still be sharper, more engaging, and more human.";
+
+  const fallbackWhatWorks =
+    safeLanguage === "he"
+      ? ["הנושא מובן", "יש בסיס למסרים ברורים", "אפשר לבנות עליו גרסה חזקה יותר"]
+      : ["The topic is understandable", "There is a base for a clear message", "It can be developed into a stronger version"];
+
+  const fallbackWhatHurts =
+    safeLanguage === "he"
+      ? ["הפתיחה לא מספיק עוצרת", "הניסוח מעט כללי", "הקריאה לפעולה לא מספיק מורגשת"]
+      : ["The opening is not stopping enough", "The wording is a bit generic", "The CTA is not strong enough"];
+
+  const fallbackImprovements =
+    safeLanguage === "he"
+      ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא", "להוסיף יותר סקרנות או מתח", "לשפר את הסיום"]
+      : ["Strengthen the first line", "Clarify the value for the reader", "Add more curiosity or tension", "Improve the ending"];
+
+  const fallbackRaiseViral =
+    safeLanguage === "he"
+      ? ["להתחיל עם זווית חדה יותר", "להוריד ניסוחים כלליים", "להגדיל רצון לתגובה או שיתוף"]
+      : ["Start with a sharper angle", "Reduce generic wording", "Increase the urge to comment or share"];
+
+  const fallbackRaiseAuthentic =
+    safeLanguage === "he"
+      ? ["לכתוב פשוט יותר", "להישמע פחות מלוטש", "להוסיף טון אנושי וישיר"]
+      : ["Use simpler wording", "Sound less polished", "Add a more direct human tone"];
+
+  const fallbackRaiseEmotional =
+    safeLanguage === "he"
+      ? ["להכניס תחושה אישית יותר", "להשתמש במסר שפוגש צורך אמיתי", "לחזק את המטען הרגשי"]
+      : ["Add a more personal feeling", "Use messaging that meets a real need", "Strengthen the emotional pull"];
+
+  const fallbackRaiseCuriosity =
+    safeLanguage === "he"
+      ? ["ליצור פתיחה עם מתח", "להשאיר שאלה פתוחה", "לרמוז על תובנה לפני חשיפתה"]
+      : ["Create a more tension-driven opening", "Leave an open loop", "Hint at the insight before revealing it"];
+
+  const fallbackImprovedVersion =
+    safeLanguage === "he"
+      ? `${original}\n\nאם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר, לדבר מדויק יותר, ולסיים עם הנעה טבעית וברורה לפעולה.`
+      : `${original}\n\nIf you want this post to perform better on ${safePlatform}, it needs a stronger opening, sharper wording, and a more natural clear action close.`;
+
+  return {
+    viralScore: normalized.viralScore || 62,
+    authenticityScore: normalized.authenticityScore || 68,
+    clarityScore: normalized.clarityScore || 70,
+    emotionalScore: normalized.emotionalScore || 60,
+    curiosityScore: normalized.curiosityScore || 58,
+    hookScore: normalized.hookScore || 57,
+    ctaScore: normalized.ctaScore || 55,
+    summary: normalized.summary || fallbackSummary,
+    whatWorks: normalized.whatWorks.length ? normalized.whatWorks : fallbackWhatWorks,
+    whatHurts: normalized.whatHurts.length ? normalized.whatHurts : fallbackWhatHurts,
+    improvements: normalized.improvements.length ? normalized.improvements : fallbackImprovements,
+    raiseViralScore: normalized.raiseViralScore.length ? normalized.raiseViralScore : fallbackRaiseViral,
+    raiseAuthenticityScore: normalized.raiseAuthenticityScore.length ? normalized.raiseAuthenticityScore : fallbackRaiseAuthentic,
+    raiseEmotionalScore: normalized.raiseEmotionalScore.length ? normalized.raiseEmotionalScore : fallbackRaiseEmotional,
+    raiseCuriosityScore: normalized.raiseCuriosityScore.length ? normalized.raiseCuriosityScore : fallbackRaiseCuriosity,
+    improvedVersion: normalized.improvedVersion || fallbackImprovedVersion
   };
 }
 
@@ -1003,6 +1093,274 @@ async function improvePostWithQualityLoop({
   };
 }
 
+async function buildAnalyzeBrief({
+  post,
+  platform,
+  language
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+
+  const systemPrompt = `
+You are a senior social media analyst strategist.
+Before scoring a post, build a short internal analysis brief.
+Focus on what matters most for platform performance.
+
+Required JSON structure:
+{
+  "postTypeGuess": "",
+  "mainStrength": "",
+  "mainWeakness": "",
+  "performanceRisk": "",
+  "hookAssessment": "",
+  "ctaAssessment": "",
+  "clarityAssessment": "",
+  "emotionAssessment": "",
+  "curiosityAssessment": "",
+  "priorityFixes": []
+}
+`;
+
+  const userPrompt = `
+Build an internal analysis brief for this post.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
+
+Post:
+${post}
+
+Rules:
+- guess the likely type of post
+- identify the strongest element
+- identify the weakest performance point
+- identify the main risk hurting results
+- assess hook, CTA, clarity, emotion, and curiosity
+- list 3-5 priority fixes
+- keep it concise and practical
+`;
+
+  const parsed = await askAIJson(systemPrompt, userPrompt, 500);
+
+  return {
+    postTypeGuess: cleanString(parsed?.postTypeGuess, "general post"),
+    mainStrength: cleanString(parsed?.mainStrength, "clear topic"),
+    mainWeakness: cleanString(parsed?.mainWeakness, "not strong enough opening"),
+    performanceRisk: cleanString(parsed?.performanceRisk, "generic phrasing"),
+    hookAssessment: cleanString(parsed?.hookAssessment, "average"),
+    ctaAssessment: cleanString(parsed?.ctaAssessment, "weak"),
+    clarityAssessment: cleanString(parsed?.clarityAssessment, "good enough"),
+    emotionAssessment: cleanString(parsed?.emotionAssessment, "moderate"),
+    curiosityAssessment: cleanString(parsed?.curiosityAssessment, "limited"),
+    priorityFixes: cleanArray(parsed?.priorityFixes)
+  };
+}
+
+async function writePostAnalysis({
+  post,
+  platform,
+  language,
+  brief
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+  const platformRules = getPlatformRules(safePlatform, safeLanguage);
+
+  const systemPrompt = `
+You are an elite social media analyst.
+Score a post realistically and give useful platform-native recommendations.
+Be specific, practical, and human.
+
+Required JSON structure:
+{
+  "viralScore": 0,
+  "authenticityScore": 0,
+  "clarityScore": 0,
+  "emotionalScore": 0,
+  "curiosityScore": 0,
+  "hookScore": 0,
+  "ctaScore": 0,
+  "summary": "",
+  "whatWorks": [],
+  "whatHurts": [],
+  "improvements": [],
+  "raiseViralScore": [],
+  "raiseAuthenticityScore": [],
+  "raiseEmotionalScore": [],
+  "raiseCuriosityScore": [],
+  "improvedVersion": ""
+}
+`;
+
+  const userPrompt = `
+Analyze this post deeply.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+
+Platform rules:
+- Tone: ${platformRules.tone}
+- CTA: ${platformRules.cta}
+- Length: ${platformRules.length}
+
+Internal analysis brief:
+- Post type guess: ${brief.postTypeGuess}
+- Main strength: ${brief.mainStrength}
+- Main weakness: ${brief.mainWeakness}
+- Performance risk: ${brief.performanceRisk}
+- Hook assessment: ${brief.hookAssessment}
+- CTA assessment: ${brief.ctaAssessment}
+- Clarity assessment: ${brief.clarityAssessment}
+- Emotion assessment: ${brief.emotionAssessment}
+- Curiosity assessment: ${brief.curiosityAssessment}
+- Priority fixes: ${brief.priorityFixes.join(", ")}
+
+Post:
+${post}
+
+Rules:
+- everything must be in ${getLanguageLabel(safeLanguage)}
+- all scores must be 0-100
+- be realistic, not flattering
+- summary must be short and useful
+- whatWorks = things that genuinely help performance
+- whatHurts = things that genuinely reduce performance
+- improvements = top practical fixes
+- raiseViralScore = specific actions to increase stopping power and sharing
+- raiseAuthenticityScore = specific actions to sound more real and less AI
+- raiseEmotionalScore = specific actions to deepen feeling or connection
+- raiseCuriosityScore = specific actions to create intrigue, pull, and open loops
+- improvedVersion must be clearly better and platform-fit
+- do not be generic
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 1000);
+}
+
+async function critiquePostAnalysis({
+  post,
+  platform,
+  language,
+  draft,
+  brief
+}) {
+  const safeLanguage = normalizeLanguage(language);
+  const safePlatform = normalizePlatform(platform);
+
+  const systemPrompt = `
+You are a senior critic for social media analysis outputs.
+Improve the analysis if it is too generic, too soft, or not useful enough.
+Keep the same JSON structure.
+
+Required JSON structure:
+{
+  "viralScore": 0,
+  "authenticityScore": 0,
+  "clarityScore": 0,
+  "emotionalScore": 0,
+  "curiosityScore": 0,
+  "hookScore": 0,
+  "ctaScore": 0,
+  "summary": "",
+  "whatWorks": [],
+  "whatHurts": [],
+  "improvements": [],
+  "raiseViralScore": [],
+  "raiseAuthenticityScore": [],
+  "raiseEmotionalScore": [],
+  "raiseCuriosityScore": [],
+  "improvedVersion": ""
+}
+`;
+
+  const userPrompt = `
+Review this analysis and make it more accurate and more useful where needed.
+
+Language: ${getLanguageLabel(safeLanguage)}
+Platform: ${safePlatform}
+
+Original post:
+${post}
+
+Internal analysis brief for quality control:
+- Main strength: ${brief.mainStrength}
+- Main weakness: ${brief.mainWeakness}
+- Performance risk: ${brief.performanceRisk}
+- Priority fixes: ${brief.priorityFixes.join(", ")}
+
+Improve if:
+- the scores feel inflated
+- the advice is too generic
+- whatWorks is vague
+- whatHurts is vague
+- improvedVersion is not clearly stronger
+- the analysis does not match the likely performance on this platform
+
+Current draft:
+${JSON.stringify(draft)}
+`;
+
+  return askAIJson(systemPrompt, userPrompt, 1000);
+}
+
+async function analyzePostWithQualityLoop({
+  post,
+  platform,
+  language
+}) {
+  const brief = await buildAnalyzeBrief({
+    post,
+    platform,
+    language
+  });
+
+  const firstDraft = await writePostAnalysis({
+    post,
+    platform,
+    language,
+    brief
+  });
+
+  if (!firstDraft || !hasEnoughAnalyzeContent(firstDraft)) {
+    return {
+      brief,
+      finalDraft: fillAnalyzeFallbacks(firstDraft, {
+        post,
+        language,
+        platform
+      })
+    };
+  }
+
+  const criticDraft = await critiquePostAnalysis({
+    post,
+    platform,
+    language,
+    draft: firstDraft,
+    brief
+  });
+
+  const selectedDraft =
+    criticDraft && hasEnoughAnalyzeContent(criticDraft) ? criticDraft : firstDraft;
+
+  const finalDraft = fillAnalyzeFallbacks(selectedDraft, {
+    post,
+    language,
+    platform
+  });
+
+  return {
+    brief,
+    finalDraft
+  };
+}
+
 /**
  * -----------------------------
  * ROUTES
@@ -1127,7 +1485,11 @@ app.post("/api/analyze-post", async (req, res) => {
       });
     }
 
-    const { post = "", language = "en", platform = "instagram" } = req.body || {};
+    const {
+      post,
+      language,
+      platform
+    } = validateAnalyzePayload(req.body || {});
 
     if (!String(post).trim()) {
       return res.status(400).json({
@@ -1136,79 +1498,13 @@ app.post("/api/analyze-post", async (req, res) => {
       });
     }
 
-    const safeLanguage = normalizeLanguage(language);
-    const safePlatform = normalizePlatform(platform);
-    const platformRules = getPlatformRules(safePlatform, safeLanguage);
+    const { finalDraft } = await analyzePostWithQualityLoop({
+      post,
+      platform,
+      language
+    });
 
-    const systemPrompt = `
-You are an elite social media analyst.
-Analyze by platform.
-Be concise, specific, human, and practical.
-
-Required JSON structure:
-{
-  "viralScore": 0,
-  "authenticityScore": 0,
-  "clarityScore": 0,
-  "emotionalScore": 0,
-  "curiosityScore": 0,
-  "hookScore": 0,
-  "ctaScore": 0,
-  "summary": "",
-  "whatWorks": [],
-  "whatHurts": [],
-  "improvements": [],
-  "raiseViralScore": [],
-  "raiseAuthenticityScore": [],
-  "raiseEmotionalScore": [],
-  "raiseCuriosityScore": [],
-  "improvedVersion": ""
-}
-`;
-
-    const userPrompt = `
-Analyze this post.
-
-Language: ${getLanguageLabel(safeLanguage)}
-Platform: ${safePlatform}
-
-Platform rules:
-- Tone: ${platformRules.tone}
-- CTA: ${platformRules.cta}
-- Length: ${platformRules.length}
-
-Post:
-${post}
-
-Rules:
-- everything must be in ${getLanguageLabel(safeLanguage)}
-- all scores must be 0-100
-- be realistic
-- keep summary short and useful
-- explain what works on this platform
-- explain what hurts performance on this platform
-- improved version must fit this platform
-- give specific actions to raise viral score
-- give specific actions to raise authenticity score
-- give specific actions to raise emotional score
-- give specific actions to raise curiosity score
-
-Curiosity score means:
-- how much the post creates interest
-- how much it makes people want to keep reading
-- how much it creates tension, intrigue, surprise, or pull
-`;
-
-    const parsed = await askAIJson(systemPrompt, userPrompt, 700);
-
-    if (!parsed) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to parse AI response"
-      });
-    }
-
-    const normalized = normalizeAnalyzeResponse(parsed);
+    const normalized = normalizeAnalyzeResponse(finalDraft);
 
     return res.json({
       success: true,
