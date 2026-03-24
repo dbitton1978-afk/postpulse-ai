@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { analyzePost, generatePost, improvePost } from "./api";
 import { translations } from "./translations";
 import "./App.css";
@@ -18,6 +18,9 @@ const platformOptions = [
   { value: "linkedin", label: "LinkedIn" },
   { value: "tiktok", label: "TikTok" }
 ];
+
+const HISTORY_STORAGE_KEY = "postpulse_history_v1";
+const HISTORY_LIMIT = 20;
 
 function Section(props) {
   const { title, children, onCopy, copyLabel } = props;
@@ -70,6 +73,79 @@ function safeText(value) {
   return typeof value === "string" ? value : "";
 }
 
+function safeJsonParse(value, fallback) {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function buildHistoryPreview(item, language) {
+  if (!item || !item.data) return "";
+  const isHebrew = language === "he";
+
+  if (item.type === "build") {
+    return (
+      item.data.hook ||
+      item.data.title ||
+      (isHebrew ? "פוסט חדש שנוצר" : "Generated post")
+    );
+  }
+
+  if (item.type === "improve") {
+    return (
+      item.data.improvedPost ||
+      item.data.moreViralVersion ||
+      (isHebrew ? "פוסט ששופר" : "Improved post")
+    );
+  }
+
+  if (item.type === "analyze") {
+    return (
+      item.data.summary ||
+      item.data.improvedVersion ||
+      (isHebrew ? "ניתוח פוסט" : "Post analysis")
+    );
+  }
+
+  return "";
+}
+
+function buildHistoryTitle(item, language) {
+  const isHebrew = language === "he";
+
+  if (item.type === "build") {
+    return item.data?.title || (isHebrew ? "פוסט שנוצר" : "Generated Post");
+  }
+
+  if (item.type === "improve") {
+    return isHebrew ? "פוסט משופר" : "Improved Post";
+  }
+
+  if (item.type === "analyze") {
+    return isHebrew ? "ניתוח פוסט" : "Post Analysis";
+  }
+
+  return isHebrew ? "פריט" : "Item";
+}
+
+function formatHistoryTime(timestamp, language) {
+  try {
+    const locale = language === "he" ? "he-IL" : "en-US";
+    return new Date(timestamp).toLocaleString(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch {
+    return "";
+  }
+}
+
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
@@ -77,6 +153,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
+  const [history, setHistory] = useState([]);
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
@@ -101,15 +178,21 @@ export default function App() {
     platform: "instagram"
   });
 
-  const improveFromBuildLabel =
-    language === "he" ? "העבר ל־Improve" : "Move to Improve";
-  const analyzeFromBuildLabel =
-    language === "he" ? "העבר ל־Analyze" : "Move to Analyze";
-  const analyzeFromImproveLabel =
-    language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
+  useEffect(() => {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    const parsed = safeJsonParse(raw || "[]", []);
+    setHistory(Array.isArray(parsed) ? parsed : []);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  }, [history]);
+
+  const copiedLabel = language === "he" ? "הועתק" : "Copied";
   const improveFromAnalyzeLabel =
     language === "he" ? "העבר חזרה ל־Improve" : "Move Back to Improve";
-  const copiedLabel = language === "he" ? "הועתק" : "Copied";
+  const analyzeFromImproveLabel =
+    language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
 
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
@@ -161,6 +244,75 @@ export default function App() {
     setLoading(false);
   }
 
+  function addToHistory(item) {
+    const savedItem = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      ...item
+    };
+
+    setHistory((prev) => [savedItem, ...prev].slice(0, HISTORY_LIMIT));
+  }
+
+  function removeHistoryItem(id) {
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function clearHistory() {
+    setHistory([]);
+  }
+
+  function saveCurrentResult() {
+    if (!result || !result.type || !result.data) return;
+
+    addToHistory({
+      type: result.type,
+      language,
+      data: result.data
+    });
+
+    setCopyMessage(t.savedToHistory);
+
+    setTimeout(() => {
+      setCopyMessage("");
+    }, 1800);
+  }
+
+  function loadHistoryItem(item) {
+    if (!item) return;
+
+    setResult({
+      type: item.type,
+      data: item.data
+    });
+
+    if (item.type === "build") {
+      setTab("build");
+    }
+
+    if (item.type === "improve") {
+      setImproveForm((prev) => ({
+        ...prev,
+        post:
+          item.data?.improvedPost ||
+          item.data?.moreAuthenticVersion ||
+          item.data?.moreViralVersion ||
+          prev.post
+      }));
+      setTab("improve");
+    }
+
+    if (item.type === "analyze") {
+      setAnalyzeForm((prev) => ({
+        ...prev,
+        post: item.data?.improvedVersion || prev.post
+      }));
+      setTab("analyze");
+    }
+
+    setError("");
+  }
+
   async function handleBuild() {
     if (!buildForm.topic.trim()) {
       setError(t.errorTopic);
@@ -175,9 +327,16 @@ export default function App() {
         language
       });
 
-      setResult({
+      const nextResult = {
         type: "build",
         data: response && response.data ? response.data : {}
+      };
+
+      setResult(nextResult);
+      addToHistory({
+        type: nextResult.type,
+        language,
+        data: nextResult.data
       });
     } catch (err) {
       setError((err && err.message) || "Error");
@@ -200,9 +359,16 @@ export default function App() {
         language
       });
 
-      setResult({
+      const nextResult = {
         type: "improve",
         data: response && response.data ? response.data : {}
+      };
+
+      setResult(nextResult);
+      addToHistory({
+        type: nextResult.type,
+        language,
+        data: nextResult.data
       });
     } catch (err) {
       setError((err && err.message) || "Error");
@@ -225,9 +391,16 @@ export default function App() {
         language
       });
 
-      setResult({
+      const nextResult = {
         type: "analyze",
         data: response && response.data ? response.data : {}
+      };
+
+      setResult(nextResult);
+      addToHistory({
+        type: nextResult.type,
+        language,
+        data: nextResult.data
       });
     } catch (err) {
       setError((err && err.message) || "Error");
@@ -239,19 +412,15 @@ export default function App() {
   const buildCopyText =
     result && result.type === "build"
       ? [
-          result.data && result.data.title ? result.data.title : "",
-          result.data && result.data.hook ? result.data.hook : "",
-          result.data && result.data.body ? result.data.body : "",
-          result.data && result.data.cta ? result.data.cta : "",
-          result.data &&
-          result.data.hashtags &&
-          Array.isArray(result.data.hashtags)
+          result.data?.title || "",
+          result.data?.hook || "",
+          result.data?.body || "",
+          result.data?.cta || "",
+          Array.isArray(result.data?.hashtags)
             ? result.data.hashtags.join(" ")
             : "",
-          result.data && result.data.shortVersion ? result.data.shortVersion : "",
-          result.data && result.data.alternativeVersion
-            ? result.data.alternativeVersion
-            : ""
+          result.data?.shortVersion || "",
+          result.data?.alternativeVersion || ""
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -260,25 +429,16 @@ export default function App() {
   const improveCopyText =
     result && result.type === "improve"
       ? [
-          result.data && result.data.improvedPost ? result.data.improvedPost : "",
-          result.data && result.data.moreViralVersion
-            ? result.data.moreViralVersion
-            : "",
-          result.data && result.data.moreAuthenticVersion
-            ? result.data.moreAuthenticVersion
-            : ""
+          result.data?.improvedPost || "",
+          result.data?.moreViralVersion || "",
+          result.data?.moreAuthenticVersion || ""
         ]
           .filter(Boolean)
           .join("\n\n")
       : "";
 
   const analyzeCopyText =
-    result &&
-    result.type === "analyze" &&
-    result.data &&
-    result.data.improvedVersion
-      ? result.data.improvedVersion
-      : "";
+    result && result.type === "analyze" ? result.data?.improvedVersion || "" : "";
 
   function getBuildResultFullPost() {
     if (!result || result.type !== "build" || !result.data) {
@@ -459,9 +619,7 @@ export default function App() {
                   <input
                     type="text"
                     value={buildForm.targetAudience}
-                    onChange={(e) =>
-                      setBuildField("targetAudience", e.target.value)
-                    }
+                    onChange={(e) => setBuildField("targetAudience", e.target.value)}
                     placeholder={audiencePlaceholder}
                   />
                 </div>
@@ -626,65 +784,61 @@ export default function App() {
 
             {!result ? <div className="empty-state">{t.emptyState}</div> : null}
 
+            {result ? (
+              <div className="result-tools">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={saveCurrentResult}
+                >
+                  {t.saveToHistory}
+                </button>
+              </div>
+            ) : null}
+
             {result && result.type === "build" ? (
               <div className="result-wrap">
                 <Section
                   title={t.title}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result.data ? result.data.title : "")}
+                  onCopy={() => copyText(result.data?.title || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.title : ""}
-                  </div>
+                  <div className="text-card">{result.data?.title || ""}</div>
                 </Section>
 
                 <Section
                   title={t.hook}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result.data ? result.data.hook : "")}
+                  onCopy={() => copyText(result.data?.hook || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.hook : ""}
-                  </div>
+                  <div className="text-card">{result.data?.hook || ""}</div>
                 </Section>
 
                 <Section
                   title={t.body}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result.data ? result.data.body : "")}
+                  onCopy={() => copyText(result.data?.body || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.body : ""}
-                  </div>
+                  <div className="text-card">{result.data?.body || ""}</div>
                 </Section>
 
                 <Section
                   title={t.cta}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result.data ? result.data.cta : "")}
+                  onCopy={() => copyText(result.data?.cta || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.cta : ""}
-                  </div>
+                  <div className="text-card">{result.data?.cta || ""}</div>
                 </Section>
 
                 <Section
                   title={t.hashtags}
                   copyLabel={t.copy}
                   onCopy={() =>
-                    copyText(
-                      result.data &&
-                        result.data.hashtags &&
-                        Array.isArray(result.data.hashtags)
-                        ? result.data.hashtags.join(" ")
-                        : ""
-                    )
+                    copyText(Array.isArray(result.data?.hashtags) ? result.data.hashtags.join(" ") : "")
                   }
                 >
                   <div className="hashtags">
-                    {result.data &&
-                    result.data.hashtags &&
-                    Array.isArray(result.data.hashtags)
+                    {Array.isArray(result.data?.hashtags)
                       ? result.data.hashtags.map((tag, index) => (
                           <span key={`${String(tag)}-${index}`}>
                             #{String(tag).replace(/^#/, "")}
@@ -697,24 +851,18 @@ export default function App() {
                 <Section
                   title={t.shortVersion}
                   copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(result.data ? result.data.shortVersion : "")
-                  }
+                  onCopy={() => copyText(result.data?.shortVersion || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.shortVersion : ""}
-                  </div>
+                  <div className="text-card">{result.data?.shortVersion || ""}</div>
                 </Section>
 
                 <Section
                   title={t.alternativeVersion}
                   copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(result.data ? result.data.alternativeVersion : "")
-                  }
+                  onCopy={() => copyText(result.data?.alternativeVersion || "")}
                 >
                   <div className="text-card">
-                    {result.data ? result.data.alternativeVersion : ""}
+                    {result.data?.alternativeVersion || ""}
                   </div>
                 </Section>
 
@@ -732,7 +880,7 @@ export default function App() {
                     className="primary-btn"
                     onClick={() => moveBuildResultToImprove("")}
                   >
-                    {t.improveAction || improveFromBuildLabel}
+                    {t.improveAction}
                   </button>
 
                   <button
@@ -748,7 +896,7 @@ export default function App() {
                     className="primary-btn"
                     onClick={moveBuildResultToAnalyze}
                   >
-                    {t.analyzeAction || analyzeFromBuildLabel}
+                    {t.analyzeAction}
                   </button>
                 </div>
               </div>
@@ -757,67 +905,43 @@ export default function App() {
             {result && result.type === "improve" ? (
               <div className="result-wrap">
                 <Section title={t.strengths}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.strengths
-                        ? result.data.strengths
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.strengths || []} />
                 </Section>
 
                 <Section title={t.weaknesses}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.weaknesses
-                        ? result.data.weaknesses
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.weaknesses || []} />
                 </Section>
 
                 <Section
                   title={t.improvedVersion}
                   copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(result.data ? result.data.improvedPost : "")
-                  }
+                  onCopy={() => copyText(result.data?.improvedPost || "")}
                 >
-                  <div className="text-card">
-                    {result.data ? result.data.improvedPost : ""}
-                  </div>
+                  <div className="text-card">{result.data?.improvedPost || ""}</div>
                 </Section>
 
                 <Section
                   title={t.moreViralVersion}
                   copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(result.data ? result.data.moreViralVersion : "")
-                  }
+                  onCopy={() => copyText(result.data?.moreViralVersion || "")}
                 >
                   <div className="text-card">
-                    {result.data ? result.data.moreViralVersion : ""}
+                    {result.data?.moreViralVersion || ""}
                   </div>
                 </Section>
 
                 <Section
                   title={t.moreAuthenticVersion}
                   copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(
-                      result.data ? result.data.moreAuthenticVersion : ""
-                    )
-                  }
+                  onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
                 >
                   <div className="text-card">
-                    {result.data ? result.data.moreAuthenticVersion : ""}
+                    {result.data?.moreAuthenticVersion || ""}
                   </div>
                 </Section>
 
                 <Section title={t.tips}>
-                  <ListBlock
-                    items={result.data && result.data.tips ? result.data.tips : []}
-                  />
+                  <ListBlock items={result.data?.tips || []} />
                 </Section>
 
                 <button
@@ -828,7 +952,7 @@ export default function App() {
                   {t.copyImproved}
                 </button>
 
-                <div className="action-row">
+                <div className="action-row action-row-single">
                   <button
                     type="button"
                     className="primary-btn"
@@ -843,110 +967,54 @@ export default function App() {
             {result && result.type === "analyze" ? (
               <div className="result-wrap">
                 <div className="scores-grid">
-                  <ScoreCard
-                    label={t.viralScore}
-                    value={result.data ? result.data.viralScore : 0}
-                  />
+                  <ScoreCard label={t.viralScore} value={result.data?.viralScore || 0} />
                   <ScoreCard
                     label={t.authenticityScore}
-                    value={result.data ? result.data.authenticityScore : 0}
+                    value={result.data?.authenticityScore || 0}
                   />
-                  <ScoreCard
-                    label={t.clarityScore}
-                    value={result.data ? result.data.clarityScore : 0}
-                  />
+                  <ScoreCard label={t.clarityScore} value={result.data?.clarityScore || 0} />
                   <ScoreCard
                     label={t.emotionalScore}
-                    value={result.data ? result.data.emotionalScore : 0}
+                    value={result.data?.emotionalScore || 0}
                   />
                   <ScoreCard
                     label={t.curiosityScore}
-                    value={result.data ? result.data.curiosityScore : 0}
+                    value={result.data?.curiosityScore || 0}
                   />
-                  <ScoreCard
-                    label={t.hookScore}
-                    value={result.data ? result.data.hookScore : 0}
-                  />
-                  <ScoreCard
-                    label={t.ctaScore}
-                    value={result.data ? result.data.ctaScore : 0}
-                  />
+                  <ScoreCard label={t.hookScore} value={result.data?.hookScore || 0} />
+                  <ScoreCard label={t.ctaScore} value={result.data?.ctaScore || 0} />
                 </div>
 
                 <Section title={t.summary}>
-                  <div className="text-card">
-                    {result.data ? result.data.summary : ""}
-                  </div>
+                  <div className="text-card">{result.data?.summary || ""}</div>
                 </Section>
 
                 <Section title={t.whatWorks}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.whatWorks
-                        ? result.data.whatWorks
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.whatWorks || []} />
                 </Section>
 
                 <Section title={t.whatHurts}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.whatHurts
-                        ? result.data.whatHurts
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.whatHurts || []} />
                 </Section>
 
                 <Section title={t.improvements}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.improvements
-                        ? result.data.improvements
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.improvements || []} />
                 </Section>
 
                 <Section title={t.raiseViralScore}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.raiseViralScore
-                        ? result.data.raiseViralScore
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.raiseViralScore || []} />
                 </Section>
 
                 <Section title={t.raiseAuthenticityScore}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.raiseAuthenticityScore
-                        ? result.data.raiseAuthenticityScore
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.raiseAuthenticityScore || []} />
                 </Section>
 
                 <Section title={t.raiseEmotionalScore}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.raiseEmotionalScore
-                        ? result.data.raiseEmotionalScore
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.raiseEmotionalScore || []} />
                 </Section>
 
                 <Section title={t.raiseCuriosityScore}>
-                  <ListBlock
-                    items={
-                      result.data && result.data.raiseCuriosityScore
-                        ? result.data.raiseCuriosityScore
-                        : []
-                    }
-                  />
+                  <ListBlock items={result.data?.raiseCuriosityScore || []} />
                 </Section>
 
                 <Section
@@ -986,6 +1054,78 @@ export default function App() {
             ) : null}
           </section>
         </main>
+
+        <section className="panel glass history-panel">
+          <div className="history-header">
+            <div className="panel-title">{t.historyTitle}</div>
+
+            {history.length ? (
+              <button type="button" className="danger-btn" onClick={clearHistory}>
+                {t.clearHistory}
+              </button>
+            ) : null}
+          </div>
+
+          {!history.length ? (
+            <div className="history-empty">{t.historyEmpty}</div>
+          ) : (
+            <div className="history-list">
+              {history.map((item) => (
+                <div key={item.id} className="history-card">
+                  <div className="history-top">
+                    <div className="history-type">
+                      {item.type === "build" ? t.build : null}
+                      {item.type === "improve" ? t.improve : null}
+                      {item.type === "analyze" ? t.analyze : null}
+                    </div>
+                    <div className="history-time">
+                      {formatHistoryTime(item.createdAt, language)}
+                    </div>
+                  </div>
+
+                  <div className="history-title">
+                    {buildHistoryTitle(item, language)}
+                  </div>
+
+                  <div className="history-preview">
+                    {buildHistoryPreview(item, language)}
+                  </div>
+
+                  <div className="history-actions">
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() => loadHistoryItem(item)}
+                    >
+                      {t.loadHistory}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() =>
+                        copyText(
+                          buildHistoryPreview(item, language) ||
+                            buildHistoryTitle(item, language)
+                        )
+                      }
+                    >
+                      {t.copy}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="danger-btn"
+                      onClick={() => removeHistoryItem(item.id)}
+                    >
+                      {t.deleteHistoryItem}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
