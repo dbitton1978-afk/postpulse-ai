@@ -10,6 +10,9 @@
   --blue: #64a8ff;
   --purple: #9d7bff;
   --danger: #ff7b7b;
+  --success: #7dffcf;
+  --success-bg: rgba(0, 255, 204, 0.12);
+  --success-border: rgba(0, 255, 204, 0.2);
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
 }
 
@@ -268,26 +271,49 @@ select {
   color: #03120f;
   font-size: 15px;
   font-weight: 800;
+  box-shadow: 0 14px 30px rgba(0, 255, 204, 0.14);
 }
 
 .primary-btn:hover {
   transform: translateY(-1px);
+  filter: brightness(1.02);
 }
 
 .primary-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
   transform: none;
+  filter: none;
 }
 
-.error-box {
+.primary-btn-viral {
+  background: linear-gradient(135deg, #7d5cff, #b18cff);
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(157, 123, 255, 0.18);
+}
+
+.primary-btn-viral:hover {
+  filter: brightness(1.04);
+}
+
+.error-box,
+.success-box {
   margin-top: 16px;
   padding: 14px 16px;
   border-radius: 14px;
+  font-weight: 700;
+}
+
+.error-box {
   background: rgba(255, 123, 123, 0.12);
   border: 1px solid rgba(255, 123, 123, 0.2);
   color: #ffd1d1;
-  font-weight: 700;
+}
+
+.success-box {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success);
 }
 
 .empty-state {
@@ -338,6 +364,10 @@ select {
   border: 1px solid rgba(0, 255, 204, 0.15);
   font-size: 13px;
   font-weight: 700;
+}
+
+.copy-btn:hover {
+  background: rgba(0, 255, 204, 0.12);
 }
 
 .text-card {
@@ -403,6 +433,16 @@ select {
   font-weight: 700;
 }
 
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.action-row .primary-btn {
+  width: 100%;
+}
+
 @media (max-width: 1100px) {
   .layout {
     grid-template-columns: 1fr;
@@ -438,6 +478,10 @@ select {
     grid-template-columns: 1fr 1fr;
   }
 
+  .action-row {
+    grid-template-columns: 1fr;
+  }
+
   .panel {
     padding: 16px;
     border-radius: 18px;
@@ -451,5 +495,13 @@ select {
 
   .tabs button {
     flex: 1 1 100%;
+  }
+
+  .section-header {
+    align-items: stretch;
+  }
+
+  .copy-btn {
+    width: 100%;
   }
 }
