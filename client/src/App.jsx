@@ -146,6 +146,135 @@ function formatHistoryTime(timestamp, language) {
   }
 }
 
+function slugifyFileName(value) {
+  return String(value || "postpulse")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-_]+/gu, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 50) || "postpulse";
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
+function buildExportContent(result, t, language) {
+  if (!result || !result.type || !result.data) return "";
+
+  const separator = "\n\n";
+  const joinList = (items) =>
+    Array.isArray(items) && items.length
+      ? items.map((item) => `- ${item}`).join("\n")
+      : "";
+
+  if (result.type === "build") {
+    return [
+      `${t.title}:`,
+      result.data.title || "",
+      `${t.hook}:`,
+      result.data.hook || "",
+      `${t.body}:`,
+      result.data.body || "",
+      `${t.cta}:`,
+      result.data.cta || "",
+      `${t.hashtags}:`,
+      Array.isArray(result.data.hashtags) ? result.data.hashtags.join(" ") : "",
+      `${t.shortVersion}:`,
+      result.data.shortVersion || "",
+      `${t.alternativeVersion}:`,
+      result.data.alternativeVersion || ""
+    ]
+      .filter((item) => item !== "")
+      .join(separator);
+  }
+
+  if (result.type === "improve") {
+    return [
+      `${t.strengths}:`,
+      joinList(result.data.strengths),
+      `${t.weaknesses}:`,
+      joinList(result.data.weaknesses),
+      `${t.improvedVersion}:`,
+      result.data.improvedPost || "",
+      `${t.moreViralVersion}:`,
+      result.data.moreViralVersion || "",
+      `${t.moreAuthenticVersion}:`,
+      result.data.moreAuthenticVersion || "",
+      `${t.tips}:`,
+      joinList(result.data.tips)
+    ]
+      .filter((item) => item !== "")
+      .join(separator);
+  }
+
+  if (result.type === "analyze") {
+    return [
+      `${t.viralScore}: ${result.data.viralScore ?? 0}%`,
+      `${t.authenticityScore}: ${result.data.authenticityScore ?? 0}%`,
+      `${t.clarityScore}: ${result.data.clarityScore ?? 0}%`,
+      `${t.emotionalScore}: ${result.data.emotionalScore ?? 0}%`,
+      `${t.curiosityScore}: ${result.data.curiosityScore ?? 0}%`,
+      `${t.hookScore}: ${result.data.hookScore ?? 0}%`,
+      `${t.ctaScore}: ${result.data.ctaScore ?? 0}%`,
+      "",
+      `${t.summary}:`,
+      result.data.summary || "",
+      `${t.whatWorks}:`,
+      joinList(result.data.whatWorks),
+      `${t.whatHurts}:`,
+      joinList(result.data.whatHurts),
+      `${t.improvements}:`,
+      joinList(result.data.improvements),
+      `${t.raiseViralScore}:`,
+      joinList(result.data.raiseViralScore),
+      `${t.raiseAuthenticityScore}:`,
+      joinList(result.data.raiseAuthenticityScore),
+      `${t.raiseEmotionalScore}:`,
+      joinList(result.data.raiseEmotionalScore),
+      `${t.raiseCuriosityScore}:`,
+      joinList(result.data.raiseCuriosityScore),
+      `${t.improvedVersion}:`,
+      result.data.improvedVersion || ""
+    ]
+      .filter((item) => item !== "")
+      .join(separator);
+  }
+
+  return language === "he" ? "אין תוכן לייצוא" : "No content to export";
+}
+
+function buildExportFilename(result, language) {
+  const isHebrew = language === "he";
+
+  if (!result || !result.type || !result.data) {
+    return "postpulse-export.txt";
+  }
+
+  if (result.type === "build") {
+    const title = slugifyFileName(result.data.title || "generated-post");
+    return `${title}.txt`;
+  }
+
+  if (result.type === "improve") {
+    return isHebrew ? "postpulse-improved-post.txt" : "postpulse-improved-post.txt";
+  }
+
+  if (result.type === "analyze") {
+    return isHebrew ? "postpulse-analysis.txt" : "postpulse-analysis.txt";
+  }
+
+  return "postpulse-export.txt";
+}
+
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
@@ -276,6 +405,33 @@ export default function App() {
     setTimeout(() => {
       setCopyMessage("");
     }, 1800);
+  }
+
+  function exportCurrentResult() {
+    if (!result) return;
+
+    const content = buildExportContent(result, t, language);
+    const filename = buildExportFilename(result, language);
+
+    downloadTextFile(filename, content);
+
+    setCopyMessage(t.exportReady);
+
+    setTimeout(() => {
+      setCopyMessage("");
+    }, 1800);
+  }
+
+  function exportHistoryItem(item) {
+    const historyResult = {
+      type: item.type,
+      data: item.data
+    };
+
+    const content = buildExportContent(historyResult, t, language);
+    const filename = buildExportFilename(historyResult, language);
+
+    downloadTextFile(filename, content);
   }
 
   function loadHistoryItem(item) {
@@ -793,6 +949,14 @@ export default function App() {
                 >
                   {t.saveToHistory}
                 </button>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={exportCurrentResult}
+                >
+                  {t.exportTxt}
+                </button>
               </div>
             ) : null}
 
@@ -1111,6 +1275,14 @@ export default function App() {
                       }
                     >
                       {t.copy}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="secondary-btn"
+                      onClick={() => exportHistoryItem(item)}
+                    >
+                      {t.exportTxt}
                     </button>
 
                     <button
