@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { analyzePost, generatePost, improvePost } from "./api";
+import { translations } from "./translations";
 import StoryEditor from "./components/StoryEditor";
 
 export default function App() {
+  const [language] = useState("he");
+  const t = translations[language];
+
   const [tab, setTab] = useState("build");
 
   const [buildText, setBuildText] = useState("");
@@ -14,12 +18,12 @@ export default function App() {
 
   // 🔥 סטורי
   const [storyText, setStoryText] = useState("");
-  const [storyToken, setStoryToken] = useState(0);
+  const [storyTextToken, setStoryTextToken] = useState(0);
 
   function sendToStory(text) {
     if (!text || !text.trim()) return;
     setStoryText(text);
-    setStoryToken(Date.now());
+    setStoryTextToken(Date.now());
   }
 
   async function handleBuild() {
@@ -29,7 +33,6 @@ export default function App() {
       setResult({ type: "build", data: res?.data || {} });
     } catch (e) {
       console.error(e);
-      setResult(null);
     }
     setLoading(false);
   }
@@ -41,7 +44,6 @@ export default function App() {
       setResult({ type: "improve", data: res?.data || {} });
     } catch (e) {
       console.error(e);
-      setResult(null);
     }
     setLoading(false);
   }
@@ -53,13 +55,12 @@ export default function App() {
       setResult({ type: "analyze", data: res?.data || {} });
     } catch (e) {
       console.error(e);
-      setResult(null);
     }
     setLoading(false);
   }
 
   return (
-    <div style={{ padding: 20 }}>
+    <div className="app" style={{ padding: 20 }}>
       <h1>PostPulse AI 🚀</h1>
 
       {/* טאבים */}
@@ -80,6 +81,10 @@ export default function App() {
 
           <button onClick={handleBuild}>
             {loading ? "..." : "Generate"}
+          </button>
+
+          <button onClick={() => sendToStory(buildText)}>
+            שלח לסטורי
           </button>
         </div>
       )}
@@ -185,13 +190,13 @@ export default function App() {
         </div>
       )}
 
-      {/* STORY EDITOR */}
-      <div style={{ marginTop: 40 }}>
+      {/* 🔥 STORY EDITOR */}
+      <div style={{ marginTop: 50 }}>
         <h2>Story Editor</h2>
 
         <StoryEditor
           incomingText={storyText}
-          incomingTextToken={storyToken}
+          incomingTextToken={storyTextToken}
         />
       </div>
     </div>
