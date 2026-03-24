@@ -47,6 +47,7 @@ function Section({ title, children, onCopy, onSendToStory }) {
           )}
         </div>
       </div>
+
       {children}
     </div>
   );
@@ -105,6 +106,9 @@ export default function App() {
   const [storyText, setStoryText] = useState("");
   const [storyTextToken, setStoryTextToken] = useState(0);
 
+  const [exportFn, setExportFn] = useState(null);
+  const [platform, setPlatform] = useState("instagram");
+
   const copyText = async (text) => {
     try {
       await navigator.clipboard.writeText(text || "");
@@ -118,6 +122,37 @@ export default function App() {
     setStoryText(String(text));
     setStoryTextToken(Date.now());
   };
+
+  async function shareToSocial() {
+    if (!exportFn) return;
+
+    try {
+      const dataUrl = await exportFn();
+      if (!dataUrl) return;
+
+      if (navigator.share) {
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          const file = new File([blob], "story.png", { type: "image/png" });
+
+          await navigator.share({
+            files: [file],
+            title: "PostPulse Story"
+          });
+          return;
+        } catch (shareErr) {
+          console.error("Share failed, falling back to download:", shareErr);
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${platform}-story.png`;
+      link.click();
+    } catch (err) {
+      console.error("Export/share failed:", err);
+    }
+  }
 
   const handleBuild = async () => {
     if (!buildForm.topic.trim()) {
@@ -330,9 +365,9 @@ export default function App() {
                       setBuildForm({ ...buildForm, platform: e.target.value })
                     }
                   >
-                    {platforms.map((platform) => (
-                      <option key={platform.value} value={platform.value}>
-                        {platform.label}
+                    {platforms.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
                       </option>
                     ))}
                   </select>
@@ -430,9 +465,9 @@ export default function App() {
                     })
                   }
                 >
-                  {platforms.map((platform) => (
-                    <option key={platform.value} value={platform.value}>
-                      {platform.label}
+                  {platforms.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
                     </option>
                   ))}
                 </select>
@@ -693,9 +728,26 @@ export default function App() {
           {language === "he" ? "עורך סטורי" : "Story Editor"}
         </h2>
 
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <select
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value)}
+          >
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="tiktok">TikTok</option>
+          </select>
+
+          <button className="primary-btn" onClick={shareToSocial}>
+            🚀 העלה לרשת
+          </button>
+        </div>
+
         <StoryEditor
           incomingText={storyText}
           incomingTextToken={storyTextToken}
+          onExportReady={setExportFn}
         />
       </section>
     </div>
