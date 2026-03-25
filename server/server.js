@@ -1,1594 +1,682 @@
-import { useEffect, useMemo, useState } from "react";
-import { analyzePost, generatePost, improvePost } from "./api";
-import { translations } from "./translations";
-import "./App.css";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import OpenAI from "openai";
 
-const styleOptions = [
-  { value: "kabbalist", he: "קבליסט", en: "Kabbalist" },
-  { value: "mentor", he: "מנטור", en: "Mentor" },
-  { value: "humorous", he: "הומוריסטי", en: "Humorous" },
-  { value: "spiritual", he: "רוחני", en: "Spiritual" },
-  { value: "emotional", he: "רגשי", en: "Emotional" },
-  { value: "professional", he: "מקצועי", en: "Professional" }
-];
+dotenv.config();
 
-const platformOptions = [
-  { value: "instagram", label: "Instagram" },
-  { value: "facebook", label: "Facebook" },
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "tiktok", label: "TikTok" }
-];
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-const HISTORY_STORAGE_KEY = "postpulse_history_v1";
-const HISTORY_LIMIT = 20;
+app.use(
+  cors({
+    origin: true,
+    credentials: false
+  })
+);
 
-function Section({ title, children, onCopy, copyLabel }) {
-  return (
-    <div className="result-section">
-      <div className="section-header">
-        <h3>{title}</h3>
-        {onCopy ? (
-          <button type="button" className="copy-btn" onClick={onCopy}>
-            {copyLabel}
-          </button>
-        ) : null}
-      </div>
-      {children}
-    </div>
-  );
-}
+app.use(express.json({ limit: "15mb" }));
 
-function ListBlock({ items }) {
-  if (!Array.isArray(items) || items.length === 0) return null;
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
-  return (
-    <ul className="result-list">
-      {items.map((item, index) => (
-        <li key={`${String(item)}-${index}`}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
-function ScoreCard({ label, value }) {
-  const num = Number(value);
-  const safeValue = Number.isFinite(num) ? Math.round(num) : 0;
-
-  return (
-    <div className="score-card">
-      <div className="score-value">{safeValue}%</div>
-      <div className="score-label">{label}</div>
-    </div>
-  );
-}
-
-function safeText(value) {
-  return typeof value === "string" ? value : "";
-}
-
-function safeJsonParse(value, fallback) {
+function safeJsonParse(value, fallback = null) {
   try {
-    const parsed = JSON.parse(value);
-    return parsed ?? fallback;
+    return JSON.parse(value);
   } catch {
     return fallback;
   }
 }
 
-function buildHistoryPreview(item, language) {
-  if (!item || !item.data) return "";
-  const isHebrew = language === "he";
-
-  if (item.type === "build") {
-    return (
-      item.data.hook ||
-      item.data.title ||
-      (isHebrew ? "פוסט חדש שנוצר" : "Generated post")
-    );
-  }
-
-  if (item.type === "improve") {
-    return (
-      item.data.improvedPost ||
-      item.data.moreViralVersion ||
-      (isHebrew ? "פוסט ששופר" : "Improved post")
-    );
-  }
-
-  if (item.type === "analyze") {
-    return (
-      item.data.summary ||
-      item.data.improvedVersion ||
-      (isHebrew ? "ניתוח פוסט" : "Post analysis")
-    );
-  }
-
-  return "";
+function cleanString(value, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
 }
 
-function buildHistoryTitle(item, language) {
-  const isHebrew = language === "he";
-
-  if (item.type === "build") {
-    return item.data?.title || (isHebrew ? "פוסט שנוצר" : "Generated Post");
-  }
-
-  if (item.type === "improve") {
-    return isHebrew ? "פוסט משופר" : "Improved Post";
-  }
-
-  if (item.type === "analyze") {
-    return isHebrew ? "ניתוח פוסט" : "Post Analysis";
-  }
-
-  return isHebrew ? "פריט" : "Item";
+function cleanArray(value, fallback = []) {
+  if (!Array.isArray(value)) return fallback;
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
 }
 
-function formatHistoryTime(timestamp, language) {
-  try {
-    const locale = language === "he" ? "he-IL" : "en-US";
-    return new Date(timestamp).toLocaleString(locale, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  } catch {
-    return "";
-  }
+function clampScore(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
 }
 
-function slugifyFileName(value) {
-  return (
-    String(value || "postpulse")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9\u0590-\u05FF\s_-]+/g, "")
-      .replace(/\s+/g, "-")
-      .slice(0, 50) || "postpulse"
-  );
+function normalizeLanguage(language) {
+  return language === "he" ? "he" : "en";
 }
 
-function downloadTextFile(filename, content) {
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
+function normalizePlatform(platform) {
+  const value = String(platform || "instagram").toLowerCase();
+  const allowed = ["instagram", "facebook", "linkedin", "tiktok"];
+  return allowed.includes(value) ? value : "instagram";
 }
 
-function buildExportContent(result, t, language) {
-  if (!result || !result.type || !result.data) return "";
-
-  const separator = "\n\n";
-  const joinList = (items) =>
-    Array.isArray(items) && items.length
-      ? items.map((item) => `- ${item}`).join("\n")
-      : "";
-
-  if (result.type === "build") {
-    return [
-      `${t.title}:`,
-      result.data.title || "",
-      `${t.hook}:`,
-      result.data.hook || "",
-      `${t.body}:`,
-      result.data.body || "",
-      `${t.cta}:`,
-      result.data.cta || "",
-      `${t.hashtags}:`,
-      Array.isArray(result.data.hashtags) ? result.data.hashtags.join(" ") : "",
-      `${t.shortVersion}:`,
-      result.data.shortVersion || "",
-      `${t.alternativeVersion}:`,
-      result.data.alternativeVersion || ""
-    ]
-      .filter((item) => item !== "")
-      .join(separator);
-  }
-
-  if (result.type === "improve") {
-    return [
-      `${t.strengths}:`,
-      joinList(result.data.strengths),
-      `${t.weaknesses}:`,
-      joinList(result.data.weaknesses),
-      `${t.improvedVersion}:`,
-      result.data.improvedPost || "",
-      `${t.moreViralVersion}:`,
-      result.data.moreViralVersion || "",
-      `${t.moreAuthenticVersion}:`,
-      result.data.moreAuthenticVersion || "",
-      `${t.tips}:`,
-      joinList(result.data.tips)
-    ]
-      .filter((item) => item !== "")
-      .join(separator);
-  }
-
-  if (result.type === "analyze") {
-    return [
-      `${t.viralScore}: ${result.data.viralScore ?? 0}%`,
-      `${t.authenticityScore}: ${result.data.authenticityScore ?? 0}%`,
-      `${t.clarityScore}: ${result.data.clarityScore ?? 0}%`,
-      `${t.emotionalScore}: ${result.data.emotionalScore ?? 0}%`,
-      `${t.curiosityScore}: ${result.data.curiosityScore ?? 0}%`,
-      `${t.hookScore}: ${result.data.hookScore ?? 0}%`,
-      `${t.ctaScore}: ${result.data.ctaScore ?? 0}%`,
-      "",
-      `${t.summary}:`,
-      result.data.summary || "",
-      `${t.whatWorks}:`,
-      joinList(result.data.whatWorks),
-      `${t.whatHurts}:`,
-      joinList(result.data.whatHurts),
-      `${t.improvements}:`,
-      joinList(result.data.improvements),
-      `${t.raiseViralScore}:`,
-      joinList(result.data.raiseViralScore),
-      `${t.raiseAuthenticityScore}:`,
-      joinList(result.data.raiseAuthenticityScore),
-      `${t.raiseEmotionalScore}:`,
-      joinList(result.data.raiseEmotionalScore),
-      `${t.raiseCuriosityScore}:`,
-      joinList(result.data.raiseCuriosityScore),
-      `${t.improvedVersion}:`,
-      result.data.improvedVersion || ""
-    ]
-      .filter((item) => item !== "")
-      .join(separator);
-  }
-
-  return language === "he" ? "אין תוכן לייצוא" : "No content to export";
+function normalizeStyle(style) {
+  const value = String(style || "professional").toLowerCase();
+  const allowed = [
+    "kabbalist",
+    "mentor",
+    "humorous",
+    "spiritual",
+    "emotional",
+    "professional"
+  ];
+  return allowed.includes(value) ? value : "professional";
 }
 
-function buildExportFilename(result) {
-  if (!result || !result.type || !result.data) {
-    return "postpulse-export.txt";
-  }
-
-  if (result.type === "build") {
-    const title = slugifyFileName(result.data.title || "generated-post");
-    return `${title}.txt`;
-  }
-
-  if (result.type === "improve") {
-    return "postpulse-improved-post.txt";
-  }
-
-  if (result.type === "analyze") {
-    return "postpulse-analysis.txt";
-  }
-
-  return "postpulse-export.txt";
+function getLanguageLabel(language) {
+  return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
 }
 
-function getWeakestArea(data, t) {
-  if (!data) return null;
+function getPlatformGuide(platform, language) {
+  const safePlatform = normalizePlatform(platform);
+  const safeLanguage = normalizeLanguage(language);
 
-  const options = [
+  const map = {
+    instagram: {
+      he: "פוסט זורם, אישי, חד, עם פתיחה חזקה, קצב טוב, ושורת סיום טבעית שמניעה לפעולה.",
+      en: "a flowing, personal, sharp post with a strong opening, good rhythm, and a natural action-driving ending."
+    },
+    facebook: {
+      he: "פוסט אנושי, שיחתי, מחבר, מעט סיפורי, וקל מאוד לקריאה.",
+      en: "a human, conversational, connective, slightly story-driven post that is very easy to read."
+    },
+    linkedin: {
+      he: "פוסט מקצועי, בהיר, בעל סמכות, עם תובנה ברורה וערך ממשי.",
+      en: "a professional, clear, authoritative post with a clear insight and real value."
+    },
+    tiktok: {
+      he: "פוסט קצר, חד, עוצר גלילה, מסקרן ומהיר לקליטה.",
+      en: "a short, punchy, scroll-stopping, curiosity-driven post that lands quickly."
+    }
+  };
+
+  return map[safePlatform][safeLanguage];
+}
+
+function getStyleGuide(style, language) {
+  const safeStyle = normalizeStyle(style);
+  const safeLanguage = normalizeLanguage(language);
+
+  const map = {
+    kabbalist: {
+      he: "עמוק, תודעתי, רוחני, חד, אבל עדיין קריא וברור.",
+      en: "deep, conscious, spiritual, and sharp, while still staying readable and clear."
+    },
+    mentor: {
+      he: "בטוח, מוביל, ברור, מעשי, עם תחושת הכוונה.",
+      en: "confident, guiding, clear, practical, and mentor-like."
+    },
+    humorous: {
+      he: "קליל, שנון, זורם, לא ילדותי ולא מאולץ.",
+      en: "light, witty, flowing, not childish and not forced."
+    },
+    spiritual: {
+      he: "רך, עמוק, מחבר, עם תחושת משמעות ושקט.",
+      en: "gentle, deep, connective, meaningful, and calm."
+    },
+    emotional: {
+      he: "אנושי, אישי, נוגע, מרגש, בלי דרמה מזויפת.",
+      en: "human, personal, touching, emotional, without fake drama."
+    },
+    professional: {
+      he: "נקי, חכם, מקצועי, בטוח, ולא יבש.",
+      en: "clean, smart, professional, confident, and not dry."
+    }
+  };
+
+  return map[safeStyle][safeLanguage];
+}
+
+function getGoalGuide(goal, language) {
+  const safeGoal = cleanString(goal).toLowerCase();
+  const safeLanguage = normalizeLanguage(language);
+
+  if (!safeGoal) {
+    return safeLanguage === "he"
+      ? "לחזק את הפוסט כך שיהיה חד, אנושי, ברור ומותאם לפלטפורמה."
+      : "strengthen the post so it becomes sharper, more human, clearer, and more platform-native.";
+  }
+
+  const rules = [
     {
-      key: "hook",
-      score: Number(data.hookScore ?? 0),
-      actionLabel: t.quickFixHook,
-      goal: t.goalPresetFixHook,
-      message: t.smartWeakHook
+      match: ["viral", "engagement", "share", "attention", "ויראל", "מעורבות", "חשיפה"],
+      he: "להגדיל עצירה, מתח, חדות, פוטנציאל שיתוף ותגובות.",
+      en: "increase stopping power, tension, sharpness, shareability, and engagement."
     },
     {
-      key: "cta",
-      score: Number(data.ctaScore ?? 0),
-      actionLabel: t.quickFixCta,
-      goal: t.goalPresetFixCta,
-      message: t.smartWeakCta
+      match: ["human", "authentic", "natural", "אנושי", "טבעי", "אותנטי"],
+      he: "להישמע טבעי יותר, אנושי יותר, ופחות כמו טקסט של AI.",
+      en: "sound more natural, more human, and less like AI text."
     },
     {
-      key: "viral",
-      score: Number(data.viralScore ?? 0),
-      actionLabel: t.quickMakeViral,
-      goal: t.goalPresetMoreViral,
-      message: t.smartWeakViral
+      match: ["emotion", "emotional", "רגש", "רגשי"],
+      he: "לחזק חיבור רגשי, עומק, והזדהות.",
+      en: "increase emotional connection, depth, and relatability."
     },
     {
-      key: "authenticity",
-      score: Number(data.authenticityScore ?? 0),
-      actionLabel: t.quickMakeHuman,
-      goal: t.goalPresetMoreHuman,
-      message: t.smartWeakAuthenticity
+      match: ["clear", "clarity", "ברור", "בהיר"],
+      he: "לחדד מסר, להסיר רעש, ולהבהיר את הערך.",
+      en: "sharpen the message, remove noise, and clarify the value."
     },
     {
-      key: "emotional",
-      score: Number(data.emotionalScore ?? 0),
-      actionLabel: t.quickMakeEmotional,
-      goal: t.goalPresetMoreEmotional,
-      message: t.smartWeakEmotional
+      match: ["hook", "opening", "פתיחה", "הוק"],
+      he: "לחזק את שורת הפתיחה כדי לעצור גלילה מהר יותר.",
+      en: "strengthen the opening line to stop the scroll faster."
     },
     {
-      key: "curiosity",
-      score: Number(data.curiosityScore ?? 0),
-      actionLabel: t.quickMakeCurious,
-      goal: t.goalPresetMoreCurious,
-      message: t.smartWeakCuriosity
+      match: ["cta", "action", "conversion", "הנעה", "פעולה"],
+      he: "לחזק את הסיום וההנעה לפעולה כך שירגישו טבעיים ומשכנעים יותר.",
+      en: "strengthen the ending and the call to action so they feel more natural and more persuasive."
     },
     {
-      key: "clarity",
-      score: Number(data.clarityScore ?? 0),
-      actionLabel: t.quickMakeClear,
-      goal: t.goalPresetMoreClear,
-      message: t.smartWeakClarity
+      match: ["professional", "authority", "מקצועי", "סמכות"],
+      he: "לחזק סמכות, בהירות וערך מקצועי.",
+      en: "increase authority, clarity, and professional value."
     }
   ];
 
-  options.sort((a, b) => a.score - b.score);
-  return options[0];
+  const found = rules.find((rule) =>
+    rule.match.some((term) => safeGoal.includes(term))
+  );
+
+  if (found) {
+    return safeLanguage === "he" ? found.he : found.en;
+  }
+
+  return cleanString(goal);
 }
 
-export default function App() {
-  const [language, setLanguage] = useState("en");
-  const [tab, setTab] = useState("build");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
-  const [copyMessage, setCopyMessage] = useState("");
-  const [history, setHistory] = useState([]);
-  const [currentPost, setCurrentPost] = useState("");
-  const [analysisResult, setAnalysisResult] = useState(null);
-
-  const t = useMemo(() => translations[language], [language]);
-  const dir = language === "he" ? "rtl" : "ltr";
-
-  const buildGoalPresets = useMemo(
-    () => [
-      t.goalPresetViral,
-      t.goalPresetHuman,
-      t.goalPresetProfessional,
-      t.goalPresetEmotional,
-      t.goalPresetSales,
-      t.goalPresetEngagement
-    ],
-    [t]
-  );
-
-  const improveGoalPresets = useMemo(
-    () => [
-      t.goalPresetMoreViral,
-      t.goalPresetMoreHuman,
-      t.goalPresetMoreClear,
-      t.goalPresetMoreEmotional,
-      t.goalPresetMoreSharp,
-      t.goalPresetMoreProfessional,
-      t.goalPresetFixHook,
-      t.goalPresetFixCta,
-      t.goalPresetMoreCurious
-    ],
-    [t]
-  );
-
-  const [buildForm, setBuildForm] = useState({
-    topic: "",
-    targetAudience: "",
-    goal: "",
-    style: "professional",
-    platform: "instagram"
-  });
-
-  const [improveForm, setImproveForm] = useState({
-    post: "",
-    goal: "",
-    style: "professional",
-    platform: "instagram"
-  });
-
-  const [analyzeForm, setAnalyzeForm] = useState({
-    post: "",
-    platform: "instagram"
-  });
-
-  useEffect(() => {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    const parsed = safeJsonParse(raw || "[]", []);
-    setHistory(Array.isArray(parsed) ? parsed : []);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-  }, [history]);
-
-  const copiedLabel = language === "he" ? "הועתק" : "Copied";
-  const improveFromAnalyzeLabel =
-    language === "he" ? "העבר חזרה ל־Improve" : "Move Back to Improve";
-  const analyzeFromImproveLabel =
-    language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
-
-  const weakestArea =
-    result && result.type === "analyze"
-      ? getWeakestArea(result.data, t)
-      : null;
-
-  function setBuildField(field, value) {
-    setBuildForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  function setImproveField(field, value) {
-    setImproveForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  function setAnalyzeField(field, value) {
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  function switchTab(nextTab) {
-    setError("");
-    setTab(nextTab);
-  }
-
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text || "");
-      setCopyMessage(copiedLabel);
-
-      setTimeout(() => {
-        setCopyMessage("");
-      }, 1800);
-    } catch (err) {
-      console.error("Copy failed", err);
-    }
-  }
-
-  function startRequest() {
-    setError("");
-    setCopyMessage("");
-    setResult(null);
-    setLoading(true);
-  }
-
-  function endRequest() {
-    setLoading(false);
-  }
-
-  function addToHistory(item) {
-    const savedItem = {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: new Date().toISOString(),
-      ...item
-    };
-
-    setHistory((prev) => [savedItem, ...prev].slice(0, HISTORY_LIMIT));
-  }
-
-  function removeHistoryItem(id) {
-    setHistory((prev) => prev.filter((item) => item.id !== id));
-  }
-
-  function clearHistory() {
-    setHistory([]);
-  }
-
-  function saveCurrentResult() {
-    if (!result || !result.type || !result.data) return;
-
-    addToHistory({
-      type: result.type,
-      language,
-      data: result.data
-    });
-
-    setCopyMessage(t.savedToHistory);
-
-    setTimeout(() => {
-      setCopyMessage("");
-    }, 1800);
-  }
-
-  function exportCurrentResult() {
-    if (!result) return;
-
-    const content = buildExportContent(result, t, language);
-    const filename = buildExportFilename(result);
-
-    downloadTextFile(filename, content);
-
-    setCopyMessage(t.exportReady);
-
-    setTimeout(() => {
-      setCopyMessage("");
-    }, 1800);
-  }
-
-  function exportHistoryItem(item) {
-    const historyResult = {
-      type: item.type,
-      data: item.data
-    };
-
-    const content = buildExportContent(historyResult, t, language);
-    const filename = buildExportFilename(historyResult);
-
-    downloadTextFile(filename, content);
-  }
-
-  function loadHistoryItem(item) {
-    if (!item) return;
-
-    setResult({
-      type: item.type,
-      data: item.data
-    });
-
-    if (item.type === "build") {
-      const loadedPost = [
-        item.data?.title || "",
-        item.data?.hook || "",
-        item.data?.body || "",
-        item.data?.cta || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
-      setCurrentPost(loadedPost);
-
-      setImproveForm((prev) => ({
-        ...prev,
-        post: loadedPost || prev.post,
-        goal: prev.goal || t.goalPresetMoreHuman,
-        style: buildForm.style,
-        platform: buildForm.platform
-      }));
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: loadedPost || prev.post,
-        platform: buildForm.platform
-      }));
-
-      setTab("build");
-    }
-
-    if (item.type === "improve") {
-      const improvedText =
-        item.data?.improvedPost ||
-        item.data?.moreAuthenticVersion ||
-        item.data?.moreViralVersion ||
-        "";
-
-      setCurrentPost(improvedText);
-
-      setImproveForm((prev) => ({
-        ...prev,
-        post: improvedText || prev.post
-      }));
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: improvedText || prev.post,
-        platform: improveForm.platform
-      }));
-
-      setTab("improve");
-    }
-
-    if (item.type === "analyze") {
-      const analyzedText = item.data?.improvedVersion || prevSafePost(currentPost);
-
-      setAnalysisResult(item.data || null);
-      setCurrentPost(analyzedText || currentPost);
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: analyzedText || prev.post
-      }));
-
-      setTab("analyze");
-    }
-
-    setError("");
-  }
-
-  async function handleBuild() {
-    if (!buildForm.topic.trim()) {
-      setError(t.errorTopic);
-      return;
-    }
-
-    startRequest();
-
-    try {
-      const response = await generatePost({
-        ...buildForm,
-        language
-      });
-
-      const nextResult = {
-        type: "build",
-        data: response && response.data ? response.data : {}
-      };
-
-      const generatedPost = [
-        nextResult.data?.title || "",
-        nextResult.data?.hook || "",
-        nextResult.data?.body || "",
-        nextResult.data?.cta || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
-      setCurrentPost(generatedPost);
-
-      setImproveForm((prev) => ({
-        ...prev,
-        post: generatedPost,
-        goal: prev.goal || t.goalPresetMoreHuman,
-        style: buildForm.style,
-        platform: buildForm.platform
-      }));
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: generatedPost,
-        platform: buildForm.platform
-      }));
-
-      setResult(nextResult);
-      addToHistory({
-        type: nextResult.type,
-        language,
-        data: nextResult.data
-      });
-    } catch (err) {
-      setError((err && err.message) || "Error");
-    } finally {
-      endRequest();
-    }
-  }
-
-  async function handleImprove() {
-    const postToImprove = improveForm.post.trim() || currentPost.trim();
-
-    if (!postToImprove) {
-      setError(t.errorPost);
-      return;
-    }
-
-    startRequest();
-
-    try {
-      const response = await improvePost({
-        ...improveForm,
-        post: postToImprove,
-        language
-      });
-
-      const nextResult = {
-        type: "improve",
-        data: response && response.data ? response.data : {}
-      };
-
-      const improvedPost =
-        safeText(nextResult.data?.improvedPost) ||
-        safeText(nextResult.data?.moreAuthenticVersion) ||
-        safeText(nextResult.data?.moreViralVersion);
-
-      setCurrentPost(improvedPost);
-
-      setAnalyzeForm((prev) => ({
-        ...prev,
-        post: improvedPost,
-        platform: improveForm.platform
-      }));
-
-      setResult(nextResult);
-      addToHistory({
-        type: nextResult.type,
-        language,
-        data: nextResult.data
-      });
-    } catch (err) {
-      setError((err && err.message) || "Error");
-    } finally {
-      endRequest();
-    }
-  }
-
-  async function handleAnalyze() {
-    const postToAnalyze = analyzeForm.post.trim() || currentPost.trim();
-
-    if (!postToAnalyze) {
-      setError(t.errorPost);
-      return;
-    }
-
-    startRequest();
-
-    try {
-      const response = await analyzePost({
-        ...analyzeForm,
-        post: postToAnalyze,
-        language
-      });
-
-      const nextResult = {
-        type: "analyze",
-        data: response && response.data ? response.data : {}
-      };
-
-      setAnalysisResult(nextResult.data);
-
-      setResult(nextResult);
-      addToHistory({
-        type: nextResult.type,
-        language,
-        data: nextResult.data
-      });
-    } catch (err) {
-      setError((err && err.message) || "Error");
-    } finally {
-      endRequest();
-    }
-  }
-
-  const buildCopyText =
-    result && result.type === "build"
-      ? [
-          result.data?.title || "",
-          result.data?.hook || "",
-          result.data?.body || "",
-          result.data?.cta || "",
-          Array.isArray(result.data?.hashtags)
-            ? result.data.hashtags.join(" ")
-            : "",
-          result.data?.shortVersion || "",
-          result.data?.alternativeVersion || ""
-        ]
-          .filter(Boolean)
-          .join("\n\n")
-      : "";
-
-  const improveCopyText =
-    result && result.type === "improve"
-      ? [
-          result.data?.improvedPost || "",
-          result.data?.moreViralVersion || "",
-          result.data?.moreAuthenticVersion || ""
-        ]
-          .filter(Boolean)
-          .join("\n\n")
-      : "";
-
-  const analyzeCopyText =
-    result && result.type === "analyze" ? result.data?.improvedVersion || "" : "";
-
-  function getBuildResultFullPost() {
-    if (!result || result.type !== "build" || !result.data) {
-      return "";
-    }
-
-    return [
-      result.data.title || "",
-      result.data.hook || "",
-      result.data.body || "",
-      result.data.cta || ""
+function normalizeHashtags(value) {
+  return cleanArray(value)
+    .map((tag) => tag.replace(/^#+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function normalizeGenerateData(data) {
+  return {
+    title: cleanString(data?.title),
+    hook: cleanString(data?.hook),
+    body: cleanString(data?.body),
+    cta: cleanString(data?.cta),
+    hashtags: normalizeHashtags(data?.hashtags),
+    shortVersion: cleanString(data?.shortVersion),
+    alternativeVersion: cleanString(data?.alternativeVersion)
+  };
+}
+
+function normalizeImproveData(data) {
+  return {
+    strengths: cleanArray(data?.strengths).slice(0, 6),
+    weaknesses: cleanArray(data?.weaknesses).slice(0, 6),
+    improvedPost: cleanString(data?.improvedPost),
+    moreViralVersion: cleanString(data?.moreViralVersion),
+    moreAuthenticVersion: cleanString(data?.moreAuthenticVersion),
+    tips: cleanArray(data?.tips).slice(0, 6)
+  };
+}
+
+function normalizeAnalyzeData(data) {
+  return {
+    viralScore: clampScore(data?.viralScore),
+    authenticityScore: clampScore(data?.authenticityScore),
+    clarityScore: clampScore(data?.clarityScore),
+    emotionalScore: clampScore(data?.emotionalScore),
+    curiosityScore: clampScore(data?.curiosityScore),
+    hookScore: clampScore(data?.hookScore),
+    ctaScore: clampScore(data?.ctaScore),
+    summary: cleanString(data?.summary),
+    whatWorks: cleanArray(data?.whatWorks).slice(0, 6),
+    whatHurts: cleanArray(data?.whatHurts).slice(0, 6),
+    improvements: cleanArray(data?.improvements).slice(0, 6),
+    raiseViralScore: cleanArray(data?.raiseViralScore).slice(0, 5),
+    raiseAuthenticityScore: cleanArray(data?.raiseAuthenticityScore).slice(0, 5),
+    raiseEmotionalScore: cleanArray(data?.raiseEmotionalScore).slice(0, 5),
+    raiseCuriosityScore: cleanArray(data?.raiseCuriosityScore).slice(0, 5),
+    improvedVersion: cleanString(data?.improvedVersion)
+  };
+}
+
+function buildGenerateFallback({ topic, language }) {
+  const isHebrew = normalizeLanguage(language) === "he";
+  const safeTopic = cleanString(topic) || (isHebrew ? "הנושא שלך" : "your topic");
+
+  return {
+    title: isHebrew ? `מחשבה חדה על ${safeTopic}` : `A sharper thought on ${safeTopic}`,
+    hook: isHebrew
+      ? `רוב האנשים מדברים על ${safeTopic} בצורה רגילה מדי. וזה בדיוק מה שמחליש את המסר.`
+      : `Most people talk about ${safeTopic} in a way that is too ordinary. That is exactly what weakens the message.`,
+    body: isHebrew
+      ? `כדי שפוסט באמת יעבוד, הוא צריך להיות ברור, אנושי, חד, ולהרגיש כאילו אדם אמיתי כתב אותו. כשיש זווית טובה וניסוח נקי, אנשים לא רק קוראים — הם גם מגיבים.`
+      : `For a post to really work, it needs to feel clear, human, sharp, and like it was written by a real person. When the angle is strong and the phrasing is clean, people do not just read — they react.`,
+    cta: isHebrew
+      ? `אם זה פוגש אותך, כתוב לי מה הכי דיבר אליך.`
+      : `If this resonates, tell me what hit you the most.`,
+    hashtags: isHebrew ? ["תוכן", "שיווק", "פוסט"] : ["content", "marketing", "post"],
+    shortVersion: isHebrew
+      ? `${safeTopic} צריך מסר חד, ברור ואנושי יותר כדי באמת לעבוד.`
+      : `${safeTopic} needs a sharper, clearer, more human message to truly work.`,
+    alternativeVersion: isHebrew
+      ? `לפעמים לא צריך לשנות את הרעיון — רק לנסח אותו נכון יותר כדי שאנשים באמת יעצרו עליו.`
+      : `Sometimes you do not need a different idea — you just need to frame it better so people actually stop for it.`
+  };
+}
+
+function buildImproveFallback({ post, language }) {
+  const isHebrew = normalizeLanguage(language) === "he";
+  const safePost = cleanString(post);
+
+  return {
+    strengths: isHebrew ? ["יש כאן בסיס טוב"] : ["There is a solid foundation here"],
+    weaknesses: isHebrew
+      ? ["הניסוח עדיין יכול להיות חד יותר"]
+      : ["The phrasing can still become sharper"],
+    improvedPost: safePost,
+    moreViralVersion: safePost,
+    moreAuthenticVersion: safePost,
+    tips: isHebrew
+      ? ["חזק את הפתיחה", "קצר רעש מיותר", "סיים עם CTA טבעי"]
+      : ["Strengthen the opening", "Remove extra noise", "End with a natural CTA"]
+  };
+}
+
+function buildAnalyzeFallback({ post, language }) {
+  const isHebrew = normalizeLanguage(language) === "he";
+  const safePost = cleanString(post);
+
+  return {
+    viralScore: 61,
+    authenticityScore: 69,
+    clarityScore: 67,
+    emotionalScore: 59,
+    curiosityScore: 57,
+    hookScore: 56,
+    ctaScore: 54,
+    summary: isHebrew
+      ? "יש כאן בסיס טוב, אבל הפוסט עדיין לא חד מספיק, לא אנושי מספיק, ולא מניע מספיק לפעולה."
+      : "There is a solid base here, but the post is still not sharp enough, human enough, or action-driving enough.",
+    whatWorks: isHebrew
+      ? ["המסר מובן", "יש כיוון", "יש בסיס שניתן לחזק"]
+      : ["The message is understandable", "There is direction", "There is a base worth strengthening"],
+    whatHurts: isHebrew
+      ? ["הפתיחה לא עוצרת מספיק", "הטון מעט גנרי", "הסיום לא מניע מספיק"]
+      : ["The opening does not stop the scroll enough", "The tone feels a bit generic", "The ending does not drive enough action"],
+    improvements: isHebrew
+      ? ["לחזק את ה-Hook", "להישמע יותר טבעי", "לחדד את ה-CTA"]
+      : ["Strengthen the hook", "Sound more natural", "Sharpen the CTA"],
+    raiseViralScore: isHebrew
+      ? ["ליצור זווית חדה יותר", "להוסיף מתח", "להפוך את המסר ליותר שיתופי"]
+      : ["Create a sharper angle", "Add tension", "Make the message more shareable"],
+    raiseAuthenticityScore: isHebrew
+      ? ["להוריד ניסוח רובוטי", "לכתוב כמו אדם אמיתי", "לשמור על שפה טבעית"]
+      : ["Reduce robotic phrasing", "Write like a real person", "Keep the language natural"],
+    raiseEmotionalScore: isHebrew
+      ? ["להכניס יותר תחושה", "לחבר לחוויה אמיתית", "ליצור עומק רגשי"]
+      : ["Add more feeling", "Connect to a real experience", "Create emotional depth"],
+    raiseCuriosityScore: isHebrew
+      ? ["לפתוח פער מסקרן", "לרמוז בלי לחשוף הכל", "לתת סיבה להמשיך לקרוא"]
+      : ["Open a curiosity gap", "Hint without revealing everything", "Give a reason to keep reading"],
+    improvedVersion: safePost
+  };
+}
+
+async function runJsonCompletion({
+  systemPrompt,
+  userPrompt,
+  fallback,
+  temperature = 0.8
+}) {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
     ]
-      .filter(Boolean)
-      .join("\n\n");
-  }
+  });
 
-  function moveBuildResultToImprove(goalValue = "") {
-    if (!result || result.type !== "build") return;
-
-    const fullPost = getBuildResultFullPost();
-
-    const smartGoal =
-      goalValue ||
-      t.goalPresetMoreHuman ||
-      (language === "he"
-        ? "שפר את הפוסט שיהיה חד יותר, אנושי וזורם"
-        : "Make the post sharper, more human and engaging");
-
-    setCurrentPost(fullPost);
-
-    setImproveForm((prev) => ({
-      ...prev,
-      post: fullPost,
-      goal: smartGoal,
-      style: buildForm.style,
-      platform: buildForm.platform
-    }));
-
-    setError("");
-    setTab("improve");
-  }
-
-  function moveBuildResultToAnalyze() {
-    const fullPost = getBuildResultFullPost();
-
-    setCurrentPost(fullPost);
-
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      post: fullPost,
-      platform: buildForm.platform
-    }));
-
-    setError("");
-    setTab("analyze");
-  }
-
-  function getImprovePrimaryText() {
-    if (!result || result.type !== "improve" || !result.data) {
-      return "";
-    }
-
-    return (
-      safeText(result.data.improvedPost) ||
-      safeText(result.data.moreAuthenticVersion) ||
-      safeText(result.data.moreViralVersion)
-    );
-  }
-
-  function moveImproveResultToAnalyze() {
-    const improvedPost = getImprovePrimaryText();
-
-    setCurrentPost(improvedPost);
-
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      post: improvedPost,
-      platform: improveForm.platform
-    }));
-
-    setError("");
-    setTab("analyze");
-  }
-
-  function getAnalyzeImprovedText() {
-    if (!result || result.type !== "analyze" || !result.data) {
-      return "";
-    }
-
-    return safeText(result.data.improvedVersion);
-  }
-
-  function moveAnalyzeImprovedToImprove(goalValue = "") {
-    if (!result || result.type !== "analyze") return;
-
-    const improvedVersion = result.data?.improvedVersion || currentPost || "";
-    const smartGoal =
-      goalValue ||
-      weakestArea?.goal ||
-      t.goalPresetMoreHuman ||
-      (language === "he"
-        ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
-        : "Improve the post based on analysis to increase performance");
-
-    setCurrentPost(improvedVersion);
-
-    setImproveForm((prev) => ({
-      ...prev,
-      post: improvedVersion,
-      goal: smartGoal,
-      platform: analyzeForm.platform
-    }));
-
-    setError("");
-    setTab("improve");
-  }
-
-  const topicPlaceholder =
-    language === "he" ? "על מה הפוסט?" : "What is the post about?";
-  const audiencePlaceholder =
-    language === "he" ? "למי הפוסט מיועד?" : "Who is this for?";
-  const goalPlaceholder =
-    language === "he" ? "מה המטרה?" : "What is the goal?";
-  const improvePostPlaceholder =
-    language === "he" ? "הדבק כאן את הפוסט לשיפור" : "Paste the post to improve";
-  const improveGoalPlaceholder =
-    language === "he" ? "מה לשפר?" : "What should improve?";
-  const analyzePostPlaceholder =
-    language === "he" ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
-
-  return (
-    <div className="app" dir={dir}>
-      <div className="bg-orb orb-1" />
-      <div className="bg-orb orb-2" />
-      <div className="bg-orb orb-3" />
-
-      <div className="app-shell">
-        <header className="hero">
-          <div className="hero-copy">
-            <div className="hero-badge">AI Content Engine</div>
-            <h1>{t.appName}</h1>
-            <p>{t.subtitle}</p>
-          </div>
-
-          <div className="lang-switch">
-            <button
-              type="button"
-              className={language === "en" ? "active" : ""}
-              onClick={() => setLanguage("en")}
-            >
-              {t.english}
-            </button>
-            <button
-              type="button"
-              className={language === "he" ? "active" : ""}
-              onClick={() => setLanguage("he")}
-            >
-              {t.hebrew}
-            </button>
-          </div>
-        </header>
-
-        <nav className="tabs">
-          <button
-            type="button"
-            className={tab === "build" ? "active" : ""}
-            onClick={() => switchTab("build")}
-          >
-            {t.build}
-          </button>
-          <button
-            type="button"
-            className={tab === "improve" ? "active" : ""}
-            onClick={() => switchTab("improve")}
-          >
-            {t.improve}
-          </button>
-          <button
-            type="button"
-            className={tab === "analyze" ? "active" : ""}
-            onClick={() => switchTab("analyze")}
-          >
-            {t.analyze}
-          </button>
-        </nav>
-
-        <main className="layout">
-          <section className="panel glass">
-            <div className="panel-title">
-              {tab === "build" ? t.build : null}
-              {tab === "improve" ? t.improve : null}
-              {tab === "analyze" ? t.analyze : null}
-            </div>
-
-            {tab === "build" ? (
-              <>
-                <div className="field">
-                  <label>{t.topic}</label>
-                  <textarea
-                    rows="5"
-                    value={buildForm.topic}
-                    onChange={(e) => setBuildField("topic", e.target.value)}
-                    placeholder={topicPlaceholder}
-                  />
-                </div>
-
-                <div className="field">
-                  <label>{t.targetAudience}</label>
-                  <input
-                    type="text"
-                    value={buildForm.targetAudience}
-                    onChange={(e) => setBuildField("targetAudience", e.target.value)}
-                    placeholder={audiencePlaceholder}
-                  />
-                </div>
-
-                <div className="field">
-                  <label>{t.goal}</label>
-                  <input
-                    type="text"
-                    value={buildForm.goal}
-                    onChange={(e) => setBuildField("goal", e.target.value)}
-                    placeholder={goalPlaceholder}
-                  />
-                  <div className="preset-row">
-                    {buildGoalPresets.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        className={`preset-chip ${buildForm.goal === preset ? "active" : ""}`}
-                        onClick={() => setBuildField("goal", preset)}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div className="field">
-                    <label>{t.style}</label>
-                    <select
-                      value={buildForm.style}
-                      onChange={(e) => setBuildField("style", e.target.value)}
-                    >
-                      {styleOptions.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {language === "he" ? item.he : item.en}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="field">
-                    <label>{t.platform}</label>
-                    <select
-                      value={buildForm.platform}
-                      onChange={(e) => setBuildField("platform", e.target.value)}
-                    >
-                      {platformOptions.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={handleBuild}
-                  disabled={loading}
-                >
-                  {loading ? t.loading : t.generate}
-                </button>
-              </>
-            ) : null}
-
-            {tab === "improve" ? (
-              <>
-                <div className="field">
-                  <label>{t.postText}</label>
-                  <textarea
-                    rows="10"
-                    value={improveForm.post}
-                    onChange={(e) => setImproveField("post", e.target.value)}
-                    placeholder={improvePostPlaceholder}
-                  />
-                </div>
-
-                <div className="field">
-                  <label>{t.goal}</label>
-                  <input
-                    type="text"
-                    value={improveForm.goal}
-                    onChange={(e) => setImproveField("goal", e.target.value)}
-                    placeholder={improveGoalPlaceholder}
-                  />
-                  <div className="preset-row">
-                    {improveGoalPresets.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        className={`preset-chip ${improveForm.goal === preset ? "active" : ""}`}
-                        onClick={() => setImproveField("goal", preset)}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div className="field">
-                    <label>{t.style}</label>
-                    <select
-                      value={improveForm.style}
-                      onChange={(e) => setImproveField("style", e.target.value)}
-                    >
-                      {styleOptions.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {language === "he" ? item.he : item.en}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="field">
-                    <label>{t.platform}</label>
-                    <select
-                      value={improveForm.platform}
-                      onChange={(e) => setImproveField("platform", e.target.value)}
-                    >
-                      {platformOptions.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={handleImprove}
-                  disabled={loading}
-                >
-                  {loading ? t.loading : t.improveBtn}
-                </button>
-              </>
-            ) : null}
-
-            {tab === "analyze" ? (
-              <>
-                <div className="field">
-                  <label>{t.postText}</label>
-                  <textarea
-                    rows="10"
-                    value={analyzeForm.post}
-                    onChange={(e) => setAnalyzeField("post", e.target.value)}
-                    placeholder={analyzePostPlaceholder}
-                  />
-                </div>
-
-                <div className="field">
-                  <label>{t.platform}</label>
-                  <select
-                    value={analyzeForm.platform}
-                    onChange={(e) => setAnalyzeField("platform", e.target.value)}
-                  >
-                    {platformOptions.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={handleAnalyze}
-                  disabled={loading}
-                >
-                  {loading ? t.loading : t.analyzeBtn}
-                </button>
-              </>
-            ) : null}
-
-            {error ? <div className="error-box">{error}</div> : null}
-            {copyMessage ? <div className="success-box">{copyMessage}</div> : null}
-          </section>
-
-          <section className="panel glass">
-            <div className="panel-title">{t.result}</div>
-
-            {!result ? <div className="empty-state">{t.emptyState}</div> : null}
-
-            {result ? (
-              <div className="result-tools">
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={saveCurrentResult}
-                >
-                  {t.saveToHistory}
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={exportCurrentResult}
-                >
-                  {t.exportTxt}
-                </button>
-              </div>
-            ) : null}
-
-            {result && result.type === "build" ? (
-              <div className="result-wrap">
-                <Section
-                  title={t.title}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.title || "")}
-                >
-                  <div className="text-card">{result.data?.title || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.hook}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.hook || "")}
-                >
-                  <div className="text-card">{result.data?.hook || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.body}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.body || "")}
-                >
-                  <div className="text-card">{result.data?.body || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.cta}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.cta || "")}
-                >
-                  <div className="text-card">{result.data?.cta || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.hashtags}
-                  copyLabel={t.copy}
-                  onCopy={() =>
-                    copyText(
-                      Array.isArray(result.data?.hashtags)
-                        ? result.data.hashtags.join(" ")
-                        : ""
-                    )
-                  }
-                >
-                  <div className="hashtags">
-                    {Array.isArray(result.data?.hashtags)
-                      ? result.data.hashtags.map((tag, index) => (
-                          <span key={`${String(tag)}-${index}`}>
-                            #{String(tag).replace(/^#/, "")}
-                          </span>
-                        ))
-                      : null}
-                  </div>
-                </Section>
-
-                <Section
-                  title={t.shortVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.shortVersion || "")}
-                >
-                  <div className="text-card">{result.data?.shortVersion || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.alternativeVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.alternativeVersion || "")}
-                >
-                  <div className="text-card">
-                    {result.data?.alternativeVersion || ""}
-                  </div>
-                </Section>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={() => copyText(buildCopyText)}
-                >
-                  {t.copyFullPost}
-                </button>
-
-                <div className="action-row">
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={() => moveBuildResultToImprove("")}
-                  >
-                    {t.improveAction}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-btn primary-btn-viral"
-                    onClick={() => moveBuildResultToImprove(t.goalPresetMoreViral)}
-                  >
-                    {t.viralBoost}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={moveBuildResultToAnalyze}
-                  >
-                    {t.analyzeAction}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {result && result.type === "improve" ? (
-              <div className="result-wrap">
-                <Section title={t.strengths}>
-                  <ListBlock items={result.data?.strengths || []} />
-                </Section>
-
-                <Section title={t.weaknesses}>
-                  <ListBlock items={result.data?.weaknesses || []} />
-                </Section>
-
-                <Section
-                  title={t.improvedVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.improvedPost || "")}
-                >
-                  <div className="text-card">{result.data?.improvedPost || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.moreViralVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.moreViralVersion || "")}
-                >
-                  <div className="text-card">
-                    {result.data?.moreViralVersion || ""}
-                  </div>
-                </Section>
-
-                <Section
-                  title={t.moreAuthenticVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
-                >
-                  <div className="text-card">
-                    {result.data?.moreAuthenticVersion || ""}
-                  </div>
-                </Section>
-
-                <Section title={t.tips}>
-                  <ListBlock items={result.data?.tips || []} />
-                </Section>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={() => copyText(improveCopyText)}
-                >
-                  {t.copyImproved}
-                </button>
-
-                <div className="action-row action-row-single">
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={moveImproveResultToAnalyze}
-                  >
-                    {analyzeFromImproveLabel}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {result && result.type === "analyze" ? (
-              <div className="result-wrap">
-                <div className="scores-grid">
-                  <ScoreCard label={t.viralScore} value={result.data?.viralScore || 0} />
-                  <ScoreCard
-                    label={t.authenticityScore}
-                    value={result.data?.authenticityScore || 0}
-                  />
-                  <ScoreCard label={t.clarityScore} value={result.data?.clarityScore || 0} />
-                  <ScoreCard
-                    label={t.emotionalScore}
-                    value={result.data?.emotionalScore || 0}
-                  />
-                  <ScoreCard
-                    label={t.curiosityScore}
-                    value={result.data?.curiosityScore || 0}
-                  />
-                  <ScoreCard label={t.hookScore} value={result.data?.hookScore || 0} />
-                  <ScoreCard label={t.ctaScore} value={result.data?.ctaScore || 0} />
-                </div>
-
-                {weakestArea ? (
-                  <div className="smart-recommendation-box">
-                    <div className="smart-recommendation-label">
-                      {t.smartRecommendationTitle}
-                    </div>
-                    <div className="smart-recommendation-text">
-                      {weakestArea.message}
-                    </div>
-                    <button
-                      type="button"
-                      className="secondary-btn"
-                      onClick={() => moveAnalyzeImprovedToImprove(weakestArea.goal)}
-                    >
-                      {weakestArea.actionLabel}
-                    </button>
-                  </div>
-                ) : null}
-
-                <Section title={t.summary}>
-                  <div className="text-card">{result.data?.summary || ""}</div>
-                </Section>
-
-                <Section title={t.whatWorks}>
-                  <ListBlock items={result.data?.whatWorks || []} />
-                </Section>
-
-                <Section title={t.whatHurts}>
-                  <ListBlock items={result.data?.whatHurts || []} />
-                </Section>
-
-                <Section title={t.improvements}>
-                  <ListBlock items={result.data?.improvements || []} />
-                </Section>
-
-                <Section title={t.raiseViralScore}>
-                  <ListBlock items={result.data?.raiseViralScore || []} />
-                </Section>
-
-                <Section title={t.raiseAuthenticityScore}>
-                  <ListBlock items={result.data?.raiseAuthenticityScore || []} />
-                </Section>
-
-                <Section title={t.raiseEmotionalScore}>
-                  <ListBlock items={result.data?.raiseEmotionalScore || []} />
-                </Section>
-
-                <Section title={t.raiseCuriosityScore}>
-                  <ListBlock items={result.data?.raiseCuriosityScore || []} />
-                </Section>
-
-                <Section
-                  title={t.improvedVersion}
-                  copyLabel={t.copy}
-                  onCopy={() => copyText(analyzeCopyText)}
-                >
-                  <div className="text-card">{analyzeCopyText}</div>
-                </Section>
-
-                <div className="quick-actions-title">{t.quickActionsTitle}</div>
-                <div className="quick-actions-grid">
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetFixHook)}
-                  >
-                    {t.quickFixHook}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetFixCta)}
-                  >
-                    {t.quickFixCta}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetMoreViral)}
-                  >
-                    {t.quickMakeViral}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="secondary-btn"
-                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetMoreHuman)}
-                  >
-                    {t.quickMakeHuman}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  className="primary-btn"
-                  onClick={() => copyText(analyzeCopyText)}
-                >
-                  {t.copyAnalyze}
-                </button>
-
-                <div className="action-row">
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={() => moveAnalyzeImprovedToImprove("")}
-                  >
-                    {improveFromAnalyzeLabel}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-btn primary-btn-viral"
-                    onClick={() => moveAnalyzeImprovedToImprove(t.goalPresetMoreViral)}
-                  >
-                    {t.viralBoost}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </section>
-        </main>
-
-        <section className="panel glass history-panel">
-          <div className="history-header">
-            <div className="panel-title">{t.historyTitle}</div>
-
-            {history.length ? (
-              <button type="button" className="danger-btn" onClick={clearHistory}>
-                {t.clearHistory}
-              </button>
-            ) : null}
-          </div>
-
-          {!history.length ? (
-            <div className="history-empty">{t.historyEmpty}</div>
-          ) : (
-            <div className="history-list">
-              {history.map((item) => (
-                <div key={item.id} className="history-card">
-                  <div className="history-top">
-                    <div className="history-type">
-                      {item.type === "build" ? t.build : null}
-                      {item.type === "improve" ? t.improve : null}
-                      {item.type === "analyze" ? t.analyze : null}
-                    </div>
-                    <div className="history-time">
-                      {formatHistoryTime(item.createdAt, language)}
-                    </div>
-                  </div>
-
-                  <div className="history-title">
-                    {buildHistoryTitle(item, language)}
-                  </div>
-
-                  <div className="history-preview">
-                    {buildHistoryPreview(item, language)}
-                  </div>
-
-                  <div className="history-actions">
-                    <button
-                      type="button"
-                      className="secondary-btn"
-                      onClick={() => loadHistoryItem(item)}
-                    >
-                      {t.loadHistory}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="secondary-btn"
-                      onClick={() =>
-                        copyText(
-                          buildHistoryPreview(item, language) ||
-                            buildHistoryTitle(item, language)
-                        )
-                      }
-                    >
-                      {t.copy}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="secondary-btn"
-                      onClick={() => exportHistoryItem(item)}
-                    >
-                      {t.exportTxt}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="danger-btn"
-                      onClick={() => removeHistoryItem(item.id)}
-                    >
-                      {t.deleteHistoryItem}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
-  );
+  const raw = completion.choices?.[0]?.message?.content || "{}";
+  return safeJsonParse(raw, fallback);
 }
 
-function prevSafePost(value) {
-  return typeof value === "string" ? value : "";
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    service: "PostPulse AI API",
+    status: "running"
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    status: "ok"
+  });
+});
+
+app.post("/generate-post", async (req, res) => {
+  try {
+    const topic = cleanString(req.body?.topic);
+    const targetAudience = cleanString(req.body?.targetAudience, "General audience");
+    const goal = cleanString(req.body?.goal);
+    const style = normalizeStyle(req.body?.style);
+    const platform = normalizePlatform(req.body?.platform);
+    const language = normalizeLanguage(req.body?.language);
+
+    if (!topic) {
+      return res.status(400).json({ error: "Topic is required" });
+    }
+
+    const systemPrompt = `
+You are PostPulse AI's elite social media writing engine.
+
+You never write generic AI content.
+You always think strategically before writing.
+
+Your job:
+- find the strongest angle
+- find the strongest emotional direction
+- write a strong hook
+- write a human body
+- write a natural CTA
+- adapt tightly to the platform
+- make the post feel native, sharp, real, and readable
+
+Core rules:
+- sound like a real human, not AI
+- avoid bland motivational filler
+- avoid fake hype
+- avoid robotic phrasing
+- avoid repetitive rhythm
+- make every sentence earn its place
+- commit to one main angle
+- create clear stopping power in the opening
+- keep the CTA natural, not forced
+
+Return valid JSON only.
+`;
+
+    const userPrompt = `
+INPUT:
+Topic: ${topic}
+Audience: ${targetAudience}
+Goal: ${goal || "Create a strong post"}
+Goal guidance: ${getGoalGuide(goal, language)}
+Style: ${style}
+Style guide: ${getStyleGuide(style, language)}
+Platform: ${platform}
+Platform guide: ${getPlatformGuide(platform, language)}
+Language: ${getLanguageLabel(language)}
+
+Think silently first:
+- best angle
+- best hook approach
+- best emotional tone
+- best CTA approach
+- what would make this feel less AI and more human
+- what would make this feel more native to ${platform}
+
+Return JSON only in this exact shape:
+{
+  "title": "",
+  "hook": "",
+  "body": "",
+  "cta": "",
+  "hashtags": [],
+  "shortVersion": "",
+  "alternativeVersion": ""
 }
+
+Rules:
+- write only in ${getLanguageLabel(language)}
+- title should be strong but not clickbait
+- hook must be scroll-stopping
+- body must be clear, human, and platform-native
+- CTA must be natural and action-driving
+- hashtags must be relevant and not spammy
+- shortVersion must be compact but still strong
+- alternativeVersion must feel meaningfully different
+- avoid generic AI phrases
+- avoid cringe
+`;
+
+    const parsed = await runJsonCompletion({
+      systemPrompt,
+      userPrompt,
+      fallback: buildGenerateFallback({ topic, language }),
+      temperature: 0.9
+    });
+
+    const normalized = normalizeGenerateData(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
+  } catch (err) {
+    console.error("generate-post error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: "Generate failed"
+    });
+  }
+});
+
+app.post("/improve-post", async (req, res) => {
+  try {
+    const post = cleanString(req.body?.post);
+    const goal = cleanString(req.body?.goal);
+    const style = normalizeStyle(req.body?.style);
+    const platform = normalizePlatform(req.body?.platform);
+    const language = normalizeLanguage(req.body?.language);
+
+    if (!post) {
+      return res.status(400).json({ error: "Post is required" });
+    }
+
+    const systemPrompt = `
+You are PostPulse AI's elite content improvement engine.
+
+You do not rewrite blindly.
+You diagnose first, then improve with precision.
+
+You specialize in:
+- stronger hooks
+- clearer messaging
+- more human tone
+- stronger emotional weight
+- tighter platform fit
+- stronger CTA
+- lower AI-feel
+- better viral framing when needed
+
+Return valid JSON only.
+`;
+
+    const userPrompt = `
+INPUT:
+Original post: ${post}
+Goal: ${goal || "Make it stronger"}
+Goal guidance: ${getGoalGuide(goal, language)}
+Style: ${style}
+Style guide: ${getStyleGuide(style, language)}
+Platform: ${platform}
+Platform guide: ${getPlatformGuide(platform, language)}
+Language: ${getLanguageLabel(language)}
+
+Return JSON only:
+{
+  "strengths": [],
+  "weaknesses": [],
+  "improvedPost": "",
+  "moreViralVersion": "",
+  "moreAuthenticVersion": "",
+  "tips": []
+}
+
+Rules:
+- write only in ${getLanguageLabel(language)}
+- diagnose real strengths only
+- diagnose real weaknesses only
+- improvedPost = strongest balanced version for the user's goal
+- moreViralVersion = stronger attention and shareability
+- moreAuthenticVersion = more human and natural
+- tips must be short and practical
+- keep it less AI, more human
+- avoid cringe and generic phrasing
+`;
+
+    const parsed = await runJsonCompletion({
+      systemPrompt,
+      userPrompt,
+      fallback: buildImproveFallback({ post, language }),
+      temperature: 0.82
+    });
+
+    const normalized = normalizeImproveData(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
+  } catch (err) {
+    console.error("improve-post error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: "Improve failed"
+    });
+  }
+});
+
+app.post("/analyze-post", async (req, res) => {
+  try {
+    const post = cleanString(req.body?.post);
+    const platform = normalizePlatform(req.body?.platform);
+    const language = normalizeLanguage(req.body?.language);
+
+    if (!post) {
+      return res.status(400).json({ error: "Post is required" });
+    }
+
+    const systemPrompt = `
+You are PostPulse AI's elite content critic and performance strategist.
+
+You analyze honestly.
+You do not flatter weak writing.
+You score only by real performance potential.
+
+You evaluate:
+- hook strength
+- clarity
+- authenticity
+- emotional impact
+- curiosity
+- CTA quality
+- viral potential
+
+Your analysis must be practical, sharp, and platform-aware.
+
+Return valid JSON only.
+`;
+
+    const userPrompt = `
+INPUT:
+Post: ${post}
+Platform: ${platform}
+Platform guide: ${getPlatformGuide(platform, language)}
+Language: ${getLanguageLabel(language)}
+
+Return JSON only in this exact structure:
+{
+  "viralScore": 0,
+  "authenticityScore": 0,
+  "clarityScore": 0,
+  "emotionalScore": 0,
+  "curiosityScore": 0,
+  "hookScore": 0,
+  "ctaScore": 0,
+  "summary": "",
+  "whatWorks": [],
+  "whatHurts": [],
+  "improvements": [],
+  "raiseViralScore": [],
+  "raiseAuthenticityScore": [],
+  "raiseEmotionalScore": [],
+  "raiseCuriosityScore": [],
+  "improvedVersion": ""
+}
+
+Scoring rules:
+- scores must be integers from 0 to 100
+- do not inflate scores
+- average writing should not get premium scores
+- weak writing should get clearly weak scores
+- hookScore = true stopping power in the first line
+- ctaScore = true action-driving power of the ending
+- authenticityScore = how human vs robotic it sounds
+- clarityScore = how clear, sharp, and easy to follow it is
+- emotionalScore = real emotional weight, not fake drama
+- curiosityScore = how much forward momentum and intrigue it creates
+- viralScore = shareability, tension, framing, memorability, and engagement potential
+
+Analysis rules:
+- write only in ${getLanguageLabel(language)}
+- be honest, direct, and useful
+- whatWorks must mention only real strengths
+- whatHurts must mention the biggest real problems
+- improvements must be practical next steps
+- raiseViralScore should focus on stronger framing, tension, and shareability
+- raiseAuthenticityScore should focus on natural tone, human wording, and lower AI feel
+- raiseEmotionalScore should focus on stronger feeling, relevance, and resonance
+- raiseCuriosityScore should focus on intrigue, open loops, and stronger reason to keep reading
+
+Improved version rules:
+- improvedVersion must be meaningfully stronger than the original
+- it must directly fix the biggest weaknesses
+- it must sound more human
+- it must match ${platform} naturally
+- it must have a stronger hook and a stronger CTA than the original
+`;
+
+    const parsed = await runJsonCompletion({
+      systemPrompt,
+      userPrompt,
+      fallback: buildAnalyzeFallback({ post, language }),
+      temperature: 0.68
+    });
+
+    const normalized = normalizeAnalyzeData(parsed);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
+  } catch (err) {
+    console.error("analyze-post error:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: "Analyze failed"
+    });
+  }
+});
+
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    error: "Route not found"
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`PostPulse server running on port ${PORT}`);
+});
