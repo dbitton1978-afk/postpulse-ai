@@ -98,10 +98,12 @@ function getPlatformGuide(platform, language) {
 }
 
 function normalizeHashtags(value) {
-  return cleanArray(value).map((tag) => {
-    const cleanTag = String(tag).replace(/^#+/, "").trim();
-    return cleanTag ? `#${cleanTag}` : "";
-  }).filter(Boolean);
+  return cleanArray(value)
+    .map((tag) => {
+      const cleanTag = String(tag).replace(/^#+/, "").trim();
+      return cleanTag ? `#${cleanTag}` : "";
+    })
+    .filter(Boolean);
 }
 
 function normalizeGenerateData(data) {
@@ -157,19 +159,21 @@ function buildGenerateFallback({ topic, language }) {
   return {
     title: isHebrew ? `פוסט על ${topic}` : `Post about ${topic}`,
     hook: isHebrew
-      ? `יש רגעים שבהם הדרך שבה מציגים רעיון משנה את כל התגובה אליו.`
-      : `Sometimes the way you present an idea changes the entire reaction to it.`,
+      ? "יש רגעים שבהם הדרך שבה מציגים רעיון משנה את כל התגובה אליו."
+      : "Sometimes the way you present an idea changes the entire reaction to it.",
     body: isHebrew
-      ? `כדי לגרום לאנשים לעצור באמת, צריך לא רק לדבר על הנושא — אלא לדבר עליו בצורה חדה, אנושית וברורה יותר.`
-      : `To make people truly stop, you need more than a topic — you need a sharper, more human, and clearer way to present it.`,
-    cta: isHebrew ? "אם זה דיבר אליכם, כתבו לי בתגובות." : "If this resonated, share your thoughts in the comments.",
+      ? "כדי לגרום לאנשים לעצור באמת, צריך לא רק לדבר על הנושא — אלא לדבר עליו בצורה חדה, אנושית וברורה יותר."
+      : "To make people truly stop, you need more than a topic — you need a sharper, more human, and clearer way to present it.",
+    cta: isHebrew
+      ? "אם זה דיבר אליכם, כתבו לי בתגובות."
+      : "If this resonated, share your thoughts in the comments.",
     hashtags: [],
     shortVersion: isHebrew
-      ? `אותו רעיון, הרבה יותר חד.`
-      : `The same idea, much sharper.`,
+      ? "אותו רעיון, הרבה יותר חד."
+      : "The same idea, much sharper.",
     alternativeVersion: isHebrew
-      ? `לפעמים לא צריך לכתוב יותר — צריך לכתוב נכון יותר.`
-      : `Sometimes you do not need to write more — you need to write better.`
+      ? "לפעמים לא צריך לכתוב יותר — צריך לכתוב נכון יותר."
+      : "Sometimes you do not need to write more — you need to write better."
   };
 }
 
@@ -220,9 +224,11 @@ function buildAnalyzeFallback({ post, language, platform }) {
     raiseCuriosityScore: isHebrew
       ? ["להשאיר לולאה פתוחה", "לרמוז על תובנה לפני החשיפה"]
       : ["Leave an open loop", "Hint at an insight before revealing it"],
-    improvedVersion: cleanString(post) || (isHebrew
-      ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
-      : `If you want this post to work better on ${safePlatform}, it needs a stronger opening and clearer wording.`)
+    improvedVersion:
+      cleanString(post) ||
+      (isHebrew
+        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
+        : `If you want this post to work better on ${safePlatform}, it needs a stronger opening and clearer wording.`)
   };
 }
 
@@ -457,12 +463,22 @@ app.post("/analyze-post", async (req, res) => {
     }
 
     const systemPrompt = `
-You are a world-class social media analyst.
+You are a world-class social media analyst and post critic.
 
-You analyze realistically, not politely.
+You analyze realistically and strategically.
+You do not flatter weak content.
 You score based on actual performance potential.
-You give practical, platform-aware feedback.
 
+You evaluate:
+- hook strength
+- clarity
+- authenticity
+- emotional impact
+- curiosity
+- CTA quality
+- viral potential
+
+You must give practical and platform-aware feedback.
 Return valid JSON only.
 `;
 
@@ -472,7 +488,7 @@ Post: ${post}
 Platform: ${platform}
 Language: ${getLanguageLabel(language)}
 
-Return JSON only:
+Return JSON only in this exact structure:
 
 {
   "viralScore": 0,
@@ -494,19 +510,25 @@ Return JSON only:
 }
 
 RULES:
-- scores must be between 0 and 100
+- scores must be integers from 0 to 100
 - write only in ${getLanguageLabel(language)}
-- be realistic
-- whatWorks must be specific
-- whatHurts must be specific
-- improvements must be practical
-- improvedVersion must be clearly stronger
+- be honest, specific, and useful
+- do not be generic
+- "whatWorks" must mention real strengths only
+- "whatHurts" must mention the real weaknesses
+- "improvements" must be practical next steps
+- "raiseViralScore" should focus on tension, shareability, stronger framing
+- "raiseAuthenticityScore" should focus on human tone, natural wording, less robotic phrasing
+- "raiseEmotionalScore" should focus on emotional connection, real feeling, stronger relevance
+- "raiseCuriosityScore" should focus on open loops, intrigue, stronger reason to keep reading
+- "improvedVersion" must be clearly stronger than the original
+- adapt to ${platform}
 - platform guide: ${getPlatformGuide(platform, language)}
 `;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.7,
+      temperature: 0.65,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
