@@ -523,15 +523,29 @@ Platform: ${platform}
 Platform guide: ${getPlatformGuide(platform, language)}
 Language: ${getLanguageLabel(language)}
 
-Think silently first:
-- best angle
-- best hook approach
-- best emotional tone
-- best CTA approach
-- what would make this feel less AI and more human
-- what would make this feel more native to ${platform}
+STEP 1 — STRATEGIC THINKING (DO NOT OUTPUT):
+- What is the strongest angle for this topic?
+- What emotional direction will make people care?
+- What would make someone stop scrolling here?
+- What is the clearest value or insight?
+- What would make this feel human and not AI?
 
-Return JSON only in this exact shape:
+STEP 2 — BUILD STRUCTURE:
+- Write a HOOK that creates immediate stopping power
+- Build a BODY that is sharp, clear, and human
+- End with a CTA that feels natural but drives action
+
+STEP 3 — QUALITY RULES:
+- Avoid generic AI phrases
+- Avoid motivational clichés
+- Avoid fluff
+- Avoid repetition
+- Each sentence must earn its place
+- Use natural human tone
+- Keep flow and rhythm
+- Match ${platform} style perfectly
+
+STEP 4 — OUTPUT JSON:
 {
   "title": "",
   "hook": "",
@@ -542,17 +556,12 @@ Return JSON only in this exact shape:
   "alternativeVersion": ""
 }
 
-Rules:
-- write only in ${getLanguageLabel(language)}
-- title should be strong but not clickbait
-- hook must be scroll-stopping
-- body must be clear, human, and platform-native
-- CTA must be natural and action-driving
-- hashtags must be relevant and not spammy
-- shortVersion must be compact but still strong
-- alternativeVersion must feel meaningfully different
-- avoid generic AI phrases
-- avoid cringe
+STRICT RULES:
+- Write only in ${getLanguageLabel(language)}
+- Hook MUST be scroll-stopping
+- Body MUST feel human, not AI
+- CTA MUST feel natural (not forced)
+- Alternative version must feel meaningfully different
 `;
 
     const parsed = await runJsonCompletion({
