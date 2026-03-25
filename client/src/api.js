@@ -3,19 +3,6 @@ const API_BASE_URL = (
   window.location.origin
 ).replace(/\/+$/, "");
 
-function getAuthToken() {
-  try {
-    return (
-      localStorage.getItem("postpulse_token") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("authToken") ||
-      ""
-    );
-  } catch {
-    return "";
-  }
-}
-
 async function parseJsonSafe(response) {
   try {
     return await response.json();
@@ -24,102 +11,53 @@ async function parseJsonSafe(response) {
   }
 }
 
-async function tryPost(path, payload) {
-  const token = getAuthToken();
-
+async function request(path, payload) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      "Content-Type": "application/json"
     },
     body: JSON.stringify(payload || {})
   });
 
   const data = await parseJsonSafe(response);
 
-  return {
-    ok: response.ok,
-    status: response.status,
-    data,
-    message:
-      data?.message ||
+  if (!response.ok) {
+    throw new Error(
       data?.error ||
-      `Request failed with status ${response.status}`
-  };
-}
-
-async function requestWithFallback(paths, payload) {
-  let lastError = "Request failed";
-
-  for (const path of paths) {
-    const result = await tryPost(path, payload);
-
-    if (result.ok) {
-      return result.data;
-    }
-
-    lastError = result.message;
-
-    const isRouteError =
-      result.status === 404 ||
-      String(result.message || "").toLowerCase().includes("route not found");
-
-    if (!isRouteError) {
-      throw new Error(result.message);
-    }
+        data?.message ||
+        `Request failed with status ${response.status}`
+    );
   }
 
-  throw new Error(lastError);
+  return data;
 }
 
 export async function generatePost(payload) {
-  const body = {
-    ...payload,
-    ideaPrompt: payload?.topic || payload?.ideaPrompt || "",
-    post: payload?.topic || payload?.post || "",
+  return request("/generate-post", {
     topic: payload?.topic || "",
-    length: payload?.length || "medium"
-  };
-
-  return requestWithFallback(
-    [
-      "/api/generate-post",
-      "/api/posts/generate"
-    ],
-    body
-  );
+    targetAudience: payload?.targetAudience || "",
+    goal: payload?.goal || "",
+    style: payload?.style || "professional",
+    platform: payload?.platform || "instagram",
+    language: payload?.language || "en"
+  });
 }
 
 export async function improvePost(payload) {
-  const body = {
-    ...payload,
-    originalPost: payload?.post || payload?.originalPost || "",
+  return request("/improve-post", {
     post: payload?.post || "",
-    length: payload?.length || "medium"
-  };
-
-  return requestWithFallback(
-    [
-      "/api/improve-post",
-      "/api/posts/optimize"
-    ],
-    body
-  );
+    goal: payload?.goal || "",
+    style: payload?.style || "professional",
+    platform: payload?.platform || "instagram",
+    language: payload?.language || "en"
+  });
 }
 
 export async function analyzePost(payload) {
-  const body = {
-    ...payload,
-    originalPost: payload?.post || payload?.originalPost || "",
-    post: payload?.post || ""
-  };
-
-  return requestWithFallback(
-    [
-      "/api/analyze-post",
-      "/api/posts/analyze"
-    ],
-    body
-  );
+  return request("/analyze-post", {
+    post: payload?.post || "",
+    platform: payload?.platform || "instagram",
+    language: payload?.language || "en"
+  });
 }
