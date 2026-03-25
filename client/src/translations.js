@@ -111,13 +111,20 @@ export const translations = {
     quickMakeClear: "Make Clearer",
 
     smartRecommendationTitle: "Top Recommendation",
-    smartWeakHook: "The weakest area right now is the hook. Strengthening the opening should improve stopping power first.",
-    smartWeakCta: "The weakest area right now is the CTA. A stronger action ending should improve response.",
-    smartWeakViral: "The weakest area right now is virality. The post needs stronger tension, sharper framing, or more shareability.",
-    smartWeakAuthenticity: "The weakest area right now is authenticity. The post should sound more natural and more human.",
-    smartWeakEmotional: "The weakest area right now is emotional impact. It needs more feeling and stronger connection.",
-    smartWeakCuriosity: "The weakest area right now is curiosity. It should create more intrigue and open loops.",
-    smartWeakClarity: "The weakest area right now is clarity. Tightening the message should make the post stronger.",
+    smartWeakHook:
+      "The weakest area right now is the hook. Strengthening the opening should improve stopping power first.",
+    smartWeakCta:
+      "The weakest area right now is the CTA. A stronger action ending should improve response.",
+    smartWeakViral:
+      "The weakest area right now is virality. The post needs stronger tension, sharper framing, or more shareability.",
+    smartWeakAuthenticity:
+      "The weakest area right now is authenticity. The post should sound more natural and more human.",
+    smartWeakEmotional:
+      "The weakest area right now is emotional impact. It needs more feeling and stronger connection.",
+    smartWeakCuriosity:
+      "The weakest area right now is curiosity. It should create more intrigue and open loops.",
+    smartWeakClarity:
+      "The weakest area right now is clarity. Tightening the message should make the post stronger.",
 
     errorTopic: "Please enter a topic",
     errorPost: "Please enter a post"
@@ -235,13 +242,20 @@ export const translations = {
     quickMakeClear: "עשה יותר ברור",
 
     smartRecommendationTitle: "ההמלצה הראשית",
-    smartWeakHook: "החולשה המרכזית כרגע היא הפתיחה. חיזוק ה-Hook ייתן את השיפור הראשוני הכי חשוב.",
-    smartWeakCta: "החולשה המרכזית כרגע היא ה-CTA. סיום עם הנעה חזקה יותר לפעולה ישפר את התגובה.",
-    smartWeakViral: "החולשה המרכזית כרגע היא הוויראליות. הפוסט צריך יותר מתח, חדות או פוטנציאל שיתוף.",
-    smartWeakAuthenticity: "החולשה המרכזית כרגע היא האותנטיות. הפוסט צריך להישמע טבעי ואנושי יותר.",
-    smartWeakEmotional: "החולשה המרכזית כרגע היא הרגש. צריך יותר תחושה וחיבור רגשי.",
-    smartWeakCuriosity: "החולשה המרכזית כרגע היא הסקרנות. כדאי ליצור יותר עניין ולולאה פתוחה.",
-    smartWeakClarity: "החולשה המרכזית כרגע היא הבהירות. חידוד המסר יחזק את הפוסט.",
+    smartWeakHook:
+      "החולשה המרכזית כרגע היא הפתיחה. חיזוק ה-Hook ייתן את השיפור הראשוני הכי חשוב.",
+    smartWeakCta:
+      "החולשה המרכזית כרגע היא ה-CTA. סיום עם הנעה חזקה יותר לפעולה ישפר את התגובה.",
+    smartWeakViral:
+      "החולשה המרכזית כרגע היא הוויראליות. הפוסט צריך יותר מתח, חדות או פוטנציאל שיתוף.",
+    smartWeakAuthenticity:
+      "החולשה המרכזית כרגע היא האותנטיות. הפוסט צריך להישמע טבעי ואנושי יותר.",
+    smartWeakEmotional:
+      "החולשה המרכזית כרגע היא הרגש. צריך יותר תחושה וחיבור רגשי.",
+    smartWeakCuriosity:
+      "החולשה המרכזית כרגע היא הסקרנות. כדאי ליצור יותר עניין ולולאה פתוחה.",
+    smartWeakClarity:
+      "החולשה המרכזית כרגע היא הבהירות. חידוד המסר יחזק את הפוסט.",
 
     errorTopic: "יש להזין נושא",
     errorPost: "יש להזין פוסט"
