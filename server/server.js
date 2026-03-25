@@ -178,6 +178,16 @@ function getGoalGuide(goal, language) {
       match: ["professional", "authority", "מקצועי", "סמכות"],
       he: "לחזק סמכות, בהירות וערך מקצועי.",
       en: "increase authority, clarity, and professional value."
+    },
+    {
+      match: ["curious", "curiosity", "מסקרן", "סקרנות"],
+      he: "ליצור יותר מסקרנות, יותר עניין, ויותר סיבה להמשיך לקרוא.",
+      en: "create more intrigue, more curiosity, and a stronger reason to keep reading."
+    },
+    {
+      match: ["sharp", "sharper", "חד", "חדות"],
+      he: "להפוך את המסר לחד יותר, ישיר יותר, ופחות רך או מפוזר.",
+      en: "make the message sharper, more direct, and less soft or scattered."
     }
   ];
 
@@ -190,6 +200,104 @@ function getGoalGuide(goal, language) {
   }
 
   return cleanString(goal);
+}
+
+function detectImproveMode(goal) {
+  const safeGoal = cleanString(goal).toLowerCase();
+
+  const modes = [
+    {
+      key: "fix_hook",
+      match: ["fix hook", "hook", "opening", "פתיחה", "הוק"]
+    },
+    {
+      key: "fix_cta",
+      match: ["fix cta", "cta", "call to action", "הנעה", "פעולה"]
+    },
+    {
+      key: "more_viral",
+      match: ["more viral", "viral", "engagement", "share", "ויראל", "מעורבות", "חשיפה"]
+    },
+    {
+      key: "more_human",
+      match: ["more human", "human", "authentic", "natural", "אנושי", "אותנטי", "טבעי"]
+    },
+    {
+      key: "more_emotional",
+      match: ["more emotional", "emotional", "emotion", "רגשי", "רגש"]
+    },
+    {
+      key: "more_clear",
+      match: ["more clear", "clearer", "clear", "clarity", "ברור", "בהיר"]
+    },
+    {
+      key: "more_professional",
+      match: ["more professional", "professional", "authority", "מקצועי", "סמכות"]
+    },
+    {
+      key: "more_curious",
+      match: ["more curious", "curious", "curiosity", "מסקרן", "סקרנות"]
+    },
+    {
+      key: "more_sharp",
+      match: ["more sharp", "sharper", "sharp", "חד", "חדות"]
+    }
+  ];
+
+  const found = modes.find((mode) =>
+    mode.match.some((term) => safeGoal.includes(term))
+  );
+
+  return found ? found.key : "balanced";
+}
+
+function getImproveModeGuide(mode, language) {
+  const isHebrew = normalizeLanguage(language) === "he";
+
+  const guides = {
+    fix_hook: {
+      he: "המטרה הראשית: לשפר קודם כל את שורת הפתיחה. הפתיחה חייבת לעצור גלילה, להיות חדה יותר, מסקרנת יותר, ואנושית יותר. שאר הפוסט צריך להישאר עקבי עם הפתיחה החדשה.",
+      en: "Primary goal: improve the opening first. The opening must stop the scroll, feel sharper, more curiosity-driven, and more human. The rest of the post should stay aligned with the stronger opening."
+    },
+    fix_cta: {
+      he: "המטרה הראשית: לשפר קודם כל את הסיום וההנעה לפעולה. ה-CTA צריך להיות טבעי, משכנע, מחובר לתוכן, וברור יותר.",
+      en: "Primary goal: improve the ending and CTA first. The CTA should feel natural, persuasive, connected to the content, and clearer."
+    },
+    more_viral: {
+      he: "המטרה הראשית: להעלות פוטנציאל ויראלי דרך יותר מתח, יותר חדות, יותר framing, ויותר shareability בלי להיות קרינג'י.",
+      en: "Primary goal: increase viral potential through stronger tension, sharper framing, stronger punch, and more shareability without sounding cringe."
+    },
+    more_human: {
+      he: "המטרה הראשית: להוריד תחושת AI ולכתוב כמו אדם אמיתי. השפה צריכה להיות טבעית, זורמת, אנושית, ואמינה יותר.",
+      en: "Primary goal: reduce AI-feel and make the writing sound like a real person. The language should feel more natural, flowing, human, and believable."
+    },
+    more_emotional: {
+      he: "המטרה הראשית: להעמיק רגש, חיבור, ותחושת אמת בלי להגזים או להפוך לדרמטי מדי.",
+      en: "Primary goal: deepen emotion, connection, and felt truth without becoming exaggerated or overly dramatic."
+    },
+    more_clear: {
+      he: "המטרה הראשית: להפוך את הפוסט לברור יותר, ממוקד יותר, וקצר יותר איפה שצריך. להסיר רעש ולחדד את הערך.",
+      en: "Primary goal: make the post clearer, more focused, and tighter where needed. Remove noise and sharpen the value."
+    },
+    more_professional: {
+      he: "המטרה הראשית: להישמע יותר מקצועי, בטוח, חכם ובעל סמכות, בלי להיות יבש או כבד.",
+      en: "Primary goal: sound more professional, confident, smart, and authoritative without becoming dry or heavy."
+    },
+    more_curious: {
+      he: "המטרה הראשית: להגדיל סקרנות, ליצור פערים מסקרנים, ולתת לאנשים סיבה להמשיך לקרוא.",
+      en: "Primary goal: increase curiosity, create intrigue gaps, and give people a stronger reason to keep reading."
+    },
+    more_sharp: {
+      he: "המטרה הראשית: להפוך את הפוסט לחד יותר, ישיר יותר, מדויק יותר, ופחות מרוכך.",
+      en: "Primary goal: make the post sharper, more direct, more precise, and less softened."
+    },
+    balanced: {
+      he: "המטרה הראשית: לשפר את הפוסט בצורה מאוזנת כך שיהיה חזק יותר, אנושי יותר, ברור יותר, ומותאם לפלטפורמה.",
+      en: "Primary goal: improve the post in a balanced way so it becomes stronger, more human, clearer, and more platform-native."
+    }
+  };
+
+  return isHebrew ? guides[mode].he : guides[mode].en;
 }
 
 function normalizeHashtags(value) {
@@ -477,6 +585,7 @@ app.post("/improve-post", async (req, res) => {
     const style = normalizeStyle(req.body?.style);
     const platform = normalizePlatform(req.body?.platform);
     const language = normalizeLanguage(req.body?.language);
+    const improveMode = detectImproveMode(goal);
 
     if (!post) {
       return res.status(400).json({ error: "Post is required" });
@@ -498,6 +607,9 @@ You specialize in:
 - lower AI-feel
 - better viral framing when needed
 
+You must follow the user's improvement mode exactly.
+If the mode is focused, you must prioritize that area first.
+
 Return valid JSON only.
 `;
 
@@ -505,7 +617,9 @@ Return valid JSON only.
 INPUT:
 Original post: ${post}
 Goal: ${goal || "Make it stronger"}
+Detected improve mode: ${improveMode}
 Goal guidance: ${getGoalGuide(goal, language)}
+Mode guidance: ${getImproveModeGuide(improveMode, language)}
 Style: ${style}
 Style guide: ${getStyleGuide(style, language)}
 Platform: ${platform}
@@ -522,16 +636,82 @@ Return JSON only:
   "tips": []
 }
 
-Rules:
-- write only in ${getLanguageLabel(language)}
+Core diagnosis rules:
 - diagnose real strengths only
 - diagnose real weaknesses only
-- improvedPost = strongest balanced version for the user's goal
-- moreViralVersion = stronger attention and shareability
-- moreAuthenticVersion = more human and natural
+- keep what is already strong
+- fix the most important weak points first
+- do not flatten the post into bland AI content
+
+Mode rules:
+- fix_hook: improve the opening first; the first line should become significantly stronger
+- fix_cta: improve the ending and call to action first
+- more_viral: increase tension, punch, framing, and engagement potential
+- more_human: reduce robotic phrasing and make it sound like a real person
+- more_emotional: deepen feeling and emotional connection
+- more_clear: make the message cleaner, tighter, and easier to understand
+- more_professional: make it sound more authoritative, smart, and polished
+- more_curious: increase intrigue and open loops
+- more_sharp: make it more direct, tighter, and more cutting
+- balanced: improve the post holistically
+
+Output rules:
+- write only in ${getLanguageLabel(language)}
+- strengths must be short and real
+- weaknesses must be short and real
+- improvedPost must reflect the detected mode first
+- moreViralVersion must be the strongest higher-engagement version
+- moreAuthenticVersion must be the strongest lower-AI-feel version
 - tips must be short and practical
-- keep it less AI, more human
 - avoid cringe and generic phrasing
+- keep the result natural and platform-native
+
+Extra strict rules by mode:
+${
+  improveMode === "fix_hook"
+    ? "- improvedPost must open with a clearly stronger hook than the original."
+    : ""
+}
+${
+  improveMode === "fix_cta"
+    ? "- improvedPost must end with a clearly stronger CTA than the original."
+    : ""
+}
+${
+  improveMode === "more_human"
+    ? "- improvedPost must sound noticeably less robotic and more conversational."
+    : ""
+}
+${
+  improveMode === "more_clear"
+    ? "- improvedPost must be cleaner and easier to follow, with less noise."
+    : ""
+}
+${
+  improveMode === "more_emotional"
+    ? "- improvedPost must create noticeably stronger feeling and resonance."
+    : ""
+}
+${
+  improveMode === "more_viral"
+    ? "- improvedPost must be punchier and more shareable without becoming cheesy."
+    : ""
+}
+${
+  improveMode === "more_professional"
+    ? "- improvedPost must feel more polished, credible, and authoritative."
+    : ""
+}
+${
+  improveMode === "more_curious"
+    ? "- improvedPost must create stronger curiosity and a better reason to keep reading."
+    : ""
+}
+${
+  improveMode === "more_sharp"
+    ? "- improvedPost must feel tighter, sharper, and more decisive."
+    : ""
+}
 `;
 
     const parsed = await runJsonCompletion({
