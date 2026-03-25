@@ -268,10 +268,10 @@ function buildExportFilename(result) {
   return "postpulse-export.txt";
 }
 
-function getWeakestArea(data, t) {
-  if (!data) return null;
+function buildWeakAreas(data, t) {
+  if (!data) return [];
 
-  const options = [
+  return [
     {
       key: "hook",
       score: Number(data.hookScore ?? 0),
@@ -322,9 +322,23 @@ function getWeakestArea(data, t) {
       message: t.smartWeakClarity
     }
   ];
+}
 
+function getWeakestArea(data, t) {
+  const options = buildWeakAreas(data, t);
+  if (!options.length) return null;
   options.sort((a, b) => a.score - b.score);
   return options[0];
+}
+
+function getTopWeakAreas(data, t, count = 3) {
+  const options = buildWeakAreas(data, t);
+  if (!options.length) return [];
+  return [...options].sort((a, b) => a.score - b.score).slice(0, count);
+}
+
+function prevSafePost(value) {
+  return typeof value === "string" ? value : "";
 }
 
 export default function App() {
@@ -340,6 +354,7 @@ export default function App() {
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
+  const isHebrew = language === "he";
 
   const buildGoalPresets = useMemo(
     () => [
@@ -398,16 +413,21 @@ export default function App() {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
   }, [history]);
 
-  const copiedLabel = language === "he" ? "הועתק" : "Copied";
+  const copiedLabel = isHebrew ? "הועתק" : "Copied";
   const improveFromAnalyzeLabel =
-    language === "he" ? "העבר חזרה ל־Improve" : "Move Back to Improve";
+    isHebrew ? "העבר חזרה ל־Improve" : "Move Back to Improve";
   const analyzeFromImproveLabel =
-    language === "he" ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
+    isHebrew ? "נתח את הגרסה המשופרת" : "Analyze Improved Version";
 
   const weakestArea =
     result && result.type === "analyze"
       ? getWeakestArea(result.data, t)
       : null;
+
+  const topWeakAreas =
+    result && result.type === "analyze"
+      ? getTopWeakAreas(result.data, t, 3)
+      : [];
 
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
@@ -793,7 +813,7 @@ export default function App() {
     const smartGoal =
       goalValue ||
       t.goalPresetMoreHuman ||
-      (language === "he"
+      (isHebrew
         ? "שפר את הפוסט שיהיה חד יותר, אנושי וזורם"
         : "Make the post sharper, more human and engaging");
 
@@ -869,7 +889,7 @@ export default function App() {
       goalValue ||
       weakestArea?.goal ||
       t.goalPresetMoreHuman ||
-      (language === "he"
+      (isHebrew
         ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
         : "Improve the post based on analysis to increase performance");
 
@@ -886,18 +906,21 @@ export default function App() {
     setTab("improve");
   }
 
+  const recommendationTitlePrimary = isHebrew ? "המלצה ראשית" : "Primary Recommendation";
+  const recommendationTitleSecondary = isHebrew ? "המלצה שנייה" : "Secondary Recommendation";
+  const recommendationTitleThird = isHebrew ? "המלצה שלישית" : "Third Recommendation";
   const topicPlaceholder =
-    language === "he" ? "על מה הפוסט?" : "What is the post about?";
+    isHebrew ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
-    language === "he" ? "למי הפוסט מיועד?" : "Who is this for?";
+    isHebrew ? "למי הפוסט מיועד?" : "Who is this for?";
   const goalPlaceholder =
-    language === "he" ? "מה המטרה?" : "What is the goal?";
+    isHebrew ? "מה המטרה?" : "What is the goal?";
   const improvePostPlaceholder =
-    language === "he" ? "הדבק כאן את הפוסט לשיפור" : "Paste the post to improve";
+    isHebrew ? "הדבק כאן את הפוסט לשיפור" : "Paste the post to improve";
   const improveGoalPlaceholder =
-    language === "he" ? "מה לשפר?" : "What should improve?";
+    isHebrew ? "מה לשפר?" : "What should improve?";
   const analyzePostPlaceholder =
-    language === "he" ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
+    isHebrew ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
 
   return (
     <div className="app" dir={dir}>
@@ -1382,21 +1405,60 @@ export default function App() {
                   <ScoreCard label={t.ctaScore} value={result.data?.ctaScore || 0} />
                 </div>
 
-                {weakestArea ? (
+                {topWeakAreas.length ? (
                   <div className="smart-recommendation-box">
                     <div className="smart-recommendation-label">
                       {t.smartRecommendationTitle}
                     </div>
+
                     <div className="smart-recommendation-text">
-                      {weakestArea.message}
+                      <strong>{recommendationTitlePrimary}</strong>
+                      <div>{topWeakAreas[0]?.message || ""}</div>
                     </div>
+
                     <button
                       type="button"
                       className="secondary-btn"
-                      onClick={() => moveAnalyzeImprovedToImprove(weakestArea.goal)}
+                      onClick={() => moveAnalyzeImprovedToImprove(topWeakAreas[0]?.goal || "")}
                     >
-                      {weakestArea.actionLabel}
+                      {topWeakAreas[0]?.actionLabel || t.quickFixHook}
                     </button>
+
+                    {topWeakAreas[1] ? (
+                      <>
+                        <div className="smart-recommendation-text" style={{ marginTop: 12 }}>
+                          <strong>{recommendationTitleSecondary}</strong>
+                          <div>{topWeakAreas[1].message}</div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() => moveAnalyzeImprovedToImprove(topWeakAreas[1].goal)}
+                          style={{ marginTop: 10 }}
+                        >
+                          {topWeakAreas[1].actionLabel}
+                        </button>
+                      </>
+                    ) : null}
+
+                    {topWeakAreas[2] ? (
+                      <>
+                        <div className="smart-recommendation-text" style={{ marginTop: 12 }}>
+                          <strong>{recommendationTitleThird}</strong>
+                          <div>{topWeakAreas[2].message}</div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() => moveAnalyzeImprovedToImprove(topWeakAreas[2].goal)}
+                          style={{ marginTop: 10 }}
+                        >
+                          {topWeakAreas[2].actionLabel}
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -1587,8 +1649,4 @@ export default function App() {
       </div>
     </div>
   );
-}
-
-function prevSafePost(value) {
-  return typeof value === "string" ? value : "";
 }
