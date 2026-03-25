@@ -909,6 +909,7 @@ export default function App() {
   const recommendationTitlePrimary = t.smartRecommendationPrimary;
   const recommendationTitleSecondary = t.smartRecommendationSecondary;
   const recommendationTitleThird = t.smartRecommendationThird;
+
   const topicPlaceholder =
     isHebrew ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
