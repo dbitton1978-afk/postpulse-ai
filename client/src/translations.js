@@ -110,7 +110,11 @@ export const translations = {
     quickMakeCurious: "Make More Curious",
     quickMakeClear: "Make Clearer",
 
-    smartRecommendationTitle: "Top Recommendation",
+    smartRecommendationTitle: "Top Recommendations",
+    smartRecommendationPrimary: "Primary Recommendation",
+    smartRecommendationSecondary: "Secondary Recommendation",
+    smartRecommendationThird: "Third Recommendation",
+
     smartWeakHook:
       "The weakest area right now is the hook. Strengthening the opening should improve stopping power first.",
     smartWeakCta:
@@ -126,15 +130,15 @@ export const translations = {
     smartWeakClarity:
       "The weakest area right now is clarity. Tightening the message should make the post stronger.",
 
-    errorTopic: "Please enter a topic",
-    errorPost: "Please enter a post"
+    errorTopic: "Please enter a topic first",
+    errorPost: "Please enter a post first"
   },
 
   he: {
     appName: "PostPulse AI",
-    subtitle: "צור, שפר ונתח פוסטים לרשתות החברתיות",
+    subtitle: "צור, שפר ונתח פוסטים לרשתות חברתיות",
 
-    build: "יצירת פוסט",
+    build: "בניית פוסט",
     improve: "שיפור פוסט",
     analyze: "ניתוח פוסט",
 
@@ -154,7 +158,7 @@ export const translations = {
     title: "כותרת",
     hook: "פתיחה",
     body: "גוף הפוסט",
-    cta: "קריאה לפעולה",
+    cta: "CTA",
     hashtags: "האשטגים",
     shortVersion: "גרסה קצרה",
     alternativeVersion: "גרסה חלופית",
@@ -163,20 +167,20 @@ export const translations = {
     weaknesses: "חולשות",
     tips: "טיפים",
     improvedVersion: "גרסה משופרת",
-    moreViralVersion: "גרסה ויראלית יותר",
-    moreAuthenticVersion: "גרסה אותנטית יותר",
+    moreViralVersion: "גרסה יותר ויראלית",
+    moreAuthenticVersion: "גרסה יותר אותנטית",
 
     summary: "סיכום",
-    whatWorks: "מה עובד טוב",
-    whatHurts: "מה פוגע בפוסט",
-    improvements: "שיפורים מומלצים",
+    whatWorks: "מה עובד",
+    whatHurts: "מה פוגע",
+    improvements: "המלצות לשיפור",
 
     viralScore: "ציון ויראליות",
     authenticityScore: "ציון אותנטיות",
     clarityScore: "ציון בהירות",
     emotionalScore: "ציון רגש",
     curiosityScore: "ציון סקרנות",
-    hookScore: "ציון פתיחה",
+    hookScore: "ציון Hook",
     ctaScore: "ציון CTA",
 
     raiseViralScore: "איך להעלות ויראליות",
@@ -241,7 +245,11 @@ export const translations = {
     quickMakeCurious: "עשה יותר מסקרן",
     quickMakeClear: "עשה יותר ברור",
 
-    smartRecommendationTitle: "ההמלצה הראשית",
+    smartRecommendationTitle: "המלצות מובילות",
+    smartRecommendationPrimary: "המלצה ראשית",
+    smartRecommendationSecondary: "המלצה שנייה",
+    smartRecommendationThird: "המלצה שלישית",
+
     smartWeakHook:
       "החולשה המרכזית כרגע היא הפתיחה. חיזוק ה-Hook ייתן את השיפור הראשוני הכי חשוב.",
     smartWeakCta:
@@ -253,11 +261,11 @@ export const translations = {
     smartWeakEmotional:
       "החולשה המרכזית כרגע היא הרגש. צריך יותר תחושה וחיבור רגשי.",
     smartWeakCuriosity:
-      "החולשה המרכזית כרגע היא הסקרנות. כדאי ליצור יותר עניין ולולאה פתוחה.",
+      "החולשה המרכזית כרגע היא הסקרנות. צריך לייצר יותר עניין ולולאות פתוחות.",
     smartWeakClarity:
-      "החולשה המרכזית כרגע היא הבהירות. חידוד המסר יחזק את הפוסט.",
+      "החולשה המרכזית כרגע היא הבהירות. חידוד המסר יהפוך את הפוסט לחזק יותר.",
 
-    errorTopic: "יש להזין נושא",
-    errorPost: "יש להזין פוסט"
+    errorTopic: "יש להזין נושא קודם",
+    errorPost: "יש להזין פוסט קודם"
   }
 };
