@@ -906,9 +906,9 @@ export default function App() {
     setTab("improve");
   }
 
-  const recommendationTitlePrimary = isHebrew ? "המלצה ראשית" : "Primary Recommendation";
-  const recommendationTitleSecondary = isHebrew ? "המלצה שנייה" : "Secondary Recommendation";
-  const recommendationTitleThird = isHebrew ? "המלצה שלישית" : "Third Recommendation";
+  const recommendationTitlePrimary = t.smartRecommendationPrimary;
+  const recommendationTitleSecondary = t.smartRecommendationSecondary;
+  const recommendationTitleThird = t.smartRecommendationThird;
   const topicPlaceholder =
     isHebrew ? "על מה הפוסט?" : "What is the post about?";
   const audiencePlaceholder =
