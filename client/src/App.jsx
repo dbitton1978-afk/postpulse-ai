@@ -90,6 +90,7 @@ function buildHistoryPreview(item, language) {
   if (item.type === "improve") {
     return (
       item.data.improvedPost ||
+      item.data.moreAuthenticVersion ||
       item.data.moreViralVersion ||
       (isHebrew ? "פוסט ששופר" : "Improved post")
     );
@@ -327,8 +328,7 @@ function buildWeakAreas(data, t) {
 function getWeakestArea(data, t) {
   const options = buildWeakAreas(data, t);
   if (!options.length) return null;
-  options.sort((a, b) => a.score - b.score);
-  return options[0];
+  return [...options].sort((a, b) => a.score - b.score)[0];
 }
 
 function getTopWeakAreas(data, t, count = 3) {
@@ -339,6 +339,20 @@ function getTopWeakAreas(data, t, count = 3) {
 
 function prevSafePost(value) {
   return typeof value === "string" ? value : "";
+}
+
+function getPrimaryImproveText(data) {
+  if (!data) return "";
+  return (
+    safeText(data.improvedPost) ||
+    safeText(data.moreAuthenticVersion) ||
+    safeText(data.moreViralVersion)
+  );
+}
+
+function getPrimaryAnalyzeText(data) {
+  if (!data) return "";
+  return safeText(data.improvedVersion);
 }
 
 export default function App() {
@@ -578,11 +592,7 @@ export default function App() {
     }
 
     if (item.type === "improve") {
-      const improvedText =
-        item.data?.improvedPost ||
-        item.data?.moreAuthenticVersion ||
-        item.data?.moreViralVersion ||
-        "";
+      const improvedText = getPrimaryImproveText(item.data);
 
       setCurrentPost(improvedText);
 
@@ -601,7 +611,7 @@ export default function App() {
     }
 
     if (item.type === "analyze") {
-      const analyzedText = item.data?.improvedVersion || prevSafePost(currentPost);
+      const analyzedText = getPrimaryAnalyzeText(item.data) || prevSafePost(currentPost);
 
       setAnalysisResult(item.data || null);
       setCurrentPost(analyzedText || currentPost);
@@ -609,6 +619,13 @@ export default function App() {
       setAnalyzeForm((prev) => ({
         ...prev,
         post: analyzedText || prev.post
+      }));
+
+      setImproveForm((prev) => ({
+        ...prev,
+        post: analyzedText || prev.post,
+        goal: weakestArea?.goal || prev.goal || t.goalPresetMoreHuman,
+        platform: analyzeForm.platform || prev.platform
       }));
 
       setTab("analyze");
@@ -696,10 +713,7 @@ export default function App() {
         data: response && response.data ? response.data : {}
       };
 
-      const improvedPost =
-        safeText(nextResult.data?.improvedPost) ||
-        safeText(nextResult.data?.moreAuthenticVersion) ||
-        safeText(nextResult.data?.moreViralVersion);
+      const improvedPost = getPrimaryImproveText(nextResult.data);
 
       setCurrentPost(improvedPost);
 
@@ -779,7 +793,7 @@ export default function App() {
   const improveCopyText =
     result && result.type === "improve"
       ? [
-          result.data?.improvedPost || "",
+          getPrimaryImproveText(result.data),
           result.data?.moreViralVersion || "",
           result.data?.moreAuthenticVersion || ""
         ]
@@ -788,7 +802,7 @@ export default function App() {
       : "";
 
   const analyzeCopyText =
-    result && result.type === "analyze" ? result.data?.improvedVersion || "" : "";
+    result && result.type === "analyze" ? getPrimaryAnalyzeText(result.data) : "";
 
   function getBuildResultFullPost() {
     if (!result || result.type !== "build" || !result.data) {
@@ -846,20 +860,9 @@ export default function App() {
     setTab("analyze");
   }
 
-  function getImprovePrimaryText() {
-    if (!result || result.type !== "improve" || !result.data) {
-      return "";
-    }
-
-    return (
-      safeText(result.data.improvedPost) ||
-      safeText(result.data.moreAuthenticVersion) ||
-      safeText(result.data.moreViralVersion)
-    );
-  }
-
   function moveImproveResultToAnalyze() {
-    const improvedPost = getImprovePrimaryText();
+    const improvedPost =
+      result && result.type === "improve" ? getPrimaryImproveText(result.data) : "";
 
     setCurrentPost(improvedPost);
 
@@ -873,21 +876,13 @@ export default function App() {
     setTab("analyze");
   }
 
-  function getAnalyzeImprovedText() {
-    if (!result || result.type !== "analyze" || !result.data) {
-      return "";
-    }
-
-    return safeText(result.data.improvedVersion);
-  }
-
   function moveAnalyzeImprovedToImprove(goalValue = "") {
     if (!result || result.type !== "analyze") return;
 
-    const improvedVersion = result.data?.improvedVersion || currentPost || "";
+    const improvedVersion = getPrimaryAnalyzeText(result.data) || currentPost || "";
     const smartGoal =
       goalValue ||
-      weakestArea?.goal ||
+      getWeakestArea(result.data, t)?.goal ||
       t.goalPresetMoreHuman ||
       (isHebrew
         ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
@@ -1336,9 +1331,9 @@ export default function App() {
                 <Section
                   title={t.improvedVersion}
                   copyLabel={t.copy}
-                  onCopy={() => copyText(result.data?.improvedPost || "")}
+                  onCopy={() => copyText(getPrimaryImproveText(result.data))}
                 >
-                  <div className="text-card">{result.data?.improvedPost || ""}</div>
+                  <div className="text-card">{getPrimaryImproveText(result.data)}</div>
                 </Section>
 
                 <Section
@@ -1406,7 +1401,7 @@ export default function App() {
                   <ScoreCard label={t.ctaScore} value={result.data?.ctaScore || 0} />
                 </div>
 
-                {topWeakAreas.length ? (
+                {weakestArea ? (
                   <div className="smart-recommendation-box">
                     <div className="smart-recommendation-label">
                       {t.smartRecommendationTitle}
@@ -1414,15 +1409,15 @@ export default function App() {
 
                     <div className="smart-recommendation-text">
                       <strong>{recommendationTitlePrimary}</strong>
-                      <div>{topWeakAreas[0]?.message || ""}</div>
+                      <div>{weakestArea.message}</div>
                     </div>
 
                     <button
                       type="button"
                       className="secondary-btn"
-                      onClick={() => moveAnalyzeImprovedToImprove(topWeakAreas[0]?.goal || "")}
+                      onClick={() => moveAnalyzeImprovedToImprove(weakestArea.goal)}
                     >
-                      {topWeakAreas[0]?.actionLabel || t.quickFixHook}
+                      {weakestArea.actionLabel}
                     </button>
 
                     {topWeakAreas[1] ? (
