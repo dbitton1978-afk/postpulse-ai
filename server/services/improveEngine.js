@@ -17,10 +17,24 @@ function normalizeString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function normalizeLanguage(language) {
+  return language === "he" ? "he" : "en";
+}
+
+function getLanguageLabel(language) {
+  return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
+}
+
+function getLanguageInstruction(language) {
+  return normalizeLanguage(language) === "he"
+    ? "Write EVERYTHING in natural Hebrew only. Do not use English at all unless the user explicitly provided an English brand name or platform name. All fields in the JSON must be in Hebrew."
+    : "Write EVERYTHING in natural English only. All fields in the JSON must be in English.";
+}
+
 function detectGoalBehavior(goal) {
   const g = String(goal || "").toLowerCase();
 
-  if (g.includes("hook")) {
+  if (g.includes("hook") || g.includes("פתיחה") || g.includes("הוק")) {
     return {
       mode: "hook",
       instruction:
@@ -28,7 +42,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("cta")) {
+  if (g.includes("cta") || g.includes("פעולה") || g.includes("הנעה")) {
     return {
       mode: "cta",
       instruction:
@@ -36,7 +50,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("viral") || g.includes("engagement")) {
+  if (g.includes("viral") || g.includes("engagement") || g.includes("ויראל") || g.includes("מעורבות")) {
     return {
       mode: "viral",
       instruction:
@@ -44,7 +58,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("human") || g.includes("authentic")) {
+  if (g.includes("human") || g.includes("authentic") || g.includes("אנושי") || g.includes("אותנט")) {
     return {
       mode: "human",
       instruction:
@@ -52,7 +66,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("emotional")) {
+  if (g.includes("emotional") || g.includes("רגש")) {
     return {
       mode: "emotional",
       instruction:
@@ -60,7 +74,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("clear")) {
+  if (g.includes("clear") || g.includes("ברור") || g.includes("בהיר")) {
     return {
       mode: "clarity",
       instruction:
@@ -68,7 +82,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("professional")) {
+  if (g.includes("professional") || g.includes("מקצוע")) {
     return {
       mode: "professional",
       instruction:
@@ -76,7 +90,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("curious")) {
+  if (g.includes("curious") || g.includes("מסקרן") || g.includes("סקרנות")) {
     return {
       mode: "curiosity",
       instruction:
@@ -84,7 +98,7 @@ function detectGoalBehavior(goal) {
     };
   }
 
-  if (g.includes("sharp")) {
+  if (g.includes("sharp") || g.includes("חד")) {
     return {
       mode: "sharpness",
       instruction:
@@ -143,6 +157,7 @@ export async function improveEngine(input) {
     language = "en"
   } = input;
 
+  const safeLanguage = normalizeLanguage(language);
   const goalBehavior = detectGoalBehavior(goal);
 
   const prompt = `
@@ -175,7 +190,10 @@ PLATFORM:
 ${platform}
 
 LANGUAGE:
-${language}
+${getLanguageLabel(safeLanguage)}
+
+CRITICAL LANGUAGE RULE:
+${getLanguageInstruction(safeLanguage)}
 
 You must produce THREE CLEARLY DIFFERENT outputs:
 
