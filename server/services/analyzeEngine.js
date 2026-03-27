@@ -20,6 +20,20 @@ function normalizeString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function normalizeLanguage(language) {
+  return language === "he" ? "he" : "en";
+}
+
+function getLanguageLabel(language) {
+  return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
+}
+
+function getLanguageInstruction(language) {
+  return normalizeLanguage(language) === "he"
+    ? "Write EVERYTHING in natural Hebrew only. Do not use English at all unless the user explicitly provided an English brand name or platform name. All fields in the JSON must be in Hebrew."
+    : "Write EVERYTHING in natural English only. All fields in the JSON must be in English.";
+}
+
 function normalizeAnalyzeResult(data, originalPost) {
   return {
     viralScore: normalizeScore(data?.viralScore, 55),
@@ -29,24 +43,21 @@ function normalizeAnalyzeResult(data, originalPost) {
     curiosityScore: normalizeScore(data?.curiosityScore, 50),
     hookScore: normalizeScore(data?.hookScore, 45),
     ctaScore: normalizeScore(data?.ctaScore, 45),
-
     summary: normalizeString(data?.summary),
-
     whatWorks: normalizeArray(data?.whatWorks, 6),
     whatHurts: normalizeArray(data?.whatHurts, 6),
     improvements: normalizeArray(data?.improvements, 6),
-
     raiseViralScore: normalizeArray(data?.raiseViralScore, 5),
     raiseAuthenticityScore: normalizeArray(data?.raiseAuthenticityScore, 5),
     raiseEmotionalScore: normalizeArray(data?.raiseEmotionalScore, 5),
     raiseCuriosityScore: normalizeArray(data?.raiseCuriosityScore, 5),
-
     improvedVersion: normalizeString(data?.improvedVersion, originalPost)
   };
 }
 
 export async function analyzeEngine(input) {
   const { post, platform, language = "en" } = input;
+  const safeLanguage = normalizeLanguage(language);
 
   const prompt = `
 You are a brutally honest senior content strategist.
@@ -64,7 +75,10 @@ PLATFORM:
 ${platform}
 
 LANGUAGE:
-${language}
+${getLanguageLabel(safeLanguage)}
+
+CRITICAL LANGUAGE RULE:
+${getLanguageInstruction(safeLanguage)}
 
 SCORING RULES:
 - Average content = 50-65
