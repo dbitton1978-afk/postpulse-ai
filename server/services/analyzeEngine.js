@@ -13,10 +13,7 @@ function normalizeScore(value, fallback = 60) {
 
 function normalizeArray(value, limit = 5) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => String(item || "").trim())
-    .filter(Boolean)
-    .slice(0, limit);
+  return value.map((i) => String(i || "").trim()).filter(Boolean).slice(0, limit);
 }
 
 function normalizeString(value, fallback = "") {
@@ -25,21 +22,25 @@ function normalizeString(value, fallback = "") {
 
 function normalizeAnalyzeResult(data, originalPost) {
   return {
-    viralScore: normalizeScore(data?.viralScore, 58),
-    authenticityScore: normalizeScore(data?.authenticityScore, 64),
-    clarityScore: normalizeScore(data?.clarityScore, 66),
-    emotionalScore: normalizeScore(data?.emotionalScore, 55),
-    curiosityScore: normalizeScore(data?.curiosityScore, 57),
-    hookScore: normalizeScore(data?.hookScore, 54),
-    ctaScore: normalizeScore(data?.ctaScore, 52),
+    viralScore: normalizeScore(data?.viralScore, 55),
+    authenticityScore: normalizeScore(data?.authenticityScore, 60),
+    clarityScore: normalizeScore(data?.clarityScore, 65),
+    emotionalScore: normalizeScore(data?.emotionalScore, 50),
+    curiosityScore: normalizeScore(data?.curiosityScore, 50),
+    hookScore: normalizeScore(data?.hookScore, 45),
+    ctaScore: normalizeScore(data?.ctaScore, 45),
+
     summary: normalizeString(data?.summary),
+
     whatWorks: normalizeArray(data?.whatWorks, 6),
     whatHurts: normalizeArray(data?.whatHurts, 6),
     improvements: normalizeArray(data?.improvements, 6),
+
     raiseViralScore: normalizeArray(data?.raiseViralScore, 5),
     raiseAuthenticityScore: normalizeArray(data?.raiseAuthenticityScore, 5),
     raiseEmotionalScore: normalizeArray(data?.raiseEmotionalScore, 5),
     raiseCuriosityScore: normalizeArray(data?.raiseCuriosityScore, 5),
+
     improvedVersion: normalizeString(data?.improvedVersion, originalPost)
   };
 }
@@ -48,14 +49,13 @@ export async function analyzeEngine(input) {
   const { post, platform, language = "en" } = input;
 
   const prompt = `
-You are a senior content strategist and elite social media critic.
+You are a brutally honest senior content strategist.
 
 Your job:
-- analyze posts honestly
-- score like a real expert, not politely
-- identify the biggest weaknesses first
-- give practical next-step recommendations
-- produce a stronger improved version
+- DO NOT be polite
+- DO NOT inflate scores
+- Identify real weaknesses
+- Think like a viral content expert
 
 POST:
 ${post}
@@ -66,35 +66,34 @@ ${platform}
 LANGUAGE:
 ${language}
 
-You must score these dimensions:
-- viralScore
-- authenticityScore
-- clarityScore
-- emotionalScore
-- curiosityScore
-- hookScore
-- ctaScore
+SCORING RULES:
+- Average content = 50-65
+- Good content = 65-80
+- Excellent content = 80+
+- Weak hook = low hookScore (below 50)
+- Weak CTA = low ctaScore
+- AI tone = lower authenticityScore
+- Boring = low curiosityScore
+- No emotional pull = low emotionalScore
 
-Scoring rules:
-- scores must be integers 0-100
-- average content should not get premium scores
-- weak hook = low hookScore
-- robotic tone = lower authenticityScore
-- vague message = lower clarityScore
-- low emotional pull = lower emotionalScore
-- low intrigue = lower curiosityScore
-- weak ending / no action = lower ctaScore
-- viralScore should reflect overall shareability and stopping power
+ANALYSIS RULES:
+- Be direct and specific
+- Point to EXACT weaknesses
+- Avoid generic phrases
+- Do not say "this is good" without reason
 
-Analysis rules:
-- be sharp, practical, and specific
-- do not use generic praise
-- point to the most important weaknesses first
-- recommendations must be actionable
-- improvedVersion must be clearly better than the original
-- improvedVersion must be more human, sharper, and more platform-native
+IMPROVEMENT RULES:
+- Improvements must be actionable
+- Not theory — actual changes
 
-Return ONLY valid JSON in this exact shape:
+IMPROVED VERSION:
+- Must be significantly better
+- More human
+- Stronger hook
+- Better flow
+- Better ending
+
+Return ONLY JSON:
 {
   "viralScore": 0,
   "authenticityScore": 0,
