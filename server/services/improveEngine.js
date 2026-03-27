@@ -7,40 +7,56 @@ const openai = new OpenAI({
 
 function normalizeArray(value, limit = 6) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => String(item || "").trim())
-    .filter(Boolean)
-    .slice(0, limit);
+  return value.map((i) => String(i || "").trim()).filter(Boolean).slice(0, limit);
 }
 
 function normalizeString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function detectGoalBehavior(goal) {
+  const g = String(goal || "").toLowerCase();
+
+  if (g.includes("hook")) {
+    return "Focus heavily on rewriting the opening to be sharp, curiosity-driven and scroll-stopping.";
+  }
+
+  if (g.includes("cta")) {
+    return "Focus heavily on improving the ending and call-to-action to drive response.";
+  }
+
+  if (g.includes("viral")) {
+    return "Increase punch, emotional triggers, and shareability without sounding fake.";
+  }
+
+  if (g.includes("human") || g.includes("authentic")) {
+    return "Reduce AI tone. Make it sound natural, personal, and human.";
+  }
+
+  if (g.includes("emotional")) {
+    return "Increase emotional depth and relatability.";
+  }
+
+  if (g.includes("clear")) {
+    return "Simplify language and improve clarity.";
+  }
+
+  return "Improve overall quality, flow, clarity and engagement.";
+}
+
 function normalizeImproveResult(data, originalPost) {
   const improvedPost =
     normalizeString(data?.improvedPost) ||
     normalizeString(data?.moreAuthenticVersion) ||
-    normalizeString(data?.moreViralVersion) ||
-    originalPost;
-
-  const moreViralVersion =
-    normalizeString(data?.moreViralVersion) ||
-    improvedPost ||
-    originalPost;
-
-  const moreAuthenticVersion =
-    normalizeString(data?.moreAuthenticVersion) ||
-    improvedPost ||
     originalPost;
 
   return {
-    strengths: normalizeArray(data?.strengths, 6),
-    weaknesses: normalizeArray(data?.weaknesses, 6),
+    strengths: normalizeArray(data?.strengths),
+    weaknesses: normalizeArray(data?.weaknesses),
     improvedPost,
-    moreViralVersion,
-    moreAuthenticVersion,
-    tips: normalizeArray(data?.tips, 6)
+    moreViralVersion: normalizeString(data?.moreViralVersion, improvedPost),
+    moreAuthenticVersion: normalizeString(data?.moreAuthenticVersion, improvedPost),
+    tips: normalizeArray(data?.tips)
   };
 }
 
@@ -53,22 +69,25 @@ export async function improveEngine(input) {
     language = "en"
   } = input;
 
+  const goalBehavior = detectGoalBehavior(goal);
+
   const prompt = `
-You are an elite content editor and rewriting strategist.
+You are an elite content editor.
 
-Your task is to improve a social media post in a way that feels:
-- more human
-- more natural
-- sharper
-- more readable
-- less AI-like
-- more platform-native
+Your job:
+- make content feel human
+- remove AI tone
+- sharpen wording
+- improve engagement
 
-INPUT POST:
+POST:
 ${post}
 
-IMPROVEMENT GOAL:
+GOAL:
 ${goal}
+
+SPECIAL INSTRUCTION:
+${goalBehavior}
 
 STYLE:
 ${style}
@@ -79,49 +98,19 @@ ${platform}
 LANGUAGE:
 ${language}
 
-You must produce THREE clearly different outputs:
+You must return 3 DIFFERENT versions:
 
-1. improvedPost
-- the best balanced version
-- stronger overall
-- more human
-- clearer
-- better rhythm
-- better wording
-- keep the original intent
-
-2. moreViralVersion
-- more punchy
-- more scroll-stopping
-- more engaging
-- stronger tension / curiosity / shareability
-- but not cringe, not exaggerated
-
-3. moreAuthenticVersion
-- more natural
-- more personal
-- more believable
-- lower AI feel
-- warmer / more human tone
-
-Also return:
-- strengths
-- weaknesses
-- practical tips
+1. improvedPost (balanced best version)
+2. moreViralVersion (high engagement)
+3. moreAuthenticVersion (most human)
 
 Rules:
-- do not output generic filler
-- do not sound robotic
-- do not repeat the same version 3 times
-- each version must feel meaningfully different
-- keep the post aligned with the platform
-- if the goal is hook-related, improve the opening first
-- if the goal is CTA-related, improve the ending first
-- if the goal is clarity-related, simplify and sharpen
-- if the goal is emotional, add emotional depth naturally
-- if the goal is viral, increase punch and engagement carefully
+- no generic rewriting
+- no repeating structure
+- must feel written by a real person
+- each version must be meaningfully different
 
-Return ONLY valid JSON in this exact format:
+Return JSON:
 {
   "strengths": [],
   "weaknesses": [],
@@ -135,7 +124,7 @@ Return ONLY valid JSON in this exact format:
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.72
+    temperature: 0.75
   });
 
   const text = response.choices?.[0]?.message?.content || "{}";
