@@ -200,7 +200,7 @@ function buildExportContent(result, t, language) {
       `${t.weaknesses}:`,
       joinList(result.data.weaknesses),
       `${t.improvedVersion}:`,
-      result.data.improvedPost || "",
+      getPrimaryImproveText(result.data),
       `${t.moreViralVersion}:`,
       result.data.moreViralVersion || "",
       `${t.moreAuthenticVersion}:`,
@@ -355,6 +355,18 @@ function getPrimaryAnalyzeText(data) {
   return safeText(data.improvedVersion);
 }
 
+function buildPostFromBuildResult(data) {
+  if (!data) return "";
+  return [
+    data.title || "",
+    data.hook || "",
+    data.body || "",
+    data.cta || ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
@@ -436,12 +448,16 @@ export default function App() {
   const weakestArea =
     result && result.type === "analyze"
       ? getWeakestArea(result.data, t)
-      : null;
+      : analysisResult
+        ? getWeakestArea(analysisResult, t)
+        : null;
 
   const topWeakAreas =
     result && result.type === "analyze"
       ? getTopWeakAreas(result.data, t, 3)
-      : [];
+      : analysisResult
+        ? getTopWeakAreas(analysisResult, t, 3)
+        : [];
 
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
@@ -563,21 +579,14 @@ export default function App() {
     });
 
     if (item.type === "build") {
-      const loadedPost = [
-        item.data?.title || "",
-        item.data?.hook || "",
-        item.data?.body || "",
-        item.data?.cta || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+      const loadedPost = buildPostFromBuildResult(item.data);
 
       setCurrentPost(loadedPost);
 
       setImproveForm((prev) => ({
         ...prev,
         post: loadedPost || prev.post,
-        goal: prev.goal || t.goalPresetMoreHuman,
+        goal: t.goalPresetMoreHuman,
         style: buildForm.style,
         platform: buildForm.platform
       }));
@@ -611,9 +620,11 @@ export default function App() {
     }
 
     if (item.type === "analyze") {
-      const analyzedText = getPrimaryAnalyzeText(item.data) || prevSafePost(currentPost);
+      const loadedAnalysis = item.data || null;
+      const analyzedText = getPrimaryAnalyzeText(loadedAnalysis) || prevSafePost(currentPost);
+      const loadedWeakestArea = getWeakestArea(loadedAnalysis, t);
 
-      setAnalysisResult(item.data || null);
+      setAnalysisResult(loadedAnalysis);
       setCurrentPost(analyzedText || currentPost);
 
       setAnalyzeForm((prev) => ({
@@ -624,7 +635,7 @@ export default function App() {
       setImproveForm((prev) => ({
         ...prev,
         post: analyzedText || prev.post,
-        goal: weakestArea?.goal || prev.goal || t.goalPresetMoreHuman,
+        goal: loadedWeakestArea?.goal || prev.goal || t.goalPresetMoreHuman,
         platform: analyzeForm.platform || prev.platform
       }));
 
@@ -653,14 +664,7 @@ export default function App() {
         data: response && response.data ? response.data : {}
       };
 
-      const generatedPost = [
-        nextResult.data?.title || "",
-        nextResult.data?.hook || "",
-        nextResult.data?.body || "",
-        nextResult.data?.cta || ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+      const generatedPost = buildPostFromBuildResult(nextResult.data);
 
       setCurrentPost(generatedPost);
 
@@ -758,7 +762,14 @@ export default function App() {
         data: response && response.data ? response.data : {}
       };
 
+      const analyzedWeakestArea = getWeakestArea(nextResult.data, t);
+
       setAnalysisResult(nextResult.data);
+
+      setImproveForm((prev) => ({
+        ...prev,
+        goal: analyzedWeakestArea?.goal || prev.goal || t.goalPresetMoreHuman
+      }));
 
       setResult(nextResult);
       addToHistory({
@@ -804,25 +815,10 @@ export default function App() {
   const analyzeCopyText =
     result && result.type === "analyze" ? getPrimaryAnalyzeText(result.data) : "";
 
-  function getBuildResultFullPost() {
-    if (!result || result.type !== "build" || !result.data) {
-      return "";
-    }
-
-    return [
-      result.data.title || "",
-      result.data.hook || "",
-      result.data.body || "",
-      result.data.cta || ""
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
   function moveBuildResultToImprove(goalValue = "") {
     if (!result || result.type !== "build") return;
 
-    const fullPost = getBuildResultFullPost();
+    const fullPost = buildPostFromBuildResult(result.data);
 
     const smartGoal =
       goalValue ||
@@ -846,7 +842,9 @@ export default function App() {
   }
 
   function moveBuildResultToAnalyze() {
-    const fullPost = getBuildResultFullPost();
+    if (!result || result.type !== "build") return;
+
+    const fullPost = buildPostFromBuildResult(result.data);
 
     setCurrentPost(fullPost);
 
@@ -880,9 +878,11 @@ export default function App() {
     if (!result || result.type !== "analyze") return;
 
     const improvedVersion = getPrimaryAnalyzeText(result.data) || currentPost || "";
+    const strongestWeakArea = getWeakestArea(result.data, t);
+
     const smartGoal =
       goalValue ||
-      getWeakestArea(result.data, t)?.goal ||
+      strongestWeakArea?.goal ||
       t.goalPresetMoreHuman ||
       (isHebrew
         ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
