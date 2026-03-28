@@ -1,91 +1,85 @@
-import OpenAI from "openai";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+import { generateEngine } from "./services/generateEngine.js";
+import { improveEngine } from "./services/improveEngine.js";
+import { analyzeEngine } from "./services/analyzeEngine.js";
+import authRoutes from "./routes/authRoutes.js";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(
+  cors({
+    origin: true,
+    credentials: false
+  })
+);
+
+app.use(express.json({ limit: "10mb" }));
+
+app.get("/", (req, res) => {
+  return res.json({
+    success: true,
+    service: "PostPulse API",
+    status: "running"
+  });
 });
 
-function safeJsonParse(value, fallback = {}) {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-
-function normalizeArray(value, limit = 8) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => String(item || "").trim().replace(/^#/, ""))
-    .filter(Boolean)
-    .slice(0, limit);
-}
-
-function normalizeString(value, fallback = "") {
-  return typeof value === "string" ? value.trim() : fallback;
-}
-
-function normalizeLanguage(language) {
-  return language === "he" ? "he" : "en";
-}
-
-function getLanguageLabel(language) {
-  return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
-}
-
-export async function generateEngine(input) {
-  const {
-    topic = "",
-    targetAudience = "",
-    goal = "",
-    style = "professional",
-    platform = "instagram",
-    language = "en"
-  } = input || {};
-
-  const safeLanguage = normalizeLanguage(language);
-
-  const prompt = `
-You are an elite social media strategist and writer.
-
-Write ONLY in ${getLanguageLabel(safeLanguage)}.
-
-Create a strong social media post.
-
-INPUT:
-Topic: ${topic}
-Target Audience: ${targetAudience}
-Goal: ${goal}
-Style: ${style}
-Platform: ${platform}
-
-Return ONLY valid JSON:
-{
-  "title": "",
-  "hook": "",
-  "body": "",
-  "cta": "",
-  "hashtags": [],
-  "shortVersion": "",
-  "alternativeVersion": ""
-}
-`;
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.8
+app.get("/health", (req, res) => {
+  return res.json({
+    success: true,
+    status: "ok"
   });
+});
 
-  const raw = response.choices?.[0]?.message?.content || "{}";
-  const parsed = safeJsonParse(raw, {});
+app.use("/api/auth", authRoutes);
 
-  return {
-    title: normalizeString(parsed.title, topic ? `Post about ${topic}` : ""),
-    hook: normalizeString(parsed.hook),
-    body: normalizeString(parsed.body),
-    cta: normalizeString(parsed.cta),
-    hashtags: normalizeArray(parsed.hashtags, 8),
-    shortVersion: normalizeString(parsed.shortVersion),
-    alternativeVersion: normalizeString(parsed.alternativeVersion)
-  };
-}
+app.post("/generate-post", async (req, res) => {
+  try {
+    const data = await generateEngine(req.body || {});
+    return res.json({ data });
+  } catch (error) {
+    console.error("generate-post error:", error);
+    return res.status(500).json({
+      error: "Generate failed"
+    });
+  }
+});
+
+app.post("/improve-post", async (req, res) => {
+  try {
+    const data = await improveEngine(req.body || {});
+    return res.json({ data });
+  } catch (error) {
+    console.error("improve-post error:", error);
+    return res.status(500).json({
+      error: "Improve failed"
+    });
+  }
+});
+
+app.post("/analyze-post", async (req, res) => {
+  try {
+    const data = await analyzeEngine(req.body || {});
+    return res.json({ data });
+  } catch (error) {
+    console.error("analyze-post error:", error);
+    return res.status(500).json({
+      error: "Analyze failed"
+    });
+  }
+});
+
+app.use((req, res) => {
+  return res.status(404).json({
+    error: "Route not found"
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`PostPulse server running on port ${PORT}`);
+});
