@@ -775,6 +775,95 @@ export default function App() {
     }
   }
 
+  async function improveFromAnalyze(analyzeData, forcedGoal = "") {
+    const safeAnalyzeData = analyzeData || activeAnalyzeData || null;
+
+    const nextPost =
+      getPrimaryAnalyzeText(safeAnalyzeData) ||
+      analyzeForm.post ||
+      currentPost ||
+      "";
+
+    if (!nextPost.trim()) {
+      setError(t.errorPost);
+      return;
+    }
+
+    const weakest = getWeakestArea(safeAnalyzeData, t);
+
+    const nextGoal =
+      forcedGoal ||
+      weakest?.goal ||
+      t.goalPresetMoreHuman ||
+      (isHebrew
+        ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
+        : "Improve the post based on analysis to increase performance");
+
+    const nextPlatform =
+      analyzeForm.platform || improveForm.platform || "instagram";
+    const nextStyle = improveForm.style || "professional";
+
+    setTab("improve");
+    setError("");
+    setCurrentPost(nextPost);
+
+    setImproveForm((prev) => ({
+      ...prev,
+      post: nextPost,
+      goal: nextGoal,
+      style: nextStyle,
+      platform: nextPlatform
+    }));
+
+    startRequest();
+
+    try {
+      const response = await improvePost({
+        post: nextPost,
+        goal: nextGoal,
+        style: nextStyle,
+        platform: nextPlatform,
+        language
+      });
+
+      const nextResult = {
+        type: "improve",
+        data: response && response.data ? response.data : {}
+      };
+
+      const improvedPost = getPrimaryImproveText(nextResult.data);
+
+      setCurrentPost(improvedPost);
+      setAnalysisResult(null);
+
+      setImproveForm((prev) => ({
+        ...prev,
+        post: improvedPost,
+        goal: nextGoal,
+        style: nextStyle,
+        platform: nextPlatform
+      }));
+
+      setAnalyzeForm((prev) => ({
+        ...prev,
+        post: improvedPost,
+        platform: nextPlatform
+      }));
+
+      setResult(nextResult);
+
+      addToHistory({
+        type: nextResult.type,
+        language,
+        data: nextResult.data
+      });
+    } catch (err) {
+      setError((err && err.message) || "Error");
+    } finally {
+      endRequest();
+    }
+  }
+
   const buildCopyText =
     result && result.type === "build"
       ? [
@@ -874,43 +963,6 @@ export default function App() {
 
     setError("");
     setTab("analyze");
-  }
-
-  function moveAnalyzeResultToImprove(analyzeData, forcedGoal = "") {
-    const safeAnalyzeData = analyzeData || analysisResult || null;
-
-    const nextPost =
-      getPrimaryAnalyzeText(safeAnalyzeData) ||
-      analyzeForm.post ||
-      currentPost ||
-      "";
-
-    if (!nextPost.trim()) {
-      setError(t.errorPost);
-      return;
-    }
-
-    const weakest = getWeakestArea(safeAnalyzeData, t);
-
-    const nextGoal =
-      forcedGoal ||
-      weakest?.goal ||
-      t.goalPresetMoreHuman ||
-      (isHebrew
-        ? "שפר את הפוסט לפי הניתוח כדי להעלות ביצועים"
-        : "Improve the post based on analysis to increase performance");
-
-    setError("");
-    setCurrentPost(nextPost);
-
-    setImproveForm((prev) => ({
-      ...prev,
-      post: nextPost,
-      goal: nextGoal,
-      platform: analyzeForm.platform || prev.platform || "instagram"
-    }));
-
-    setTab("improve");
   }
 
   const recommendationTitlePrimary = t.smartRecommendationPrimary;
@@ -1427,7 +1479,7 @@ export default function App() {
                     <button
                       type="button"
                       className="secondary-btn"
-                      onClick={() => moveAnalyzeResultToImprove(result.data, weakestArea.goal)}
+                      onClick={() => improveFromAnalyze(result.data, weakestArea.goal)}
                     >
                       {weakestArea.actionLabel}
                     </button>
@@ -1442,9 +1494,7 @@ export default function App() {
                         <button
                           type="button"
                           className="secondary-btn"
-                          onClick={() =>
-                            moveAnalyzeResultToImprove(result.data, topWeakAreas[1].goal)
-                          }
+                          onClick={() => improveFromAnalyze(result.data, topWeakAreas[1].goal)}
                           style={{ marginTop: 10 }}
                         >
                           {topWeakAreas[1].actionLabel}
@@ -1462,9 +1512,7 @@ export default function App() {
                         <button
                           type="button"
                           className="secondary-btn"
-                          onClick={() =>
-                            moveAnalyzeResultToImprove(result.data, topWeakAreas[2].goal)
-                          }
+                          onClick={() => improveFromAnalyze(result.data, topWeakAreas[2].goal)}
                           style={{ marginTop: 10 }}
                         >
                           {topWeakAreas[2].actionLabel}
@@ -1519,7 +1567,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-btn"
-                    onClick={() => moveAnalyzeResultToImprove(result.data, t.goalPresetFixHook)}
+                    onClick={() => improveFromAnalyze(result.data, t.goalPresetFixHook)}
                   >
                     {t.quickFixHook}
                   </button>
@@ -1527,7 +1575,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-btn"
-                    onClick={() => moveAnalyzeResultToImprove(result.data, t.goalPresetFixCta)}
+                    onClick={() => improveFromAnalyze(result.data, t.goalPresetFixCta)}
                   >
                     {t.quickFixCta}
                   </button>
@@ -1535,7 +1583,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-btn"
-                    onClick={() => moveAnalyzeResultToImprove(result.data, t.goalPresetMoreViral)}
+                    onClick={() => improveFromAnalyze(result.data, t.goalPresetMoreViral)}
                   >
                     {t.quickMakeViral}
                   </button>
@@ -1543,7 +1591,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-btn"
-                    onClick={() => moveAnalyzeResultToImprove(result.data, t.goalPresetMoreHuman)}
+                    onClick={() => improveFromAnalyze(result.data, t.goalPresetMoreHuman)}
                   >
                     {t.quickMakeHuman}
                   </button>
@@ -1561,7 +1609,7 @@ export default function App() {
                   <button
                     type="button"
                     className="primary-btn"
-                    onClick={() => moveAnalyzeResultToImprove(result.data, "")}
+                    onClick={() => improveFromAnalyze(result.data, "")}
                   >
                     {improveFromAnalyzeLabel}
                   </button>
@@ -1569,9 +1617,7 @@ export default function App() {
                   <button
                     type="button"
                     className="primary-btn primary-btn-viral"
-                    onClick={() =>
-                      moveAnalyzeResultToImprove(result.data, t.goalPresetMoreViral)
-                    }
+                    onClick={() => improveFromAnalyze(result.data, t.goalPresetMoreViral)}
                   >
                     {t.viralBoost}
                   </button>
