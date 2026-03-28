@@ -22,7 +22,7 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 
 app.get("/", (req, res) => {
-  res.json({
+  return res.json({
     success: true,
     service: "PostPulse API",
     status: "running"
@@ -30,16 +30,14 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({
+  return res.json({
     success: true,
     status: "ok"
   });
 });
 
-/* ---------- AUTH ROUTES ---------- */
 app.use("/api/auth", authRoutes);
 
-/* ---------- AI ROUTES ---------- */
 app.post("/generate-post", async (req, res) => {
   try {
     const data = await generateEngine(req.body || {});
