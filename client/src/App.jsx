@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { analyzePost, generatePost, improvePost } from "./api";
+import {
+  analyzePost,
+  generatePost,
+  improvePost,
+  loginUser,
+  logoutUser,
+  registerUser
+} from "./api";
 import { translations } from "./translations";
 import "./App.css";
 
@@ -21,6 +28,7 @@ const platformOptions = [
 
 const HISTORY_STORAGE_KEY = "postpulse_history_v1";
 const HISTORY_LIMIT = 20;
+const USER_STORAGE_KEY = "postpulse_user";
 
 function Section({ title, children, onCopy, copyLabel }) {
   return (
@@ -72,6 +80,32 @@ function safeJsonParse(value, fallback) {
     return parsed ?? fallback;
   } catch {
     return fallback;
+  }
+}
+
+function loadStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    return safeJsonParse(raw || "null", null);
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredUser(user) {
+  try {
+    if (!user) return;
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  } catch {
+    // ignore
+  }
+}
+
+function clearStoredUser() {
+  try {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  } catch {
+    // ignore
   }
 }
 
@@ -362,16 +396,26 @@ export default function App() {
   const [language, setLanguage] = useState("en");
   const [tab, setTab] = useState("build");
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [currentPost, setCurrentPost] = useState("");
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
+  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   const t = useMemo(() => translations[language], [language]);
   const dir = language === "he" ? "rtl" : "ltr";
   const isHebrew = language === "he";
+
+  const [authForm, setAuthForm] = useState({
+    email: "",
+    password: ""
+  });
 
   const buildGoalPresets = useMemo(
     () => [
@@ -424,6 +468,7 @@ export default function App() {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
     const parsed = safeJsonParse(raw || "[]", []);
     setHistory(Array.isArray(parsed) ? parsed : []);
+    setCurrentUser(loadStoredUser());
   }, []);
 
   useEffect(() => {
@@ -458,6 +503,13 @@ export default function App() {
 
   function setAnalyzeField(field, value) {
     setAnalyzeForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  }
+
+  function setAuthField(field, value) {
+    setAuthForm((prev) => ({
       ...prev,
       [field]: value
     }));
@@ -632,6 +684,76 @@ export default function App() {
 
       setTab("analyze");
     }
+  }
+
+  async function handleRegister() {
+    if (!authForm.email.trim() || !authForm.password.trim()) {
+      setAuthError(isHebrew ? "צריך להזין אימייל וסיסמה" : "Please enter email and password");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError("");
+    setAuthMessage("");
+
+    try {
+      const data = await registerUser({
+        email: authForm.email.trim(),
+        password: authForm.password.trim()
+      });
+
+      const user = data?.user || null;
+      setCurrentUser(user);
+      saveStoredUser(user);
+      setAuthMessage(isHebrew ? "נרשמת בהצלחה" : "Registered successfully");
+      setAuthForm({
+        email: "",
+        password: ""
+      });
+    } catch (err) {
+      setAuthError((err && err.message) || "Auth error");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogin() {
+    if (!authForm.email.trim() || !authForm.password.trim()) {
+      setAuthError(isHebrew ? "צריך להזין אימייל וסיסמה" : "Please enter email and password");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError("");
+    setAuthMessage("");
+
+    try {
+      const data = await loginUser({
+        email: authForm.email.trim(),
+        password: authForm.password.trim()
+      });
+
+      const user = data?.user || null;
+      setCurrentUser(user);
+      saveStoredUser(user);
+      setAuthMessage(isHebrew ? "התחברת בהצלחה" : "Logged in successfully");
+      setAuthForm({
+        email: "",
+        password: ""
+      });
+    } catch (err) {
+      setAuthError((err && err.message) || "Auth error");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    logoutUser();
+    clearStoredUser();
+    setCurrentUser(null);
+    setAuthMessage(isHebrew ? "התנתקת" : "Logged out");
+    setAuthError("");
   }
 
   async function handleBuild() {
@@ -981,6 +1103,34 @@ export default function App() {
     isHebrew ? "מה לשפר?" : "What should improve?";
   const analyzePostPlaceholder =
     isHebrew ? "הדבק כאן את הפוסט לניתוח" : "Paste the post to analyze";
+  const authTitle =
+    authMode === "login"
+      ? isHebrew
+        ? "התחברות"
+        : "Login"
+      : isHebrew
+        ? "הרשמה"
+        : "Register";
+  const authEmailLabel = isHebrew ? "אימייל" : "Email";
+  const authPasswordLabel = isHebrew ? "סיסמה" : "Password";
+  const authSubmitLabel =
+    authMode === "login"
+      ? isHebrew
+        ? "התחבר"
+        : "Login"
+      : isHebrew
+        ? "הירשם"
+        : "Register";
+  const authSwitchLabel =
+    authMode === "login"
+      ? isHebrew
+        ? "אין לך חשבון? עבור להרשמה"
+        : "No account? Switch to register"
+      : isHebrew
+        ? "כבר יש לך חשבון? עבור להתחברות"
+        : "Already have an account? Switch to login";
+  const logoutLabel = isHebrew ? "התנתק" : "Logout";
+  const loggedInLabel = isHebrew ? "מחובר כ:" : "Logged in as:";
 
   return (
     <div className="app" dir={dir}>
@@ -1013,6 +1163,78 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        <section className="panel glass" style={{ marginBottom: 18 }}>
+          {!currentUser ? (
+            <>
+              <div className="panel-title">{authTitle}</div>
+
+              <div className="grid-2">
+                <div className="field">
+                  <label>{authEmailLabel}</label>
+                  <input
+                    type="email"
+                    value={authForm.email}
+                    onChange={(e) => setAuthField("email", e.target.value)}
+                    placeholder={authEmailLabel}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>{authPasswordLabel}</label>
+                  <input
+                    type="password"
+                    value={authForm.password}
+                    onChange={(e) => setAuthField("password", e.target.value)}
+                    placeholder={authPasswordLabel}
+                  />
+                </div>
+              </div>
+
+              <div className="action-row">
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={authMode === "login" ? handleLogin : handleRegister}
+                  disabled={authLoading}
+                >
+                  {authLoading ? t.loading : authSubmitLabel}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() =>
+                    setAuthMode((prev) => (prev === "login" ? "register" : "login"))
+                  }
+                >
+                  {authSwitchLabel}
+                </button>
+              </div>
+
+              {authError ? <div className="error-box">{authError}</div> : null}
+              {authMessage ? <div className="success-box">{authMessage}</div> : null}
+            </>
+          ) : (
+            <>
+              <div className="panel-title">
+                {loggedInLabel} {currentUser.email}
+              </div>
+
+              <div className="action-row action-row-single">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleLogout}
+                >
+                  {logoutLabel}
+                </button>
+              </div>
+
+              {authMessage ? <div className="success-box">{authMessage}</div> : null}
+            </>
+          )}
+        </section>
 
         <nav className="tabs">
           <button
