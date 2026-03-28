@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { generateEngine } from "./services/generateEngine.js";
 import { improveEngine } from "./services/improveEngine.js";
 import { analyzeEngine } from "./services/analyzeEngine.js";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
@@ -35,6 +36,10 @@ app.get("/health", (req, res) => {
   });
 });
 
+/* ---------- AUTH ROUTES ---------- */
+app.use("/api/auth", authRoutes);
+
+/* ---------- AI ROUTES ---------- */
 app.post("/generate-post", async (req, res) => {
   try {
     const data = await generateEngine(req.body || {});
