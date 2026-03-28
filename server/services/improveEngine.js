@@ -27,8 +27,8 @@ function getLanguageLabel(language) {
 
 function getLanguageInstruction(language) {
   return normalizeLanguage(language) === "he"
-    ? "Write EVERYTHING in natural Hebrew only. Do not use English at all unless the user explicitly provided an English brand name or platform name. All fields in the JSON must be in Hebrew."
-    : "Write EVERYTHING in natural English only. All fields in the JSON must be in English.";
+    ? "Write EVERYTHING in natural Hebrew only. All returned fields must be in Hebrew."
+    : "Write EVERYTHING in natural English only. All returned fields must be in English.";
 }
 
 function detectGoalBehavior(goal) {
@@ -38,7 +38,7 @@ function detectGoalBehavior(goal) {
     return {
       mode: "hook",
       instruction:
-        "Focus first on the opening. The first line must become sharper, more curiosity-driven, and more scroll-stopping."
+        "Focus first on rewriting the opening so it becomes sharper, more curiosity-driven, and more scroll-stopping."
     };
   }
 
@@ -46,7 +46,7 @@ function detectGoalBehavior(goal) {
     return {
       mode: "cta",
       instruction:
-        "Focus first on the ending. The CTA must become more natural, more persuasive, and more action-driving."
+        "Focus first on improving the ending and call to action so it feels stronger, clearer, and more action-driving."
     };
   }
 
@@ -54,7 +54,7 @@ function detectGoalBehavior(goal) {
     return {
       mode: "viral",
       instruction:
-        "Increase punch, tension, curiosity, and shareability without becoming fake, cheesy, or exaggerated."
+        "Increase punch, tension, curiosity, and shareability without sounding fake, forced, or exaggerated."
     };
   }
 
@@ -62,7 +62,7 @@ function detectGoalBehavior(goal) {
     return {
       mode: "human",
       instruction:
-        "Reduce AI feel aggressively. Make the writing sound more human, more natural, more believable, and more personal."
+        "Aggressively reduce AI tone. Make the post sound more natural, personal, believable, and human."
     };
   }
 
@@ -78,7 +78,7 @@ function detectGoalBehavior(goal) {
     return {
       mode: "clarity",
       instruction:
-        "Simplify, tighten, and clarify the message. Remove noise and make the value easier to understand."
+        "Simplify and sharpen the message. Remove noise and make the point easier to understand."
     };
   }
 
@@ -86,57 +86,35 @@ function detectGoalBehavior(goal) {
     return {
       mode: "professional",
       instruction:
-        "Make the post sound more polished, credible, authoritative, and professionally sharp."
-    };
-  }
-
-  if (g.includes("curious") || g.includes("מסקרן") || g.includes("סקרנות")) {
-    return {
-      mode: "curiosity",
-      instruction:
-        "Increase intrigue, open loops, and forward momentum so the reader wants to keep reading."
-    };
-  }
-
-  if (g.includes("sharp") || g.includes("חד")) {
-    return {
-      mode: "sharpness",
-      instruction:
-        "Make the post more direct, cleaner, tighter, and sharper line by line."
+        "Make the writing more polished, credible, and professionally sharp."
     };
   }
 
   return {
     mode: "balanced",
     instruction:
-      "Improve the post holistically: stronger wording, better flow, more clarity, more humanity, and stronger engagement."
+      "Improve the post holistically: stronger wording, better flow, more clarity, better human tone, and better engagement."
   };
 }
 
-function normalizeImproveResult(data, originalPost) {
+function normalizeImproveResult(data, originalPost, language) {
+  const isHebrew = normalizeLanguage(language) === "he";
+
   const improvedPost =
     normalizeString(data?.improvedPost) ||
     normalizeString(data?.moreAuthenticVersion) ||
     normalizeString(data?.moreViralVersion) ||
     originalPost;
 
-  let moreViralVersion =
+  const moreViralVersion =
     normalizeString(data?.moreViralVersion) ||
     improvedPost ||
     originalPost;
 
-  let moreAuthenticVersion =
+  const moreAuthenticVersion =
     normalizeString(data?.moreAuthenticVersion) ||
     improvedPost ||
     originalPost;
-
-  if (moreViralVersion === improvedPost) {
-    moreViralVersion = normalizeString(data?.moreViralVersion, improvedPost);
-  }
-
-  if (moreAuthenticVersion === improvedPost) {
-    moreAuthenticVersion = normalizeString(data?.moreAuthenticVersion, improvedPost);
-  }
 
   return {
     strengths: normalizeArray(data?.strengths, 6),
@@ -144,7 +122,14 @@ function normalizeImproveResult(data, originalPost) {
     improvedPost,
     moreViralVersion,
     moreAuthenticVersion,
-    tips: normalizeArray(data?.tips, 6)
+    tips: normalizeArray(
+      data?.tips,
+      6
+    ).length
+      ? normalizeArray(data?.tips, 6)
+      : isHebrew
+        ? ["חדד את הפתיחה", "הפוך את המסר ליותר טבעי", "סיים עם הנעה ברורה יותר"]
+        : ["Sharpen the opening", "Make the tone more natural", "End with a clearer CTA"]
   };
 }
 
@@ -161,20 +146,15 @@ export async function improveEngine(input) {
   const goalBehavior = detectGoalBehavior(goal);
 
   const prompt = `
-You are an elite content editor and rewriting strategist.
+You are an elite content editor and rewrite strategist.
 
-Your task is to improve a social media post so it becomes:
-- more human
-- more natural
-- sharper
-- more readable
-- less AI-like
-- more platform-native
+TASK:
+Improve this social media post so it performs better and sounds more human.
 
-INPUT POST:
+POST:
 ${post}
 
-IMPROVEMENT GOAL:
+GOAL:
 ${goal}
 
 GOAL MODE:
@@ -195,49 +175,41 @@ ${getLanguageLabel(safeLanguage)}
 CRITICAL LANGUAGE RULE:
 ${getLanguageInstruction(safeLanguage)}
 
-You must produce THREE CLEARLY DIFFERENT outputs:
+OUTPUT REQUIREMENTS:
+You must return 3 clearly different versions:
 
 1. improvedPost
-- the best balanced version
-- strongest overall
-- best final version for the user
+- best balanced version
+- strongest overall version
 - should improve the post according to the goal first
 
 2. moreViralVersion
-- clearly more punchy than improvedPost
-- stronger scroll-stopping energy
-- stronger tension / curiosity / shareability
-- must feel noticeably different from improvedPost
+- more punchy
+- more scroll-stopping
+- stronger engagement energy
+- must feel clearly different from improvedPost
 
 3. moreAuthenticVersion
-- clearly more natural and human than improvedPost
-- more personal, more believable, warmer tone
-- must feel noticeably different from improvedPost
+- more natural
+- more human
+- warmer and more believable
+- must feel clearly different from improvedPost
 
-Critical rules:
-- DO NOT return 3 similar rewrites
-- each version must feel meaningfully different in tone and purpose
-- improvedPost = best balanced version
-- moreViralVersion = best performance-oriented version
-- moreAuthenticVersion = best human-sounding version
+RULES:
 - no generic filler
 - no robotic phrasing
 - no fake hype
-- no repetitive sentence patterns
-- keep the post aligned with the platform
-- if goal is hook-related, improve the opening first
-- if goal is CTA-related, improve the ending first
-- if goal is clarity-related, simplify and sharpen
-- if goal is emotional, add emotional depth naturally
-- if goal is viral, increase punch carefully
-- if goal is human/authentic, aggressively reduce AI feel
+- no repeated sentence patterns
+- do not return 3 versions that feel almost identical
+- keep the writing aligned with the platform
+- improve according to the requested goal first
 
 Also return:
 - strengths
 - weaknesses
 - practical tips
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON:
 {
   "strengths": [],
   "weaknesses": [],
@@ -251,11 +223,11 @@ Return ONLY valid JSON in this exact format:
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.76
+    temperature: 0.72
   });
 
   const text = response.choices?.[0]?.message?.content || "{}";
   const parsed = safeJsonParse(text);
 
-  return normalizeImproveResult(parsed, post);
+  return normalizeImproveResult(parsed, post, safeLanguage);
 }
