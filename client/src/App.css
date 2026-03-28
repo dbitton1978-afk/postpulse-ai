@@ -1,239 +1,693 @@
-export const translations = {
-  en: {
-    appName: "PostPulse AI",
-    subtitle: "Build, improve, and analyze social media posts with sharper, more human results",
+:root {
+  color-scheme: dark;
+  --bg: #07111f;
+  --bg-soft: rgba(10, 19, 34, 0.72);
+  --panel: rgba(10, 18, 32, 0.78);
+  --panel-strong: rgba(12, 22, 38, 0.92);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #eef4ff;
+  --text-soft: #b6c3da;
+  --text-muted: #8e9ab0;
+  --accent: #7c9cff;
+  --accent-strong: #5f84ff;
+  --accent-soft: rgba(124, 156, 255, 0.14);
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.14);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+  --warning: #f59e0b;
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.24);
+  --radius-xl: 26px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
 
-    english: "English",
-    hebrew: "עברית",
+* {
+  box-sizing: border-box;
+}
 
-    build: "Build Post",
-    improve: "Improve Post",
-    analyze: "Analyze Post",
+html,
+body,
+#root {
+  min-height: 100%;
+}
 
-    topic: "Topic / Idea",
-    targetAudience: "Target Audience",
-    goal: "Goal",
-    style: "Style",
-    platform: "Platform",
-    postText: "Post Text",
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(90, 119, 255, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(53, 200, 155, 0.12), transparent 22%),
+    linear-gradient(180deg, #06101c 0%, #081423 100%);
+  color: var(--text);
+}
 
-    generate: "Generate Post",
-    improveBtn: "Improve Post",
-    analyzeBtn: "Analyze Post",
-    loading: "Working...",
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
 
-    result: "Result",
-    title: "Title",
-    hook: "Hook",
-    body: "Body",
-    cta: "CTA",
-    hashtags: "Hashtags",
-    shortVersion: "Short Version",
-    alternativeVersion: "Alternative Version",
+button {
+  cursor: pointer;
+}
 
-    strengths: "Strengths",
-    weaknesses: "Weaknesses",
-    tips: "Tips",
-    improvedVersion: "Improved Version",
-    moreViralVersion: "More Viral Version",
-    moreAuthenticVersion: "More Human Version",
+.app {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
 
-    viralScore: "Viral Score",
-    authenticityScore: "Authenticity Score",
-    clarityScore: "Clarity Score",
-    emotionalScore: "Emotional Score",
-    curiosityScore: "Curiosity Score",
-    hookScore: "Hook Score",
-    ctaScore: "CTA Score",
+.app-shell {
+  position: relative;
+  z-index: 2;
+  width: min(1400px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 42px;
+}
 
-    summary: "Summary",
-    whatWorks: "What Works",
-    whatHurts: "What Hurts",
-    improvements: "Improvements",
-    raiseViralScore: "How to Raise Viral Score",
-    raiseAuthenticityScore: "How to Raise Authenticity",
-    raiseEmotionalScore: "How to Raise Emotional Impact",
-    raiseCuriosityScore: "How to Raise Curiosity",
+.bg-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  pointer-events: none;
+}
 
-    copy: "Copy",
-    copyFullPost: "Copy Full Post",
-    copyImproved: "Copy Improved Versions",
-    copyAnalyze: "Copy Improved Version",
-    saveToHistory: "Save to History",
-    savedToHistory: "Saved to history",
-    exportTxt: "Export TXT",
-    exportReady: "Export ready",
+.orb-1 {
+  width: 340px;
+  height: 340px;
+  left: -80px;
+  top: -40px;
+  background: rgba(90, 119, 255, 0.18);
+}
 
-    improveAction: "Send to Improve",
-    analyzeAction: "Send to Analyze",
-    viralBoost: "Viral Boost",
+.orb-2 {
+  width: 320px;
+  height: 320px;
+  right: -80px;
+  top: 140px;
+  background: rgba(53, 200, 155, 0.14);
+}
 
-    quickActionsTitle: "Quick Actions",
-    quickFixHook: "Fix Hook",
-    quickFixCta: "Fix CTA",
-    quickMakeViral: "Make More Viral",
-    quickMakeHuman: "Make More Human",
-    quickMakeEmotional: "Make More Emotional",
-    quickMakeCurious: "Make More Curious",
-    quickMakeClear: "Make More Clear",
+.orb-3 {
+  width: 300px;
+  height: 300px;
+  left: 36%;
+  bottom: -100px;
+  background: rgba(124, 156, 255, 0.12);
+}
 
-    smartRecommendationTitle: "Smart Recommendation",
-    smartRecommendationPrimary: "Primary Recommendation",
-    smartRecommendationSecondary: "Second Recommendation",
-    smartRecommendationThird: "Third Recommendation",
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
 
-    smartWeakHook: "The opening is too weak. Strengthen the first line so it stops the scroll faster.",
-    smartWeakCta: "The ending is not driving enough action. Make the CTA clearer and more compelling.",
-    smartWeakViral: "The post lacks enough punch and shareability. Raise its energy and engagement potential.",
-    smartWeakAuthenticity: "The writing still feels a bit artificial. Make it sound more natural and human.",
-    smartWeakEmotional: "The post needs more emotional pull. Add feeling and relatability.",
-    smartWeakCuriosity: "The post does not create enough intrigue. Add curiosity and forward momentum.",
-    smartWeakClarity: "The message is not sharp enough yet. Make it clearer and easier to understand.",
+.hero-copy h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(34px, 6vw, 56px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
 
-    goalPresetViral: "More Viral",
-    goalPresetHuman: "More Human",
-    goalPresetProfessional: "More Professional",
-    goalPresetEmotional: "More Emotional",
-    goalPresetSales: "More Converting",
-    goalPresetEngagement: "More Engagement",
+.hero-copy p {
+  margin: 0;
+  max-width: 760px;
+  font-size: 16px;
+  color: var(--text-soft);
+  line-height: 1.7;
+}
 
-    goalPresetMoreViral: "More Viral",
-    goalPresetMoreHuman: "More Human",
-    goalPresetMoreClear: "More Clear",
-    goalPresetMoreEmotional: "More Emotional",
-    goalPresetMoreSharp: "More Sharp",
-    goalPresetMoreProfessional: "More Professional",
-    goalPresetFixHook: "Fix Hook",
-    goalPresetFixCta: "Fix CTA",
-    goalPresetMoreCurious: "More Curious",
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(124, 156, 255, 0.12);
+  border: 1px solid rgba(124, 156, 255, 0.2);
+  color: #dbe5ff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
 
-    historyTitle: "History",
-    historyEmpty: "No saved results yet",
-    clearHistory: "Clear History",
-    loadHistory: "Load",
-    deleteHistoryItem: "Delete",
+.lang-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-    emptyState: "No result yet. Start with Build, Improve, or Analyze.",
-    errorTopic: "Please enter a topic first.",
-    errorPost: "Please enter a post first."
-  },
+.lang-switch button,
+.tabs button,
+.primary-btn,
+.secondary-btn,
+.copy-btn,
+.danger-btn,
+.preset-chip {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
 
-  he: {
-    appName: "PostPulse AI",
-    subtitle: "צור, שפר ונתח פוסטים לרשתות עם תוצאה חדה יותר, אנושית יותר ומדויקת יותר",
+.lang-switch button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  font-weight: 600;
+}
 
-    english: "English",
-    hebrew: "עברית",
+.lang-switch button:hover,
+.tabs button:hover,
+.secondary-btn:hover,
+.copy-btn:hover,
+.danger-btn:hover,
+.preset-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
 
-    build: "יצירת פוסט",
-    improve: "שיפור פוסט",
-    analyze: "ניתוח פוסט",
+.lang-switch button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+  border-color: rgba(124, 156, 255, 0.34);
+  box-shadow: 0 10px 24px rgba(95, 132, 255, 0.16);
+}
 
-    topic: "נושא / רעיון",
-    targetAudience: "קהל יעד",
-    goal: "מטרה",
-    style: "סגנון",
-    platform: "פלטפורמה",
-    postText: "טקסט הפוסט",
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
 
-    generate: "צור פוסט",
-    improveBtn: "שפר פוסט",
-    analyzeBtn: "נתח פוסט",
-    loading: "עובד...",
+.tabs button {
+  min-height: 54px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-soft);
+  font-weight: 700;
+}
 
-    result: "תוצאה",
-    title: "כותרת",
-    hook: "פתיחה",
-    body: "גוף הפוסט",
-    cta: "הנעה לפעולה",
-    hashtags: "האשטגים",
-    shortVersion: "גרסה קצרה",
-    alternativeVersion: "גרסה חלופית",
+.tabs button.active {
+  background: linear-gradient(180deg, rgba(124, 156, 255, 0.22), rgba(124, 156, 255, 0.1));
+  border-color: rgba(124, 156, 255, 0.34);
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(95, 132, 255, 0.18);
+}
 
-    strengths: "חוזקות",
-    weaknesses: "חולשות",
-    tips: "טיפים",
-    improvedVersion: "גרסה משופרת",
-    moreViralVersion: "גרסה יותר ויראלית",
-    moreAuthenticVersion: "גרסה יותר אנושית",
+.layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
 
-    viralScore: "ציון ויראליות",
-    authenticityScore: "ציון אותנטיות",
-    clarityScore: "ציון בהירות",
-    emotionalScore: "ציון רגש",
-    curiosityScore: "ציון סקרנות",
-    hookScore: "ציון פתיחה",
-    ctaScore: "ציון הנעה לפעולה",
+.glass {
+  background: linear-gradient(180deg, rgba(13, 22, 38, 0.88), rgba(8, 15, 27, 0.86));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px);
+}
 
-    summary: "סיכום",
-    whatWorks: "מה עובד",
-    whatHurts: "מה פוגע",
-    improvements: "כיווני שיפור",
-    raiseViralScore: "איך לשפר ויראליות",
-    raiseAuthenticityScore: "איך לחזק אותנטיות",
-    raiseEmotionalScore: "איך לחזק רגש",
-    raiseCuriosityScore: "איך להגביר סקרנות",
+.panel {
+  border-radius: var(--radius-xl);
+  padding: 22px;
+}
 
-    copy: "העתק",
-    copyFullPost: "העתק פוסט מלא",
-    copyImproved: "העתק גרסאות משופרות",
-    copyAnalyze: "העתק גרסה משופרת",
-    saveToHistory: "שמור להיסטוריה",
-    savedToHistory: "נשמר להיסטוריה",
-    exportTxt: "ייצוא TXT",
-    exportReady: "הייצוא מוכן",
+.panel-title {
+  margin-bottom: 18px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
 
-    improveAction: "העבר ל־Improve",
-    analyzeAction: "העבר ל־Analyze",
-    viralBoost: "בוסט ויראלי",
+.field {
+  margin-bottom: 16px;
+}
 
-    quickActionsTitle: "פעולות מהירות",
-    quickFixHook: "שפר פתיחה",
-    quickFixCta: "שפר הנעה לפעולה",
-    quickMakeViral: "הפוך לויראלי יותר",
-    quickMakeHuman: "הפוך לאנושי יותר",
-    quickMakeEmotional: "הפוך לרגשי יותר",
-    quickMakeCurious: "הפוך למסקרן יותר",
-    quickMakeClear: "הפוך לברור יותר",
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
 
-    smartRecommendationTitle: "המלצה חכמה",
-    smartRecommendationPrimary: "המלצה ראשית",
-    smartRecommendationSecondary: "המלצה שנייה",
-    smartRecommendationThird: "המלצה שלישית",
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 14px 16px;
+  outline: none;
+  resize: vertical;
+  min-height: 52px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
 
-    smartWeakHook: "הפתיחה חלשה מדי. צריך לחזק את השורה הראשונה כדי לעצור את הגלילה מהר יותר.",
-    smartWeakCta: "הסיום לא מניע מספיק לפעולה. צריך CTA ברור וחזק יותר.",
-    smartWeakViral: "לפוסט חסר מספיק כוח ומשיכה לשיתוף. צריך לחזק אנרגיה ופוטנציאל מעורבות.",
-    smartWeakAuthenticity: "הכתיבה עדיין מרגישה מעט מלאכותית. צריך להפוך אותה לטבעית ואנושית יותר.",
-    smartWeakEmotional: "לפוסט חסר עומק רגשי. צריך להוסיף יותר תחושה והזדהות.",
-    smartWeakCuriosity: "הפוסט לא יוצר מספיק סקרנות. צריך להוסיף עניין ותנועה קדימה.",
-    smartWeakClarity: "המסר עדיין לא חד מספיק. צריך להפוך אותו לברור וקל יותר להבנה.",
+.field textarea {
+  min-height: 120px;
+}
 
-    goalPresetViral: "יותר ויראלי",
-    goalPresetHuman: "יותר אנושי",
-    goalPresetProfessional: "יותר מקצועי",
-    goalPresetEmotional: "יותר רגשי",
-    goalPresetSales: "יותר ממיר",
-    goalPresetEngagement: "יותר מעורבות",
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--text-muted);
+}
 
-    goalPresetMoreViral: "יותר ויראלי",
-    goalPresetMoreHuman: "יותר אנושי",
-    goalPresetMoreClear: "יותר ברור",
-    goalPresetMoreEmotional: "יותר רגשי",
-    goalPresetMoreSharp: "יותר חד",
-    goalPresetMoreProfessional: "יותר מקצועי",
-    goalPresetFixHook: "שפר פתיחה",
-    goalPresetFixCta: "שפר הנעה לפעולה",
-    goalPresetMoreCurious: "יותר מסקרן",
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: rgba(124, 156, 255, 0.34);
+  box-shadow:
+    0 0 0 4px rgba(124, 156, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
 
-    historyTitle: "היסטוריה",
-    historyEmpty: "עדיין אין תוצאות שמורות",
-    clearHistory: "נקה היסטוריה",
-    loadHistory: "טען",
-    deleteHistoryItem: "מחק",
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
 
-    emptyState: "עדיין אין תוצאה. התחל ביצירה, שיפור או ניתוח.",
-    errorTopic: "צריך להזין נושא קודם.",
-    errorPost: "צריך להזין פוסט קודם."
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.preset-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.preset-chip.active {
+  color: #fff;
+  background: rgba(124, 156, 255, 0.16);
+  border-color: rgba(124, 156, 255, 0.34);
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.copy-btn {
+  border: 0;
+  border-radius: 14px;
+  min-height: 48px;
+  padding: 0 16px;
+  font-weight: 800;
+}
+
+.primary-btn {
+  width: 100%;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(95, 132, 255, 0.28);
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(95, 132, 255, 0.34);
+}
+
+.primary-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.primary-btn-viral {
+  background: linear-gradient(180deg, #8c6bff, #6d4eff);
+}
+
+.secondary-btn,
+.copy-btn {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.danger-btn {
+  background: var(--danger-soft);
+  color: #ffd8d8;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.result-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.result-tools .secondary-btn {
+  min-height: 42px;
+}
+
+.result-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.result-section {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.copy-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.text-card {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.result-list {
+  margin: 0;
+  padding-inline-start: 20px;
+  color: var(--text-soft);
+  line-height: 1.8;
+}
+
+.result-list li + li {
+  margin-top: 6px;
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hashtags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(124, 156, 255, 0.12);
+  border: 1px solid rgba(124, 156, 255, 0.2);
+  color: #dfe7ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.scores-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.score-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(124, 156, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.score-value {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+
+.score-label {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.smart-recommendation-box {
+  padding: 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(124, 156, 255, 0.13), rgba(124, 156, 255, 0.05));
+  border: 1px solid rgba(124, 156, 255, 0.24);
+  box-shadow: 0 16px 34px rgba(95, 132, 255, 0.12);
+}
+
+.smart-recommendation-label {
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #d8e2ff;
+  text-transform: uppercase;
+}
+
+.smart-recommendation-text {
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.smart-recommendation-text strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.quick-actions-title {
+  margin-top: 4px;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-soft);
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-actions-grid .secondary-btn,
+.smart-recommendation-box .secondary-btn {
+  min-height: 44px;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-row .primary-btn {
+  width: auto;
+  min-width: 180px;
+}
+
+.action-row-single .primary-btn {
+  width: 100%;
+}
+
+.history-panel {
+  margin-top: 18px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.history-header .panel-title {
+  margin-bottom: 0;
+}
+
+.history-empty,
+.empty-state {
+  border-radius: 18px;
+  padding: 18px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.history-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.history-type {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #d8e2ff;
+  text-transform: uppercase;
+}
+
+.history-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.history-preview {
+  color: var(--text-soft);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-actions .secondary-btn,
+.history-actions .danger-btn {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.success-box,
+.error-box {
+  margin-top: 14px;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-weight: 700;
+}
+
+.success-box {
+  background: var(--success-soft);
+  color: #d6ffe2;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+.error-box {
+  background: var(--danger-soft);
+  color: #ffd9d9;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
   }
-};
+
+  .scores-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .history-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100% - 20px, 100%);
+    padding-top: 18px;
+    padding-bottom: 30px;
+  }
+
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2,
+  .scores-grid,
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .action-row {
+    flex-direction: column;
+  }
+
+  .action-row .primary-btn {
+    width: 100%;
+  }
+
+  .result-tools {
+    flex-direction: column;
+  }
+
+  .result-tools .secondary-btn {
+    width: 100%;
+  }
+}
