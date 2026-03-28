@@ -16,9 +16,8 @@ function generateToken(user) {
   );
 }
 
-// REGISTER
 router.post("/register", (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
 
   if (!email || !password) {
     return res.status(400).json({
@@ -44,7 +43,7 @@ router.post("/register", (req, res) => {
 
   const token = generateToken(newUser);
 
-  res.json({
+  return res.json({
     token,
     user: {
       id: newUser.id,
@@ -53,9 +52,14 @@ router.post("/register", (req, res) => {
   });
 });
 
-// LOGIN
 router.post("/login", (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Missing email or password"
+    });
+  }
 
   const user = users.find(
     (u) => u.email === email && u.password === password
@@ -69,7 +73,7 @@ router.post("/login", (req, res) => {
 
   const token = generateToken(user);
 
-  res.json({
+  return res.json({
     token,
     user: {
       id: user.id,
