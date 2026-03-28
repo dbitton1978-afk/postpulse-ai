@@ -1,7 +1,10 @@
 export const translations = {
   en: {
     appName: "PostPulse AI",
-    subtitle: "Build, improve, and analyze social media posts",
+    subtitle: "Build, improve, and analyze social media posts with sharper, more human results",
+
+    english: "English",
+    hebrew: "עברית",
 
     build: "Build Post",
     improve: "Improve Post",
@@ -17,7 +20,7 @@ export const translations = {
     generate: "Generate Post",
     improveBtn: "Improve Post",
     analyzeBtn: "Analyze Post",
-    loading: "Loading...",
+    loading: "Working...",
 
     result: "Result",
     title: "Title",
@@ -33,12 +36,7 @@ export const translations = {
     tips: "Tips",
     improvedVersion: "Improved Version",
     moreViralVersion: "More Viral Version",
-    moreAuthenticVersion: "More Authentic Version",
-
-    summary: "Summary",
-    whatWorks: "What Works",
-    whatHurts: "What Hurts",
-    improvements: "Recommended Improvements",
+    moreAuthenticVersion: "More Human Version",
 
     viralScore: "Viral Score",
     authenticityScore: "Authenticity Score",
@@ -48,58 +46,27 @@ export const translations = {
     hookScore: "Hook Score",
     ctaScore: "CTA Score",
 
+    summary: "Summary",
+    whatWorks: "What Works",
+    whatHurts: "What Hurts",
+    improvements: "Improvements",
     raiseViralScore: "How to Raise Viral Score",
-    raiseAuthenticityScore: "How to Raise Authenticity Score",
-    raiseEmotionalScore: "How to Raise Emotional Score",
-    raiseCuriosityScore: "How to Raise Curiosity Score",
+    raiseAuthenticityScore: "How to Raise Authenticity",
+    raiseEmotionalScore: "How to Raise Emotional Impact",
+    raiseCuriosityScore: "How to Raise Curiosity",
 
-    hebrew: "עברית",
-    english: "English",
-
-    emptyState: "Start by generating a post ✨",
     copy: "Copy",
     copyFullPost: "Copy Full Post",
     copyImproved: "Copy Improved Versions",
     copyAnalyze: "Copy Improved Version",
-
-    improveAction: "Improve",
-    viralBoost: "Viral Boost",
-    analyzeAction: "Analyze",
-
-    publishAction: "Publish",
-    publishToInstagram: "Publish to Instagram",
-    publishToFacebook: "Publish to Facebook",
-    publishToLinkedIn: "Publish to LinkedIn",
-    publishToTikTok: "Publish to TikTok",
-    publishComingSoon: "Publishing will be connected soon",
-
-    historyTitle: "History",
-    historyEmpty: "Saved results will appear here",
     saveToHistory: "Save to History",
     savedToHistory: "Saved to history",
-    loadHistory: "Load",
-    clearHistory: "Clear History",
-    deleteHistoryItem: "Delete",
-
     exportTxt: "Export TXT",
-    exportReady: "TXT downloaded",
+    exportReady: "Export ready",
 
-    goalPresetViral: "Make it viral",
-    goalPresetHuman: "Make it human",
-    goalPresetProfessional: "Make it professional",
-    goalPresetEmotional: "Make it emotional",
-    goalPresetSales: "Drive action",
-    goalPresetEngagement: "Increase engagement",
-
-    goalPresetMoreViral: "Make it more viral",
-    goalPresetMoreHuman: "Make it more human",
-    goalPresetMoreClear: "Make it clearer",
-    goalPresetMoreEmotional: "Make it more emotional",
-    goalPresetMoreSharp: "Make it sharper",
-    goalPresetMoreProfessional: "Make it more professional",
-    goalPresetMoreCurious: "Make it more curious",
-    goalPresetFixHook: "Fix the hook",
-    goalPresetFixCta: "Fix the CTA",
+    improveAction: "Send to Improve",
+    analyzeAction: "Send to Analyze",
+    viralBoost: "Viral Boost",
 
     quickActionsTitle: "Quick Actions",
     quickFixHook: "Fix Hook",
@@ -108,37 +75,57 @@ export const translations = {
     quickMakeHuman: "Make More Human",
     quickMakeEmotional: "Make More Emotional",
     quickMakeCurious: "Make More Curious",
-    quickMakeClear: "Make Clearer",
+    quickMakeClear: "Make More Clear",
 
-    smartRecommendationTitle: "Top Recommendations",
+    smartRecommendationTitle: "Smart Recommendation",
     smartRecommendationPrimary: "Primary Recommendation",
-    smartRecommendationSecondary: "Secondary Recommendation",
+    smartRecommendationSecondary: "Second Recommendation",
     smartRecommendationThird: "Third Recommendation",
 
-    smartWeakHook:
-      "The weakest area right now is the hook. Strengthening the opening should improve stopping power first.",
-    smartWeakCta:
-      "The weakest area right now is the CTA. A stronger action ending should improve response.",
-    smartWeakViral:
-      "The weakest area right now is virality. The post needs stronger tension, sharper framing, or more shareability.",
-    smartWeakAuthenticity:
-      "The weakest area right now is authenticity. The post should sound more natural and more human.",
-    smartWeakEmotional:
-      "The weakest area right now is emotional impact. It needs more feeling and stronger connection.",
-    smartWeakCuriosity:
-      "The weakest area right now is curiosity. It should create more intrigue and open loops.",
-    smartWeakClarity:
-      "The weakest area right now is clarity. Tightening the message should make the post stronger.",
+    smartWeakHook: "The opening is too weak. Strengthen the first line so it stops the scroll faster.",
+    smartWeakCta: "The ending is not driving enough action. Make the CTA clearer and more compelling.",
+    smartWeakViral: "The post lacks enough punch and shareability. Raise its energy and engagement potential.",
+    smartWeakAuthenticity: "The writing still feels a bit artificial. Make it sound more natural and human.",
+    smartWeakEmotional: "The post needs more emotional pull. Add feeling and relatability.",
+    smartWeakCuriosity: "The post does not create enough intrigue. Add curiosity and forward momentum.",
+    smartWeakClarity: "The message is not sharp enough yet. Make it clearer and easier to understand.",
 
-    errorTopic: "Please enter a topic first",
-    errorPost: "Please enter a post first"
+    goalPresetViral: "More Viral",
+    goalPresetHuman: "More Human",
+    goalPresetProfessional: "More Professional",
+    goalPresetEmotional: "More Emotional",
+    goalPresetSales: "More Converting",
+    goalPresetEngagement: "More Engagement",
+
+    goalPresetMoreViral: "More Viral",
+    goalPresetMoreHuman: "More Human",
+    goalPresetMoreClear: "More Clear",
+    goalPresetMoreEmotional: "More Emotional",
+    goalPresetMoreSharp: "More Sharp",
+    goalPresetMoreProfessional: "More Professional",
+    goalPresetFixHook: "Fix Hook",
+    goalPresetFixCta: "Fix CTA",
+    goalPresetMoreCurious: "More Curious",
+
+    historyTitle: "History",
+    historyEmpty: "No saved results yet",
+    clearHistory: "Clear History",
+    loadHistory: "Load",
+    deleteHistoryItem: "Delete",
+
+    emptyState: "No result yet. Start with Build, Improve, or Analyze.",
+    errorTopic: "Please enter a topic first.",
+    errorPost: "Please enter a post first."
   },
 
   he: {
     appName: "PostPulse AI",
-    subtitle: "צור, שפר ונתח פוסטים לרשתות חברתיות",
+    subtitle: "צור, שפר ונתח פוסטים לרשתות עם תוצאה חדה יותר, אנושית יותר ומדויקת יותר",
 
-    build: "בניית פוסט",
+    english: "English",
+    hebrew: "עברית",
+
+    build: "יצירת פוסט",
     improve: "שיפור פוסט",
     analyze: "ניתוח פוסט",
 
@@ -152,13 +139,13 @@ export const translations = {
     generate: "צור פוסט",
     improveBtn: "שפר פוסט",
     analyzeBtn: "נתח פוסט",
-    loading: "טוען...",
+    loading: "עובד...",
 
     result: "תוצאה",
     title: "כותרת",
     hook: "פתיחה",
     body: "גוף הפוסט",
-    cta: "CTA",
+    cta: "הנעה לפעולה",
     hashtags: "האשטגים",
     shortVersion: "גרסה קצרה",
     alternativeVersion: "גרסה חלופית",
@@ -168,104 +155,85 @@ export const translations = {
     tips: "טיפים",
     improvedVersion: "גרסה משופרת",
     moreViralVersion: "גרסה יותר ויראלית",
-    moreAuthenticVersion: "גרסה יותר אותנטית",
-
-    summary: "סיכום",
-    whatWorks: "מה עובד",
-    whatHurts: "מה פוגע",
-    improvements: "המלצות לשיפור",
+    moreAuthenticVersion: "גרסה יותר אנושית",
 
     viralScore: "ציון ויראליות",
     authenticityScore: "ציון אותנטיות",
     clarityScore: "ציון בהירות",
     emotionalScore: "ציון רגש",
     curiosityScore: "ציון סקרנות",
-    hookScore: "ציון Hook",
-    ctaScore: "ציון CTA",
+    hookScore: "ציון פתיחה",
+    ctaScore: "ציון הנעה לפעולה",
 
-    raiseViralScore: "איך להעלות ויראליות",
-    raiseAuthenticityScore: "איך להעלות אותנטיות",
-    raiseEmotionalScore: "איך להעלות רגש",
-    raiseCuriosityScore: "איך להעלות סקרנות",
+    summary: "סיכום",
+    whatWorks: "מה עובד",
+    whatHurts: "מה פוגע",
+    improvements: "כיווני שיפור",
+    raiseViralScore: "איך לשפר ויראליות",
+    raiseAuthenticityScore: "איך לחזק אותנטיות",
+    raiseEmotionalScore: "איך לחזק רגש",
+    raiseCuriosityScore: "איך להגביר סקרנות",
 
-    hebrew: "עברית",
-    english: "English",
-
-    emptyState: "התחל ביצירת פוסט ✨",
     copy: "העתק",
     copyFullPost: "העתק פוסט מלא",
     copyImproved: "העתק גרסאות משופרות",
     copyAnalyze: "העתק גרסה משופרת",
-
-    improveAction: "שפר",
-    viralBoost: "בוסט ויראלי",
-    analyzeAction: "נתח",
-
-    publishAction: "פרסם",
-    publishToInstagram: "פרסם לאינסטגרם",
-    publishToFacebook: "פרסם לפייסבוק",
-    publishToLinkedIn: "פרסם ללינקדאין",
-    publishToTikTok: "פרסם לטיקטוק",
-    publishComingSoon: "החיבור לפרסום יתווסף בקרוב",
-
-    historyTitle: "היסטוריה",
-    historyEmpty: "התוצאות השמורות יופיעו כאן",
     saveToHistory: "שמור להיסטוריה",
     savedToHistory: "נשמר להיסטוריה",
-    loadHistory: "טען",
-    clearHistory: "נקה היסטוריה",
-    deleteHistoryItem: "מחק",
+    exportTxt: "ייצוא TXT",
+    exportReady: "הייצוא מוכן",
 
-    exportTxt: "ייצא TXT",
-    exportReady: "קובץ TXT ירד",
-
-    goalPresetViral: "לעשות אותו ויראלי",
-    goalPresetHuman: "לעשות אותו אנושי",
-    goalPresetProfessional: "לעשות אותו מקצועי",
-    goalPresetEmotional: "לעשות אותו רגשי",
-    goalPresetSales: "להניע לפעולה",
-    goalPresetEngagement: "להגדיל מעורבות",
-
-    goalPresetMoreViral: "לעשות אותו יותר ויראלי",
-    goalPresetMoreHuman: "לעשות אותו יותר אנושי",
-    goalPresetMoreClear: "לעשות אותו יותר ברור",
-    goalPresetMoreEmotional: "לעשות אותו יותר רגשי",
-    goalPresetMoreSharp: "לעשות אותו יותר חד",
-    goalPresetMoreProfessional: "לעשות אותו יותר מקצועי",
-    goalPresetMoreCurious: "לעשות אותו יותר מסקרן",
-    goalPresetFixHook: "לתקן את הפתיחה",
-    goalPresetFixCta: "לתקן את ה-CTA",
+    improveAction: "העבר ל־Improve",
+    analyzeAction: "העבר ל־Analyze",
+    viralBoost: "בוסט ויראלי",
 
     quickActionsTitle: "פעולות מהירות",
     quickFixHook: "שפר פתיחה",
-    quickFixCta: "שפר CTA",
-    quickMakeViral: "עשה יותר ויראלי",
-    quickMakeHuman: "עשה יותר אנושי",
-    quickMakeEmotional: "עשה יותר רגשי",
-    quickMakeCurious: "עשה יותר מסקרן",
-    quickMakeClear: "עשה יותר ברור",
+    quickFixCta: "שפר הנעה לפעולה",
+    quickMakeViral: "הפוך לויראלי יותר",
+    quickMakeHuman: "הפוך לאנושי יותר",
+    quickMakeEmotional: "הפוך לרגשי יותר",
+    quickMakeCurious: "הפוך למסקרן יותר",
+    quickMakeClear: "הפוך לברור יותר",
 
-    smartRecommendationTitle: "המלצות מובילות",
+    smartRecommendationTitle: "המלצה חכמה",
     smartRecommendationPrimary: "המלצה ראשית",
     smartRecommendationSecondary: "המלצה שנייה",
     smartRecommendationThird: "המלצה שלישית",
 
-    smartWeakHook:
-      "החולשה המרכזית כרגע היא הפתיחה. חיזוק ה-Hook ייתן את השיפור הראשוני הכי חשוב.",
-    smartWeakCta:
-      "החולשה המרכזית כרגע היא ה-CTA. סיום עם הנעה חזקה יותר לפעולה ישפר את התגובה.",
-    smartWeakViral:
-      "החולשה המרכזית כרגע היא הוויראליות. הפוסט צריך יותר מתח, חדות או פוטנציאל שיתוף.",
-    smartWeakAuthenticity:
-      "החולשה המרכזית כרגע היא האותנטיות. הפוסט צריך להישמע טבעי ואנושי יותר.",
-    smartWeakEmotional:
-      "החולשה המרכזית כרגע היא הרגש. צריך יותר תחושה וחיבור רגשי.",
-    smartWeakCuriosity:
-      "החולשה המרכזית כרגע היא הסקרנות. צריך לייצר יותר עניין ולולאות פתוחות.",
-    smartWeakClarity:
-      "החולשה המרכזית כרגע היא הבהירות. חידוד המסר יהפוך את הפוסט לחזק יותר.",
+    smartWeakHook: "הפתיחה חלשה מדי. צריך לחזק את השורה הראשונה כדי לעצור את הגלילה מהר יותר.",
+    smartWeakCta: "הסיום לא מניע מספיק לפעולה. צריך CTA ברור וחזק יותר.",
+    smartWeakViral: "לפוסט חסר מספיק כוח ומשיכה לשיתוף. צריך לחזק אנרגיה ופוטנציאל מעורבות.",
+    smartWeakAuthenticity: "הכתיבה עדיין מרגישה מעט מלאכותית. צריך להפוך אותה לטבעית ואנושית יותר.",
+    smartWeakEmotional: "לפוסט חסר עומק רגשי. צריך להוסיף יותר תחושה והזדהות.",
+    smartWeakCuriosity: "הפוסט לא יוצר מספיק סקרנות. צריך להוסיף עניין ותנועה קדימה.",
+    smartWeakClarity: "המסר עדיין לא חד מספיק. צריך להפוך אותו לברור וקל יותר להבנה.",
 
-    errorTopic: "יש להזין נושא קודם",
-    errorPost: "יש להזין פוסט קודם"
+    goalPresetViral: "יותר ויראלי",
+    goalPresetHuman: "יותר אנושי",
+    goalPresetProfessional: "יותר מקצועי",
+    goalPresetEmotional: "יותר רגשי",
+    goalPresetSales: "יותר ממיר",
+    goalPresetEngagement: "יותר מעורבות",
+
+    goalPresetMoreViral: "יותר ויראלי",
+    goalPresetMoreHuman: "יותר אנושי",
+    goalPresetMoreClear: "יותר ברור",
+    goalPresetMoreEmotional: "יותר רגשי",
+    goalPresetMoreSharp: "יותר חד",
+    goalPresetMoreProfessional: "יותר מקצועי",
+    goalPresetFixHook: "שפר פתיחה",
+    goalPresetFixCta: "שפר הנעה לפעולה",
+    goalPresetMoreCurious: "יותר מסקרן",
+
+    historyTitle: "היסטוריה",
+    historyEmpty: "עדיין אין תוצאות שמורות",
+    clearHistory: "נקה היסטוריה",
+    loadHistory: "טען",
+    deleteHistoryItem: "מחק",
+
+    emptyState: "עדיין אין תוצאה. התחל ביצירה, שיפור או ניתוח.",
+    errorTopic: "צריך להזין נושא קודם.",
+    errorPost: "צריך להזין פוסט קודם."
   }
 };
