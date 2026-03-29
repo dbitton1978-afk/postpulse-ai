@@ -1,7 +1,7 @@
 {
   "name": "postpulse-server",
   "version": "1.0.0",
-  "description": "PostPulse AI Backend",
+  "description": "PostPulse AI backend server",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -9,10 +9,12 @@
     "build": "echo \"No build step required for server\""
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "openai": "^4.104.0"
+    "mongoose": "^8.12.2",
+    "openai": "^4.86.2"
   }
 }
