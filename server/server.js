@@ -274,7 +274,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-/* Auth */
 app.post("/api/auth/register", async (req, res) => {
   try {
     const email = cleanString(req.body?.email).toLowerCase();
@@ -374,7 +373,6 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-/* Posts storage */
 app.post("/api/posts/save", authMiddleware, async (req, res) => {
   try {
     const type = cleanString(req.body?.type, "build");
@@ -420,7 +418,6 @@ app.get("/api/posts/my-posts", authMiddleware, async (req, res) => {
   }
 });
 
-/* Generate */
 async function handleGenerate(req, res) {
   try {
     const topic = cleanString(req.body?.topic);
@@ -518,7 +515,6 @@ RULES:
   }
 }
 
-/* Improve */
 async function handleImprove(req, res) {
   try {
     const post = cleanString(req.body?.post);
@@ -607,7 +603,6 @@ RULES:
   }
 }
 
-/* Analyze */
 async function handleAnalyze(req, res) {
   try {
     const post = cleanString(req.body?.post);
@@ -703,17 +698,14 @@ RULES:
   }
 }
 
-/* Backward-compatible routes */
 app.post("/generate-post", handleGenerate);
 app.post("/improve-post", handleImprove);
 app.post("/analyze-post", handleAnalyze);
 
-/* New API routes */
 app.post("/api/generate-post", handleGenerate);
 app.post("/api/improve-post", handleImprove);
 app.post("/api/analyze-post", handleAnalyze);
 
-/* Optional authenticated aliases that auto-save */
 app.post("/api/posts/generate", authMiddleware, handleGenerate);
 app.post("/api/posts/improve", authMiddleware, handleImprove);
 app.post("/api/posts/analyze", authMiddleware, handleAnalyze);
