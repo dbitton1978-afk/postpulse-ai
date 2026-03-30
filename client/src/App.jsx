@@ -4,6 +4,7 @@ import {
   generatePost,
   improvePost,
   loadMyPosts,
+  savePost,
   logoutUser,
   getStoredUser
 } from "./api";
@@ -189,6 +190,9 @@ export default function App() {
     return t?.[key] || fallback;
   }
 
+  const copyLabel = isHebrew ? "העתק" : "Copy";
+  const copiedLabel = isHebrew ? "הועתק" : "Copied";
+
   const buildGoalPresets = useMemo(
     () => [
       tr("goalPresetViral", isHebrew ? "פוסט ויראלי" : "More viral"),
@@ -254,8 +258,6 @@ export default function App() {
     fetchHistory();
   }, []);
 
-  const copiedLabel = isHebrew ? "הועתק" : "Copied";
-
   function setBuildField(field, value) {
     setBuildForm((prev) => ({
       ...prev,
@@ -310,6 +312,26 @@ export default function App() {
       setHistory(posts);
     } catch (err) {
       console.error("History sync failed", err);
+    }
+  }
+
+  async function saveResultManually(type, data) {
+    try {
+      await savePost({
+        type,
+        content: {
+          ...data,
+          language,
+          platform:
+            type === "build"
+              ? buildForm.platform
+              : type === "improve"
+                ? improveForm.platform
+                : analyzeForm.platform
+        }
+      });
+    } catch (err) {
+      console.error("Manual save failed", err);
     }
   }
 
@@ -443,6 +465,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
+      await saveResultManually("build", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -485,6 +508,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
+      await saveResultManually("improve", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -517,6 +541,7 @@ export default function App() {
 
       setAnalysisResult(nextResult.data);
       setResult(nextResult);
+      await saveResultManually("analyze", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -959,7 +984,7 @@ export default function App() {
                         className="secondary-btn"
                         onClick={() => copyText(buildCopyText)}
                       >
-                        {copiedLabel}
+                        {copyLabel}
                       </button>
                       <button
                         type="button"
@@ -985,7 +1010,7 @@ export default function App() {
                         className="secondary-btn"
                         onClick={() => copyText(improveCopyText)}
                       >
-                        {copiedLabel}
+                        {copyLabel}
                       </button>
                       <button
                         type="button"
@@ -1004,7 +1029,7 @@ export default function App() {
                         className="secondary-btn"
                         onClick={() => copyText(analyzeCopyText)}
                       >
-                        {copiedLabel}
+                        {copyLabel}
                       </button>
                       <button
                         type="button"
@@ -1022,7 +1047,7 @@ export default function App() {
                     <Section
                       title={tr("title", "Title")}
                       onCopy={() => copyText(result.data?.title || "")}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{result.data?.title || ""}</p>
                     </Section>
@@ -1030,7 +1055,7 @@ export default function App() {
                     <Section
                       title={tr("hook", "Hook")}
                       onCopy={() => copyText(result.data?.hook || "")}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{result.data?.hook || ""}</p>
                     </Section>
@@ -1038,7 +1063,7 @@ export default function App() {
                     <Section
                       title={tr("body", "Body")}
                       onCopy={() => copyText(result.data?.body || "")}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{result.data?.body || ""}</p>
                     </Section>
@@ -1046,12 +1071,22 @@ export default function App() {
                     <Section
                       title={tr("cta", "CTA")}
                       onCopy={() => copyText(result.data?.cta || "")}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{result.data?.cta || ""}</p>
                     </Section>
 
-                    <Section title={tr("hashtags", "Hashtags")}>
+                    <Section
+                      title={tr("hashtags", "Hashtags")}
+                      onCopy={() =>
+                        copyText(
+                          Array.isArray(result.data?.hashtags)
+                            ? result.data.hashtags.join(" ")
+                            : ""
+                        )
+                      }
+                      copyLabel={copyLabel}
+                    >
                       <p>
                         {Array.isArray(result.data?.hashtags)
                           ? result.data.hashtags.join(" ")
@@ -1059,11 +1094,19 @@ export default function App() {
                       </p>
                     </Section>
 
-                    <Section title={tr("shortVersion", "Short Version")}>
+                    <Section
+                      title={tr("shortVersion", "Short Version")}
+                      onCopy={() => copyText(result.data?.shortVersion || "")}
+                      copyLabel={copyLabel}
+                    >
                       <p>{result.data?.shortVersion || ""}</p>
                     </Section>
 
-                    <Section title={tr("alternativeVersion", "Alternative Version")}>
+                    <Section
+                      title={tr("alternativeVersion", "Alternative Version")}
+                      onCopy={() => copyText(result.data?.alternativeVersion || "")}
+                      copyLabel={copyLabel}
+                    >
                       <p>{result.data?.alternativeVersion || ""}</p>
                     </Section>
                   </>
@@ -1082,16 +1125,24 @@ export default function App() {
                     <Section
                       title={tr("improvedVersion", "Improved Version")}
                       onCopy={() => copyText(getPrimaryImproveText(result.data))}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{getPrimaryImproveText(result.data)}</p>
                     </Section>
 
-                    <Section title={tr("moreViralVersion", "More Viral Version")}>
+                    <Section
+                      title={tr("moreViralVersion", "More Viral Version")}
+                      onCopy={() => copyText(result.data?.moreViralVersion || "")}
+                      copyLabel={copyLabel}
+                    >
                       <p>{result.data?.moreViralVersion || ""}</p>
                     </Section>
 
-                    <Section title={tr("moreAuthenticVersion", "More Authentic Version")}>
+                    <Section
+                      title={tr("moreAuthenticVersion", "More Authentic Version")}
+                      onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
+                      copyLabel={copyLabel}
+                    >
                       <p>{result.data?.moreAuthenticVersion || ""}</p>
                     </Section>
 
@@ -1160,7 +1211,7 @@ export default function App() {
                     <Section
                       title={tr("improvedVersion", "Improved Version")}
                       onCopy={() => copyText(activeAnalyzeData?.improvedVersion || "")}
-                      copyLabel={copiedLabel}
+                      copyLabel={copyLabel}
                     >
                       <p>{activeAnalyzeData?.improvedVersion || ""}</p>
                     </Section>
