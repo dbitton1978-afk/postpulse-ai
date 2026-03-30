@@ -4,7 +4,6 @@ import {
   generatePost,
   improvePost,
   loadMyPosts,
-  savePost,
   logoutUser,
   getStoredUser
 } from "./api";
@@ -160,13 +159,27 @@ function buildPostFromBuildResult(data) {
 function normalizeServerHistory(posts) {
   if (!Array.isArray(posts)) return [];
 
-  return posts.map((post) => ({
-    id: post._id || post.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    createdAt: post.createdAt || new Date().toISOString(),
-    type: post.type || "build",
-    language: post.content?.language || "en",
-    data: post.content || {}
-  }));
+  const unique = [];
+  const seen = new Set();
+
+  for (const post of posts) {
+    const normalized = {
+      id: post._id || post.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: post.createdAt || new Date().toISOString(),
+      type: post.type || "build",
+      language: post.content?.language || "en",
+      data: post.content || {}
+    };
+
+    const signature = `${normalized.type}_${normalized.createdAt}_${JSON.stringify(normalized.data)}`;
+
+    if (!seen.has(signature)) {
+      seen.add(signature);
+      unique.push(normalized);
+    }
+  }
+
+  return unique;
 }
 
 export default function App() {
@@ -315,26 +328,6 @@ export default function App() {
     }
   }
 
-  async function saveResultManually(type, data) {
-    try {
-      await savePost({
-        type,
-        content: {
-          ...data,
-          language,
-          platform:
-            type === "build"
-              ? buildForm.platform
-              : type === "improve"
-                ? improveForm.platform
-                : analyzeForm.platform
-        }
-      });
-    } catch (err) {
-      console.error("Manual save failed", err);
-    }
-  }
-
   function removeHistoryItem(id) {
     setHistory((prev) => prev.filter((item) => item.id !== id));
   }
@@ -364,14 +357,14 @@ export default function App() {
         ...prev,
         post: loadedPost || prev.post,
         goal: tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human"),
-        style: buildForm.style,
-        platform: buildForm.platform
+        style: item.data?.style || buildForm.style,
+        platform: item.data?.platform || buildForm.platform
       }));
 
       setAnalyzeForm((prev) => ({
         ...prev,
         post: loadedPost || prev.post,
-        platform: buildForm.platform
+        platform: item.data?.platform || buildForm.platform
       }));
 
       setTab("build");
@@ -386,13 +379,16 @@ export default function App() {
 
       setImproveForm((prev) => ({
         ...prev,
-        post: improvedText || prev.post
+        post: improvedText || prev.post,
+        goal: item.data?.goal || prev.goal,
+        style: item.data?.style || prev.style,
+        platform: item.data?.platform || prev.platform
       }));
 
       setAnalyzeForm((prev) => ({
         ...prev,
         post: improvedText || prev.post,
-        platform: improveForm.platform || prev.platform
+        platform: item.data?.platform || prev.platform
       }));
 
       setTab("improve");
@@ -412,14 +408,15 @@ export default function App() {
 
       setAnalyzeForm((prev) => ({
         ...prev,
-        post: analyzedText || prev.post
+        post: analyzedText || prev.post,
+        platform: item.data?.platform || prev.platform
       }));
 
       setImproveForm((prev) => ({
         ...prev,
         post: analyzedText || prev.post,
         goal: prev.goal || tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human"),
-        platform: analyzeForm.platform || prev.platform || "instagram"
+        platform: item.data?.platform || prev.platform || "instagram"
       }));
 
       setTab("analyze");
@@ -465,7 +462,6 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await saveResultManually("build", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -508,7 +504,6 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await saveResultManually("improve", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -541,7 +536,6 @@ export default function App() {
 
       setAnalysisResult(nextResult.data);
       setResult(nextResult);
-      await saveResultManually("analyze", nextResult.data);
       await syncServerHistory();
     } catch (err) {
       setError(err?.message || "Error");
@@ -594,8 +588,8 @@ export default function App() {
       goal:
         tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human") ||
         prev.goal,
-      style: buildForm.style,
-      platform: buildForm.platform
+      style: result.data?.style || buildForm.style,
+      platform: result.data?.platform || buildForm.platform
     }));
 
     setError("");
@@ -612,7 +606,7 @@ export default function App() {
     setAnalyzeForm((prev) => ({
       ...prev,
       post: fullPost,
-      platform: buildForm.platform
+      platform: result.data?.platform || buildForm.platform
     }));
 
     setError("");
@@ -639,7 +633,7 @@ export default function App() {
     setAnalyzeForm((prev) => ({
       ...prev,
       post: improvedPost,
-      platform: improveForm.platform || prev.platform || "instagram"
+      platform: improveData?.platform || improveForm.platform || prev.platform || "instagram"
     }));
 
     setError("");
@@ -665,7 +659,7 @@ export default function App() {
       ...prev,
       post: nextPost,
       goal: prev.goal || tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human"),
-      platform: analyzeForm.platform || prev.platform || "instagram"
+      platform: analysisResult?.platform || analyzeForm.platform || prev.platform || "instagram"
     }));
 
     setTab("improve");
