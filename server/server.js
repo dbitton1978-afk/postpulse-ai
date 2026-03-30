@@ -50,7 +50,6 @@ function normalizeScoreValue(value) {
 
   if (!Number.isFinite(num)) return 0;
 
-  // אם המודל החזיר ציונים בסולם 0-10, נהפוך ל-0-100
   if (num >= 0 && num <= 10) {
     return Math.round(num * 10);
   }
@@ -465,10 +464,8 @@ async function handleGenerate(req, res) {
 
     const systemPrompt = `
 You are a world-class social media content strategist.
-
 You NEVER generate generic AI text.
 You ALWAYS write like a sharp, natural human creator.
-
 Return valid JSON only.
 `;
 
@@ -557,7 +554,6 @@ async function handleImprove(req, res) {
 
     const systemPrompt = `
 You are a world-class social media post optimizer.
-
 You improve text in a natural, human, persuasive way.
 Return valid JSON only.
 `;
