@@ -160,6 +160,23 @@ select {
   flex-wrap: wrap;
 }
 
+.lang-switch button {
+  border: 0;
+  outline: none;
+  cursor: pointer;
+  transition: 0.18s ease;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8efff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lang-switch button.active {
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(46, 211, 198, 0.7));
+  color: white;
+}
+
 .tabs {
   display: flex;
   gap: 12px;
