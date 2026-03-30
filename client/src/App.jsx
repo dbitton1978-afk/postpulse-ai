@@ -4,6 +4,7 @@ import {
   generatePost,
   improvePost,
   loadMyPosts,
+  savePost,
   logoutUser,
   getStoredUser
 } from "./api";
@@ -159,27 +160,13 @@ function buildPostFromBuildResult(data) {
 function normalizeServerHistory(posts) {
   if (!Array.isArray(posts)) return [];
 
-  const unique = [];
-  const seen = new Set();
-
-  for (const post of posts) {
-    const normalized = {
-      id: post._id || post.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: post.createdAt || new Date().toISOString(),
-      type: post.type || "build",
-      language: post.content?.language || "en",
-      data: post.content || {}
-    };
-
-    const signature = `${normalized.type}_${normalized.createdAt}_${JSON.stringify(normalized.data)}`;
-
-    if (!seen.has(signature)) {
-      seen.add(signature);
-      unique.push(normalized);
-    }
-  }
-
-  return unique;
+  return posts.map((post) => ({
+    id: post._id || post.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: post.createdAt || new Date().toISOString(),
+    type: post.type || "build",
+    language: post.content?.language || "en",
+    data: post.content || {}
+  }));
 }
 
 export default function App() {
@@ -319,13 +306,40 @@ export default function App() {
   }
 
   async function syncServerHistory() {
-    try {
-      const response = await loadMyPosts();
-      const posts = normalizeServerHistory(response?.posts);
-      setHistory(posts);
-    } catch (err) {
-      console.error("History sync failed", err);
-    }
+    const response = await loadMyPosts();
+    const posts = normalizeServerHistory(response?.posts);
+    setHistory(posts);
+  }
+
+  async function saveHistoryItem(type, data) {
+    const payload = {
+      type,
+      content: {
+        ...data,
+        language,
+        platform:
+          type === "build"
+            ? buildForm.platform
+            : type === "improve"
+              ? improveForm.platform
+              : analyzeForm.platform,
+        style:
+          type === "build"
+            ? buildForm.style
+            : type === "improve"
+              ? improveForm.style
+              : undefined,
+        goal:
+          type === "build"
+            ? buildForm.goal
+            : type === "improve"
+              ? improveForm.goal
+              : undefined
+      }
+    };
+
+    await savePost(payload);
+    await syncServerHistory();
   }
 
   function removeHistoryItem(id) {
@@ -356,15 +370,15 @@ export default function App() {
       setImproveForm((prev) => ({
         ...prev,
         post: loadedPost || prev.post,
-        goal: tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human"),
-        style: item.data?.style || buildForm.style,
-        platform: item.data?.platform || buildForm.platform
+        goal: item.data?.goal || tr("goalPresetMoreHuman", isHebrew ? "יותר אנושי" : "More human"),
+        style: item.data?.style || prev.style,
+        platform: item.data?.platform || prev.platform
       }));
 
       setAnalyzeForm((prev) => ({
         ...prev,
         post: loadedPost || prev.post,
-        platform: item.data?.platform || buildForm.platform
+        platform: item.data?.platform || prev.platform
       }));
 
       setTab("build");
@@ -462,7 +476,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("build", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
@@ -504,7 +518,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("improve", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
@@ -536,7 +550,7 @@ export default function App() {
 
       setAnalysisResult(nextResult.data);
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("analyze", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
