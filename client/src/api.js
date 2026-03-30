@@ -1,82 +1,99 @@
-const API_BASE_URL = (
-  import.meta.env.VITE_API_URL ||
-  window.location.origin
-).replace(/\/+$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(
+  /\/+$/,
+  ""
+);
 
-function getAuthToken() {
-  try {
-    return (
-      localStorage.getItem("postpulse_token") ||
-      localStorage.getItem("token") ||
-      localStorage.getItem("authToken") ||
-      ""
-    );
-  } catch {
-    return "";
-  }
+const TOKEN_KEY = "postpulse_token";
+const USER_KEY = "postpulse_user";
+
+function buildHeaders(token, extraHeaders = {}) {
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders
+  };
 }
 
-function setAuthToken(token) {
-  try {
-    if (!token) return;
-    localStorage.setItem("postpulse_token", token);
-  } catch {
-    // ignore storage errors
-  }
-}
-
-function clearAuthToken() {
-  try {
-    localStorage.removeItem("postpulse_token");
-  } catch {
-    // ignore storage errors
-  }
-}
-
-async function parseJsonSafe(response) {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
-async function request(path, payload, options = {}) {
-  const token = getAuthToken();
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method || "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body:
-      options.method === "GET" ? undefined : JSON.stringify(payload || {})
+async function request(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: buildHeaders(options.token, options.headers)
   });
 
-  const data = await parseJsonSafe(response);
+  const raw = await response.text();
+  let data = null;
+
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = { success: false, error: raw || "Invalid server response" };
+  }
 
   if (!response.ok) {
     throw new Error(
-      data?.error ||
-        data?.message ||
-        `Request failed with status ${response.status}`
+      data?.error || data?.message || `Request failed with status ${response.status}`
     );
   }
 
   return data;
 }
 
-/* ---------- AUTH ---------- */
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+
+export function setToken(token) {
+  if (!token) {
+    localStorage.removeItem(TOKEN_KEY);
+    return;
+  }
+
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export function getStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user) {
+  if (!user) {
+    localStorage.removeItem(USER_KEY);
+    return;
+  }
+
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function clearStoredUser() {
+  localStorage.removeItem(USER_KEY);
+}
+
+export function clearAuth() {
+  clearToken();
+  clearStoredUser();
+}
 
 export async function registerUser(payload) {
   const data = await request("/api/auth/register", {
-    email: payload?.email || "",
-    password: payload?.password || ""
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 
   if (data?.token) {
-    setAuthToken(data.token);
+    setToken(data.token);
+  }
+
+  if (data?.user) {
+    setStoredUser(data.user);
   }
 
   return data;
@@ -84,48 +101,76 @@ export async function registerUser(payload) {
 
 export async function loginUser(payload) {
   const data = await request("/api/auth/login", {
-    email: payload?.email || "",
-    password: payload?.password || ""
+    method: "POST",
+    body: JSON.stringify(payload)
   });
 
   if (data?.token) {
-    setAuthToken(data.token);
+    setToken(data.token);
+  }
+
+  if (data?.user) {
+    setStoredUser(data.user);
   }
 
   return data;
 }
 
 export function logoutUser() {
-  clearAuthToken();
+  clearAuth();
 }
 
-/* ---------- AI ---------- */
-
 export async function generatePost(payload) {
-  return request("/generate-post", {
-    topic: payload?.topic || "",
-    targetAudience: payload?.targetAudience || "",
-    goal: payload?.goal || "",
-    style: payload?.style || "professional",
-    platform: payload?.platform || "instagram",
-    language: payload?.language || "en"
+  const token = getToken();
+
+  return request("/api/posts/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token
   });
 }
 
 export async function improvePost(payload) {
-  return request("/improve-post", {
-    post: payload?.post || "",
-    goal: payload?.goal || "",
-    style: payload?.style || "professional",
-    platform: payload?.platform || "instagram",
-    language: payload?.language || "en"
+  const token = getToken();
+
+  return request("/api/posts/improve", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token
   });
 }
 
 export async function analyzePost(payload) {
-  return request("/analyze-post", {
-    post: payload?.post || "",
-    platform: payload?.platform || "instagram",
-    language: payload?.language || "en"
+  const token = getToken();
+
+  return request("/api/posts/analyze", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token
+  });
+}
+
+export async function savePost(payload) {
+  const token = getToken();
+
+  return request("/api/posts/save", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token
+  });
+}
+
+export async function loadMyPosts() {
+  const token = getToken();
+
+  return request("/api/posts/my-posts", {
+    method: "GET",
+    token
+  });
+}
+
+export async function healthCheck() {
+  return request("/api/health", {
+    method: "GET"
   });
 }
