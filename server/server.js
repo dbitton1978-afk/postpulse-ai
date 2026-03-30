@@ -45,10 +45,22 @@ function cleanArray(value, fallback = []) {
   return value.map((item) => String(item || "").trim()).filter(Boolean);
 }
 
-function clampScore(value) {
+function normalizeScoreValue(value) {
   const num = Number(value);
+
   if (!Number.isFinite(num)) return 0;
-  return Math.max(0, Math.min(100, Math.round(num)));
+
+  // אם המודל החזיר ציונים בסולם 0-10, נהפוך ל-0-100
+  if (num >= 0 && num <= 10) {
+    return Math.round(num * 10);
+  }
+
+  return Math.round(num);
+}
+
+function clampScore(value) {
+  const normalized = normalizeScoreValue(value);
+  return Math.max(0, Math.min(100, normalized));
 }
 
 function normalizeLanguage(language) {
@@ -113,8 +125,12 @@ function normalizeHashtags(value) {
     .filter(Boolean);
 }
 
-function normalizeGenerateData(data) {
+function normalizeGenerateData(data, meta = {}) {
   return {
+    language: normalizeLanguage(meta.language),
+    platform: normalizePlatform(meta.platform),
+    style: normalizeStyle(meta.style),
+    goal: cleanString(meta.goal),
     title: cleanString(data?.title),
     hook: cleanString(data?.hook),
     body: cleanString(data?.body),
@@ -125,8 +141,12 @@ function normalizeGenerateData(data) {
   };
 }
 
-function normalizeImproveData(data) {
+function normalizeImproveData(data, meta = {}) {
   return {
+    language: normalizeLanguage(meta.language),
+    platform: normalizePlatform(meta.platform),
+    style: normalizeStyle(meta.style),
+    goal: cleanString(meta.goal),
     strengths: cleanArray(data?.strengths),
     weaknesses: cleanArray(data?.weaknesses),
     improvedPost: cleanString(data?.improvedPost),
@@ -136,8 +156,10 @@ function normalizeImproveData(data) {
   };
 }
 
-function normalizeAnalyzeData(data) {
+function normalizeAnalyzeData(data, meta = {}) {
   return {
+    language: normalizeLanguage(meta.language),
+    platform: normalizePlatform(meta.platform),
     viralScore: clampScore(data?.viralScore),
     authenticityScore: clampScore(data?.authenticityScore),
     clarityScore: clampScore(data?.clarityScore),
@@ -157,10 +179,14 @@ function normalizeAnalyzeData(data) {
   };
 }
 
-function buildGenerateFallback({ topic, language }) {
+function buildGenerateFallback({ topic, language, platform, style, goal }) {
   const isHebrew = normalizeLanguage(language) === "he";
 
   return {
+    language: normalizeLanguage(language),
+    platform: normalizePlatform(platform),
+    style: normalizeStyle(style),
+    goal: cleanString(goal),
     title: isHebrew ? `פוסט על ${topic}` : `Post about ${topic}`,
     hook: isHebrew
       ? "יש רגעים שבהם הדרך שבה מציגים רעיון משנה את כל התגובה אליו."
@@ -181,8 +207,12 @@ function buildGenerateFallback({ topic, language }) {
   };
 }
 
-function buildImproveFallback({ post }) {
+function buildImproveFallback({ post, language, platform, style, goal }) {
   return {
+    language: normalizeLanguage(language),
+    platform: normalizePlatform(platform),
+    style: normalizeStyle(style),
+    goal: cleanString(goal),
     strengths: [],
     weaknesses: [],
     improvedPost: cleanString(post),
@@ -197,41 +227,43 @@ function buildAnalyzeFallback({ post, language, platform }) {
   const safePlatform = normalizePlatform(platform);
 
   return {
-    viralScore: 60,
-    authenticityScore: 68,
-    clarityScore: 70,
-    emotionalScore: 58,
-    curiosityScore: 57,
-    hookScore: 56,
-    ctaScore: 54,
+    language: normalizeLanguage(language),
+    platform: safePlatform,
+    viralScore: 68,
+    authenticityScore: 74,
+    clarityScore: 76,
+    emotionalScore: 66,
+    curiosityScore: 67,
+    hookScore: 64,
+    ctaScore: 63,
     summary: isHebrew
-      ? "יש כאן בסיס טוב, אבל אפשר לחזק חדות, סקרנות וקריאה לפעולה."
-      : "There is a solid base here, but it can be sharper, more curiosity-driven, and stronger on CTA.",
+      ? "יש כאן בסיס טוב, אבל אפשר לחזק פתיחה, סקרנות וקריאה לפעולה."
+      : "There is a solid base here, but the opening, curiosity, and CTA can be stronger.",
     whatWorks: isHebrew
-      ? ["הנושא ברור", "יש בסיס לפוסט טוב"]
-      : ["The topic is clear", "There is a base for a good post"],
+      ? ["הנושא ברור", "יש בסיס טוב למסר", "אפשר לבנות עליו חזק"]
+      : ["The topic is clear", "There is a solid message base", "It has strong potential"],
     whatHurts: isHebrew
-      ? ["הפתיחה לא מספיק חזקה", "הניסוח מעט כללי"]
-      : ["The opening is not strong enough", "The wording is a bit generic"],
+      ? ["הפתיחה לא מספיק חדה", "הטקסט יכול להיות אנושי יותר"]
+      : ["The opening is not sharp enough", "The text could sound more human"],
     improvements: isHebrew
-      ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא"]
-      : ["Strengthen the first sentence", "Clarify the value for the reader"],
+      ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא", "לשפר CTA"]
+      : ["Strengthen the first sentence", "Clarify the reader value", "Improve the CTA"],
     raiseViralScore: isHebrew
-      ? ["להתחיל חד יותר", "ליצור יותר מתח"]
-      : ["Start more sharply", "Create more tension"],
+      ? ["לפתוח עם מתח", "להכניס זווית מפתיעה"]
+      : ["Open with tension", "Add a surprising angle"],
     raiseAuthenticityScore: isHebrew
-      ? ["לדבר פשוט יותר", "להישמע פחות רובוטי"]
-      : ["Use simpler wording", "Sound less robotic"],
+      ? ["לפשט ניסוח", "לדבר בגובה העיניים"]
+      : ["Simplify wording", "Use a more natural voice"],
     raiseEmotionalScore: isHebrew
-      ? ["להוסיף חיבור רגשי", "לגעת בצורך אמיתי"]
-      : ["Add emotional connection", "Touch a real need"],
+      ? ["לגעת בכאב או רצון אמיתי"]
+      : ["Touch a real pain point or desire"],
     raiseCuriosityScore: isHebrew
-      ? ["להשאיר לולאה פתוחה", "לרמוז על תובנה לפני החשיפה"]
-      : ["Leave an open loop", "Hint at an insight before revealing it"],
+      ? ["להשאיר לולאה פתוחה", "לעורר שאלה כבר בפתיחה"]
+      : ["Leave an open loop", "Trigger a question in the opening"],
     improvedVersion:
       cleanString(post) ||
       (isHebrew
-        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
+        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך פתיחה חזקה יותר וניסוח ברור יותר.`
         : `If you want this post to work better on ${safePlatform}, it needs a stronger opening and clearer wording.`)
   };
 }
@@ -435,12 +467,7 @@ async function handleGenerate(req, res) {
 You are a world-class social media content strategist.
 
 You NEVER generate generic AI text.
-
-You ALWAYS:
-- think before writing
-- build a strategic internal brief
-- write like a real human
-- optimize for engagement and platform behavior
+You ALWAYS write like a sharp, natural human creator.
 
 Return valid JSON only.
 `;
@@ -454,14 +481,7 @@ Style: ${style}
 Platform: ${platform}
 Language: ${getLanguageLabel(language)}
 
-STEP 1 — Build an internal brief silently:
-- best angle
-- main emotion
-- strongest hook direction
-- best CTA direction
-- what makes people stop scrolling
-
-STEP 2 — Return JSON only:
+Return JSON only:
 
 {
   "title": "",
@@ -494,8 +514,16 @@ RULES:
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = safeJsonParse(raw, buildGenerateFallback({ topic, language }));
-    const normalized = normalizeGenerateData(parsed);
+    const parsed = safeJsonParse(
+      raw,
+      buildGenerateFallback({ topic, language, platform, style, goal })
+    );
+    const normalized = normalizeGenerateData(parsed, {
+      language,
+      platform,
+      style,
+      goal
+    });
 
     if (req.user?.userId) {
       await saveGeneratedContent(req.user.userId, "build", normalized);
@@ -530,15 +558,7 @@ async function handleImprove(req, res) {
     const systemPrompt = `
 You are a world-class social media post optimizer.
 
-You do NOT rewrite blindly.
-
-You first understand:
-- what is weak
-- what should stay
-- what should become stronger
-- what fits the user's goal
-- what fits the platform
-
+You improve text in a natural, human, persuasive way.
 Return valid JSON only.
 `;
 
@@ -582,8 +602,16 @@ RULES:
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = safeJsonParse(raw, buildImproveFallback({ post }));
-    const normalized = normalizeImproveData(parsed);
+    const parsed = safeJsonParse(
+      raw,
+      buildImproveFallback({ post, language, platform, style, goal })
+    );
+    const normalized = normalizeImproveData(parsed, {
+      language,
+      platform,
+      style,
+      goal
+    });
 
     if (req.user?.userId) {
       await saveGeneratedContent(req.user.userId, "improve", normalized);
@@ -626,6 +654,10 @@ You analyze posts for:
 - CTA strength
 
 Return valid JSON only.
+All scores must be on a 0-100 scale.
+Do not use 0-10 scores.
+Be realistic, but not harsh by default.
+A decent post should usually land in the 60-85 range.
 `;
 
     const userPrompt = `
@@ -656,8 +688,9 @@ Return JSON only:
 }
 
 RULES:
+- scores must be 0-100 only
+- a decent post should not get single-digit results
 - be practical, specific, and concise
-- scores must be realistic
 - adapt to ${platform}
 - platform guide: ${getPlatformGuide(platform, language)}
 - write only in ${getLanguageLabel(language)}
@@ -678,7 +711,10 @@ RULES:
       raw,
       buildAnalyzeFallback({ post, language, platform })
     );
-    const normalized = normalizeAnalyzeData(parsed);
+    const normalized = normalizeAnalyzeData(parsed, {
+      language,
+      platform
+    });
 
     if (req.user?.userId) {
       await saveGeneratedContent(req.user.userId, "analyze", normalized);
