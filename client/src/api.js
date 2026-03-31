@@ -150,16 +150,6 @@ export async function analyzePost(payload) {
   });
 }
 
-export async function savePost(payload) {
-  const token = getToken();
-
-  return request("/api/posts/save", {
-    method: "POST",
-    body: JSON.stringify(payload),
-    token
-  });
-}
-
 export async function loadMyPosts() {
   const token = getToken();
 
