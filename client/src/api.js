@@ -2,17 +2,78 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000"
 ).replace(/\/+$/, "");
 
-const TOKEN_KEY = "token";
-const USER_KEY = "user";
+const TOKEN_KEYS = ["token", "postpulse_token", "authToken"];
+const USER_KEYS = ["user", "postpulse_user", "authUser"];
+
+function readFirstExisting(keys) {
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+    if (value) return value;
+  }
+  return "";
+}
+
+function writeAll(keys, value) {
+  keys.forEach((key) => {
+    localStorage.setItem(key, value);
+  });
+}
+
+function removeAll(keys) {
+  keys.forEach((key) => {
+    localStorage.removeItem(key);
+  });
+}
+
+export function getStoredToken() {
+  return readFirstExisting(TOKEN_KEYS);
+}
+
+export function hasToken() {
+  return Boolean(getStoredToken());
+}
+
+export function getStoredUser() {
+  for (const key of USER_KEYS) {
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+
+  return null;
+}
+
+export function logoutUser() {
+  removeAll(TOKEN_KEYS);
+  removeAll(USER_KEYS);
+}
 
 function getAuthHeaders() {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getStoredToken();
 
   return token
     ? {
         Authorization: `Bearer ${token}`
       }
     : {};
+}
+
+function persistAuth(responseData) {
+  if (responseData?.token) {
+    writeAll(TOKEN_KEYS, responseData.token);
+  }
+
+  if (responseData?.user) {
+    const userJson = JSON.stringify(responseData.user);
+    writeAll(USER_KEYS, userJson);
+  }
+
+  return responseData;
 }
 
 async function request(path, options = {}) {
@@ -26,45 +87,16 @@ async function request(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
 
+  if (response.status === 401) {
+    logoutUser();
+    throw new Error(data?.message || "Session expired");
+  }
+
   if (!response.ok) {
     throw new Error(data?.message || data?.error || "Something went wrong");
   }
 
   return data;
-}
-
-function persistAuth(responseData) {
-  if (responseData?.token) {
-    localStorage.setItem(TOKEN_KEY, responseData.token);
-  }
-
-  if (responseData?.user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(responseData.user));
-  }
-
-  return responseData;
-}
-
-export function hasToken() {
-  return Boolean(localStorage.getItem(TOKEN_KEY));
-}
-
-export function getStoredUser() {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function getStoredToken() {
-  return localStorage.getItem(TOKEN_KEY) || "";
-}
-
-export function logoutUser() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
 }
 
 export async function registerUser(payload) {
