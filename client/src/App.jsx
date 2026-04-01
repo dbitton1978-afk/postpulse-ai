@@ -4,8 +4,10 @@ import {
   generatePost,
   improvePost,
   loadMyPosts,
+  savePost,
   logoutUser,
-  getStoredUser
+  getStoredUser,
+  hasToken
 } from "./api";
 import { translations } from "./translations";
 import "./App.css";
@@ -324,6 +326,40 @@ export default function App() {
     setHistory(posts);
   }
 
+  async function saveHistoryItem(type, data) {
+    if (!hasToken()) {
+      throw new Error(isHebrew ? "צריך להתחבר כדי לשמור היסטוריה" : "You must be logged in to save history");
+    }
+
+    await savePost({
+      type,
+      content: {
+        ...data,
+        language,
+        platform:
+          type === "build"
+            ? buildForm.platform
+            : type === "improve"
+              ? improveForm.platform
+              : analyzeForm.platform,
+        style:
+          type === "build"
+            ? buildForm.style
+            : type === "improve"
+              ? improveForm.style
+              : undefined,
+        goal:
+          type === "build"
+            ? buildForm.goal
+            : type === "improve"
+              ? improveForm.goal
+              : undefined
+      }
+    });
+
+    await syncServerHistory();
+  }
+
   function removeHistoryItem(id) {
     setHistory((prev) => prev.filter((item) => item.id !== id));
   }
@@ -458,7 +494,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("build", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
@@ -500,7 +536,7 @@ export default function App() {
       }));
 
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("improve", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
@@ -532,7 +568,7 @@ export default function App() {
 
       setAnalysisResult(nextResult.data);
       setResult(nextResult);
-      await syncServerHistory();
+      await saveHistoryItem("analyze", nextResult.data);
     } catch (err) {
       setError(err?.message || "Error");
     } finally {
@@ -1209,6 +1245,7 @@ export default function App() {
                 ) : null}
               </>
             ) : null}
+
           </section>
 
           <section className="panel glass history-panel">
