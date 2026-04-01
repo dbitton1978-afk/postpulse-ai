@@ -4,10 +4,14 @@ import {
   deletePost,
   generatePost,
   getMyPosts,
+  getStoredUser,
+  hasToken,
   improvePost,
+  loginUser,
+  logoutUser,
+  registerUser,
   savePost
 } from "./api";
-import { translations } from "./translations";
 import "./App.css";
 
 const styleOptions = [
@@ -26,75 +30,34 @@ const platformOptions = [
   { value: "tiktok", label: "TikTok" }
 ];
 
-function Section({ title, children, onCopy, copyLabel }) {
-  return (
-    <div className="result-section">
-      <div className="section-header">
-        <h3>{title}</h3>
-        {onCopy ? (
-          <button type="button" className="copy-btn" onClick={onCopy}>
-            {copyLabel}
-          </button>
-        ) : null}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ListBlock({ items }) {
-  if (!Array.isArray(items) || items.length === 0) return null;
-
-  return (
-    <ul className="result-list">
-      {items.map((item, index) => (
-        <li key={`${String(item)}-${index}`}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
-function ScoreCard({ label, value }) {
-  const num = Number(value);
-  const safeValue = Number.isFinite(num) ? Math.round(num) : 0;
-
-  return (
-    <div className="score-card">
-      <div className="score-value">{safeValue}%</div>
-      <div className="score-label">{label}</div>
-    </div>
-  );
-}
-
 function safeText(value) {
   return typeof value === "string" ? value : "";
 }
 
 function buildHistoryPreview(item, language) {
-  if (!item || !item.data) return "";
   const isHebrew = language === "he";
 
-  if (item.type === "build") {
+  if (item?.type === "build") {
     return (
-      item.data.hook ||
-      item.data.title ||
-      (isHebrew ? "פוסט חדש שנוצר" : "Generated post")
+      item?.data?.hook ||
+      item?.data?.title ||
+      (isHebrew ? "פוסט שנוצר" : "Generated post")
     );
   }
 
-  if (item.type === "improve") {
+  if (item?.type === "improve") {
     return (
-      item.data.improvedPost ||
-      item.data.moreAuthenticVersion ||
-      item.data.moreViralVersion ||
+      item?.data?.improvedPost ||
+      item?.data?.moreAuthenticVersion ||
+      item?.data?.moreViralVersion ||
       (isHebrew ? "פוסט ששופר" : "Improved post")
     );
   }
 
-  if (item.type === "analyze") {
+  if (item?.type === "analyze") {
     return (
-      item.data.summary ||
-      item.data.improvedVersion ||
+      item?.data?.summary ||
+      item?.data?.improvedVersion ||
       (isHebrew ? "ניתוח פוסט" : "Post analysis")
     );
   }
@@ -105,25 +68,25 @@ function buildHistoryPreview(item, language) {
 function buildHistoryTitle(item, language) {
   const isHebrew = language === "he";
 
-  if (item.type === "build") {
-    return item.data?.title || (isHebrew ? "פוסט שנוצר" : "Generated Post");
+  if (item?.type === "build") {
+    return item?.data?.title || (isHebrew ? "פוסט שנוצר" : "Generated Post");
   }
 
-  if (item.type === "improve") {
+  if (item?.type === "improve") {
     return isHebrew ? "פוסט משופר" : "Improved Post";
   }
 
-  if (item.type === "analyze") {
+  if (item?.type === "analyze") {
     return isHebrew ? "ניתוח פוסט" : "Post Analysis";
   }
 
   return isHebrew ? "פריט" : "Item";
 }
 
-function formatHistoryTime(timestamp, language) {
+function formatHistoryTime(value, language) {
   try {
     const locale = language === "he" ? "he-IL" : "en-US";
-    return new Date(timestamp).toLocaleString(locale, {
+    return new Date(value).toLocaleString(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "2-digit",
@@ -135,25 +98,22 @@ function formatHistoryTime(timestamp, language) {
   }
 }
 
-function getPrimaryImproveText(data) {
-  if (!data) return "";
+function buildPostFromGenerated(data) {
+  return [data?.title, data?.hook, data?.body, data?.cta]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function getImprovePrimaryText(data) {
   return (
-    safeText(data.improvedPost) ||
-    safeText(data.moreAuthenticVersion) ||
-    safeText(data.moreViralVersion)
+    safeText(data?.improvedPost) ||
+    safeText(data?.moreAuthenticVersion) ||
+    safeText(data?.moreViralVersion)
   );
 }
 
-function getPrimaryAnalyzeText(data) {
-  if (!data) return "";
-  return safeText(data.improvedVersion);
-}
-
-function buildPostFromBuildResult(data) {
-  if (!data) return "";
-  return [data.title || "", data.hook || "", data.body || "", data.cta || ""]
-    .filter(Boolean)
-    .join("\n\n");
+function getAnalyzePrimaryText(data) {
+  return safeText(data?.improvedVersion);
 }
 
 export default function App() {
@@ -161,17 +121,22 @@ export default function App() {
   const [tab, setTab] = useState("build");
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [authLoading, setAuthLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [historyError, setHistoryError] = useState("");
-  const [deletingId, setDeletingId] = useState("");
-  const [historyFilter, setHistoryFilter] = useState("all");
   const [history, setHistory] = useState([]);
-
-  const t = useMemo(() => translations[language], [language]);
-  const dir = language === "he" ? "rtl" : "ltr";
-  const isHebrew = language === "he";
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const [deletingId, setDeletingId] = useState("");
+  const [result, setResult] = useState(null);
+  const [authMode, setAuthMode] = useState("login");
+  const [user, setUser] = useState(() => (hasToken() ? getStoredUser() : null));
+  const [authForm, setAuthForm] = useState({
+    email: "",
+    password: ""
+  });
 
   const [buildForm, setBuildForm] = useState({
     topic: "",
@@ -193,26 +158,52 @@ export default function App() {
     platform: "instagram"
   });
 
+  const isHebrew = language === "he";
+  const dir = isHebrew ? "rtl" : "ltr";
+
   const historyItems = useMemo(() => {
     if (historyFilter === "all") return history;
     return history.filter((item) => item.type === historyFilter);
   }, [history, historyFilter]);
 
   useEffect(() => {
-    loadHistory();
-  }, []);
+    if (hasToken() && !user) {
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        setUser(storedUser);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (!copyMessage) return;
+    if (user && hasToken()) {
+      loadHistory();
+    }
+  }, [user]);
 
-    const timeout = window.setTimeout(() => {
+  useEffect(() => {
+    if (!copyMessage && !successMessage) return;
+
+    const timer = window.setTimeout(() => {
       setCopyMessage("");
+      setSuccessMessage("");
     }, 1800);
 
-    return () => window.clearTimeout(timeout);
-  }, [copyMessage]);
+    return () => window.clearTimeout(timer);
+  }, [copyMessage, successMessage]);
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text || "");
+      setCopyMessage(isHebrew ? "הועתק" : "Copied");
+    } catch {
+      setCopyMessage(isHebrew ? "ההעתקה נכשלה" : "Copy failed");
+    }
+  }
 
   async function loadHistory() {
+    if (!hasToken()) return;
+
     setHistoryLoading(true);
     setHistoryError("");
 
@@ -228,47 +219,9 @@ export default function App() {
     }
   }
 
-  function setBuildField(field, value) {
-    setBuildForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  function setImproveField(field, value) {
-    setImproveForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  function setAnalyzeField(field, value) {
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      [field]: value
-    }));
-  }
-
-  async function copyText(text) {
-    try {
-      await navigator.clipboard.writeText(text || "");
-      setCopyMessage(isHebrew ? "הועתק" : "Copied");
-    } catch {
-      setCopyMessage(isHebrew ? "ההעתקה נכשלה" : "Copy failed");
-    }
-  }
-
-  function startRequest() {
-    setError("");
-    setResult(null);
-    setLoading(true);
-  }
-
-  function endRequest() {
-    setLoading(false);
-  }
-
   async function persistHistoryItem(type, input, data) {
+    if (!hasToken()) return;
+
     try {
       const response = await savePost({
         type,
@@ -287,19 +240,84 @@ export default function App() {
     }
   }
 
+  function setBuildField(field, value) {
+    setBuildForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function setImproveField(field, value) {
+    setImproveForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function setAnalyzeField(field, value) {
+    setAnalyzeForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function setAuthField(field, value) {
+    setAuthForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function handleAuthSubmit() {
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+      const payload = {
+        email: authForm.email.trim(),
+        password: authForm.password
+      };
+
+      const response =
+        authMode === "login"
+          ? await loginUser(payload)
+          : await registerUser(payload);
+
+      setUser(response?.user || getStoredUser());
+      setSuccessMessage(
+        authMode === "login"
+          ? isHebrew
+            ? "התחברת בהצלחה"
+            : "Logged in successfully"
+          : isHebrew
+            ? "נרשמת בהצלחה"
+            : "Registered successfully"
+      );
+    } catch (err) {
+      setAuthError(err?.message || (isHebrew ? "שגיאת התחברות" : "Authentication failed"));
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    logoutUser();
+    setUser(null);
+    setHistory([]);
+    setResult(null);
+    setSuccessMessage(isHebrew ? "התנתקת" : "Logged out");
+  }
+
   async function handleBuild() {
+    setError("");
+    setResult(null);
+
     if (!buildForm.topic.trim()) {
       setError(isHebrew ? "יש להזין נושא לפוסט" : "Please enter a topic");
       return;
     }
 
-    startRequest();
+    setLoading(true);
 
     try {
-      const response = await generatePost({
-        ...buildForm,
+      const payload = {
+        topic: buildForm.topic.trim(),
+        targetAudience: buildForm.targetAudience.trim(),
+        goal: buildForm.goal.trim(),
+        style: buildForm.style,
+        platform: buildForm.platform,
         language
-      });
+      };
+
+      const response = await generatePost(payload);
 
       const nextResult = {
         type: "build",
@@ -307,28 +325,37 @@ export default function App() {
       };
 
       setResult(nextResult);
-
-      await persistHistoryItem("build", buildForm, nextResult.data);
+      await persistHistoryItem("build", payload, nextResult.data);
     } catch (err) {
-      setError(err?.message || "Error");
+      setError(err?.message || (isHebrew ? "יצירת הפוסט נכשלה" : "Generate failed"));
     } finally {
-      endRequest();
+      setLoading(false);
     }
   }
 
   async function handleImprove() {
-    if (!improveForm.post.trim()) {
+    setError("");
+    setResult(null);
+
+    const postValue = (improveForm.post || "").trim();
+
+    if (!postValue) {
       setError(isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text");
       return;
     }
 
-    startRequest();
+    setLoading(true);
 
     try {
-      const response = await improvePost({
-        ...improveForm,
+      const payload = {
+        post: postValue,
+        goal: improveForm.goal.trim(),
+        style: improveForm.style,
+        platform: improveForm.platform,
         language
-      });
+      };
+
+      const response = await improvePost(payload);
 
       const nextResult = {
         type: "improve",
@@ -336,28 +363,35 @@ export default function App() {
       };
 
       setResult(nextResult);
-
-      await persistHistoryItem("improve", improveForm, nextResult.data);
+      await persistHistoryItem("improve", payload, nextResult.data);
     } catch (err) {
-      setError(err?.message || "Error");
+      setError(err?.message || (isHebrew ? "שיפור הפוסט נכשל" : "Improve failed"));
     } finally {
-      endRequest();
+      setLoading(false);
     }
   }
 
   async function handleAnalyze() {
-    if (!analyzeForm.post.trim()) {
+    setError("");
+    setResult(null);
+
+    const postValue = (analyzeForm.post || "").trim();
+
+    if (!postValue) {
       setError(isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text");
       return;
     }
 
-    startRequest();
+    setLoading(true);
 
     try {
-      const response = await analyzePost({
-        ...analyzeForm,
+      const payload = {
+        post: postValue,
+        platform: analyzeForm.platform,
         language
-      });
+      };
+
+      const response = await analyzePost(payload);
 
       const nextResult = {
         type: "analyze",
@@ -365,16 +399,15 @@ export default function App() {
       };
 
       setResult(nextResult);
-
-      await persistHistoryItem("analyze", analyzeForm, nextResult.data);
+      await persistHistoryItem("analyze", payload, nextResult.data);
     } catch (err) {
-      setError(err?.message || "Error");
+      setError(err?.message || (isHebrew ? "ניתוח הפוסט נכשל" : "Analyze failed"));
     } finally {
-      endRequest();
+      setLoading(false);
     }
   }
 
-  async function handleDeleteHistoryItem(itemId) {
+  async function handleDeleteHistory(itemId) {
     if (!itemId) return;
 
     setDeletingId(itemId);
@@ -384,9 +417,7 @@ export default function App() {
       await deletePost(itemId);
       setHistory((prev) => prev.filter((item) => item._id !== itemId));
     } catch (err) {
-      setHistoryError(
-        err?.message || (isHebrew ? "מחיקת הפריט נכשלה" : "Delete failed")
-      );
+      setHistoryError(err?.message || (isHebrew ? "מחיקה נכשלה" : "Delete failed"));
     } finally {
       setDeletingId("");
     }
@@ -395,60 +426,50 @@ export default function App() {
   function handleLoadFromHistory(item) {
     if (!item) return;
 
-    const safeInput = item.input || {};
-    const safeData = item.data || {};
+    const input = item.input || {};
+    const data = item.data || {};
 
     if (item.type === "build") {
       setBuildForm({
-        topic: safeText(safeInput.topic),
-        targetAudience: safeText(safeInput.targetAudience),
-        goal: safeText(safeInput.goal),
-        style: safeText(safeInput.style) || "professional",
-        platform: safeText(safeInput.platform) || "instagram"
+        topic: safeText(input.topic),
+        targetAudience: safeText(input.targetAudience),
+        goal: safeText(input.goal),
+        style: safeText(input.style) || "professional",
+        platform: safeText(input.platform) || "instagram"
       });
+      setResult({ type: "build", data });
       setTab("build");
-      setResult({
-        type: "build",
-        data: safeData
-      });
       return;
     }
 
     if (item.type === "improve") {
       setImproveForm({
-        post: safeText(safeInput.post) || getPrimaryImproveText(safeData),
-        goal: safeText(safeInput.goal),
-        style: safeText(safeInput.style) || "professional",
-        platform: safeText(safeInput.platform) || "instagram"
+        post: safeText(input.post) || getImprovePrimaryText(data),
+        goal: safeText(input.goal),
+        style: safeText(input.style) || "professional",
+        platform: safeText(input.platform) || "instagram"
       });
+      setResult({ type: "improve", data });
       setTab("improve");
-      setResult({
-        type: "improve",
-        data: safeData
-      });
       return;
     }
 
     if (item.type === "analyze") {
       setAnalyzeForm({
-        post: safeText(safeInput.post) || getPrimaryAnalyzeText(safeData),
-        platform: safeText(safeInput.platform) || "instagram"
+        post: safeText(input.post) || getAnalyzePrimaryText(data),
+        platform: safeText(input.platform) || "instagram"
       });
+      setResult({ type: "analyze", data });
       setTab("analyze");
-      setResult({
-        type: "analyze",
-        data: safeData
-      });
     }
   }
 
   function moveBuildToImprove() {
     if (result?.type !== "build") return;
-    const builtPost = buildPostFromBuildResult(result.data);
 
     setImproveForm((prev) => ({
       ...prev,
-      post: builtPost,
+      post: buildPostFromGenerated(result.data),
       platform: buildForm.platform || prev.platform
     }));
 
@@ -457,31 +478,101 @@ export default function App() {
 
   function moveImproveToAnalyze() {
     if (result?.type !== "improve") return;
-    const improvedPost = getPrimaryImproveText(result.data);
 
     setAnalyzeForm((prev) => ({
       ...prev,
-      post: improvedPost,
+      post: getImprovePrimaryText(result.data),
       platform: improveForm.platform || prev.platform
     }));
 
     setTab("analyze");
   }
 
-  const copyLabel = isHebrew ? "העתק" : "Copy";
-  const deleteLabel = isHebrew ? "מחק" : "Delete";
-  const loadLabel = isHebrew ? "טען לטופס" : "Load";
-  const filters = [
-    { value: "all", label: isHebrew ? "הכל" : "All" },
-    { value: "build", label: isHebrew ? "Build" : "Build" },
-    { value: "improve", label: isHebrew ? "Improve" : "Improve" },
-    { value: "analyze", label: isHebrew ? "Analyze" : "Analyze" }
-  ];
+  if (!user || !hasToken()) {
+    return (
+      <div className="app-shell" dir={dir}>
+        <div className="app-bg" />
+        <div className="app-container">
+          <section className="panel glass" style={{ maxWidth: 520, margin: "60px auto" }}>
+            <h1 style={{ marginTop: 0 }}>PostPulse AI</h1>
+            <p style={{ color: "#9fb0cd", marginBottom: 24 }}>
+              {isHebrew ? "התחבר או הירשם כדי לעבוד עם המערכת" : "Log in or register to use the system"}
+            </p>
+
+            <div className="tabs">
+              <button
+                type="button"
+                className={`tab-btn ${authMode === "login" ? "active" : ""}`}
+                onClick={() => setAuthMode("login")}
+              >
+                {isHebrew ? "התחברות" : "Login"}
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${authMode === "register" ? "active" : ""}`}
+                onClick={() => setAuthMode("register")}
+              >
+                {isHebrew ? "הרשמה" : "Register"}
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${language === "he" ? "active" : ""}`}
+                onClick={() => setLanguage("he")}
+              >
+                עברית
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${language === "en" ? "active" : ""}`}
+                onClick={() => setLanguage("en")}
+              >
+                English
+              </button>
+            </div>
+
+            <div className="field">
+              <label>{isHebrew ? "אימייל" : "Email"}</label>
+              <input
+                type="email"
+                value={authForm.email}
+                onChange={(e) => setAuthField("email", e.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label>{isHebrew ? "סיסמה" : "Password"}</label>
+              <input
+                type="password"
+                value={authForm.password}
+                onChange={(e) => setAuthField("password", e.target.value)}
+              />
+            </div>
+
+            <button className="primary-btn" onClick={handleAuthSubmit} disabled={authLoading}>
+              {authLoading
+                ? isHebrew
+                  ? "טוען..."
+                  : "Loading..."
+                : authMode === "login"
+                  ? isHebrew
+                    ? "התחבר"
+                    : "Login"
+                  : isHebrew
+                    ? "הירשם"
+                    : "Register"}
+            </button>
+
+            {authError ? <div className="error-box">{authError}</div> : null}
+            {successMessage ? <div className="success-box">{successMessage}</div> : null}
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell" dir={dir}>
       <div className="app-bg" />
-
       <div className="app-container">
         <header className="topbar glass">
           <div>
@@ -504,64 +595,73 @@ export default function App() {
             >
               English
             </button>
+            <button type="button" className="secondary-btn" onClick={handleLogout}>
+              {isHebrew ? "התנתק" : "Logout"}
+            </button>
           </div>
         </header>
+
+        {user?.email ? (
+          <div className="panel glass" style={{ marginBottom: 24 }}>
+            <strong>{isHebrew ? "משתמש:" : "User:"}</strong> {user.email}
+          </div>
+        ) : null}
 
         <div className="main-grid">
           <section className="panel glass">
             <div className="tabs">
               <button
+                type="button"
                 className={`tab-btn ${tab === "build" ? "active" : ""}`}
                 onClick={() => setTab("build")}
               >
-                {t.build}
+                Build
               </button>
               <button
+                type="button"
                 className={`tab-btn ${tab === "improve" ? "active" : ""}`}
                 onClick={() => setTab("improve")}
               >
-                {t.improve}
+                Improve
               </button>
               <button
+                type="button"
                 className={`tab-btn ${tab === "analyze" ? "active" : ""}`}
                 onClick={() => setTab("analyze")}
               >
-                {t.analyze}
+                Analyze
               </button>
             </div>
 
-            {tab === "build" && (
+            {tab === "build" ? (
               <>
                 <div className="field">
-                  <label>{t.topic}</label>
+                  <label>{isHebrew ? "נושא / רעיון" : "Topic / Idea"}</label>
                   <input
                     value={buildForm.topic}
                     onChange={(e) => setBuildField("topic", e.target.value)}
-                    placeholder={isHebrew ? "על מה הפוסט?" : "What is the post about?"}
                   />
                 </div>
 
                 <div className="field">
-                  <label>{t.targetAudience}</label>
+                  <label>{isHebrew ? "קהל יעד" : "Target Audience"}</label>
                   <input
                     value={buildForm.targetAudience}
                     onChange={(e) => setBuildField("targetAudience", e.target.value)}
-                    placeholder={isHebrew ? "למי הפוסט מיועד?" : "Who is the audience?"}
                   />
                 </div>
 
                 <div className="field">
-                  <label>{t.goal}</label>
+                  <label>{isHebrew ? "מטרה" : "Goal"}</label>
                   <input
                     value={buildForm.goal}
                     onChange={(e) => setBuildField("goal", e.target.value)}
-                    placeholder={isHebrew ? "מה המטרה?" : "What is the goal?"}
                   />
                 </div>
 
                 <div className="grid-2">
                   <div className="field">
-                    <label>{t.style}</label>
+                    <label>{isHebrew ? "סגנון" : "Style"}</label>
                     <select
                       value={buildForm.style}
                       onChange={(e) => setBuildField("style", e.target.value)}
@@ -575,7 +675,7 @@ export default function App() {
                   </div>
 
                   <div className="field">
-                    <label>{t.platform}</label>
+                    <label>{isHebrew ? "פלטפורמה" : "Platform"}</label>
                     <select
                       value={buildForm.platform}
                       onChange={(e) => setBuildField("platform", e.target.value)}
@@ -590,15 +690,15 @@ export default function App() {
                 </div>
 
                 <button className="primary-btn" onClick={handleBuild} disabled={loading}>
-                  {loading ? t.loading : t.generate}
+                  {loading ? (isHebrew ? "טוען..." : "Loading...") : isHebrew ? "צור פוסט" : "Generate Post"}
                 </button>
               </>
-            )}
+            ) : null}
 
-            {tab === "improve" && (
+            {tab === "improve" ? (
               <>
                 <div className="field">
-                  <label>{t.postText}</label>
+                  <label>{isHebrew ? "טקסט הפוסט" : "Post Text"}</label>
                   <textarea
                     rows={8}
                     value={improveForm.post}
@@ -607,7 +707,7 @@ export default function App() {
                 </div>
 
                 <div className="field">
-                  <label>{t.goal}</label>
+                  <label>{isHebrew ? "מטרה" : "Goal"}</label>
                   <input
                     value={improveForm.goal}
                     onChange={(e) => setImproveField("goal", e.target.value)}
@@ -616,7 +716,7 @@ export default function App() {
 
                 <div className="grid-2">
                   <div className="field">
-                    <label>{t.style}</label>
+                    <label>{isHebrew ? "סגנון" : "Style"}</label>
                     <select
                       value={improveForm.style}
                       onChange={(e) => setImproveField("style", e.target.value)}
@@ -630,7 +730,7 @@ export default function App() {
                   </div>
 
                   <div className="field">
-                    <label>{t.platform}</label>
+                    <label>{isHebrew ? "פלטפורמה" : "Platform"}</label>
                     <select
                       value={improveForm.platform}
                       onChange={(e) => setImproveField("platform", e.target.value)}
@@ -645,15 +745,15 @@ export default function App() {
                 </div>
 
                 <button className="primary-btn" onClick={handleImprove} disabled={loading}>
-                  {loading ? t.loading : t.improveBtn}
+                  {loading ? (isHebrew ? "טוען..." : "Loading...") : isHebrew ? "שפר פוסט" : "Improve Post"}
                 </button>
               </>
-            )}
+            ) : null}
 
-            {tab === "analyze" && (
+            {tab === "analyze" ? (
               <>
                 <div className="field">
-                  <label>{t.postText}</label>
+                  <label>{isHebrew ? "טקסט הפוסט" : "Post Text"}</label>
                   <textarea
                     rows={8}
                     value={analyzeForm.post}
@@ -662,7 +762,7 @@ export default function App() {
                 </div>
 
                 <div className="field">
-                  <label>{t.platform}</label>
+                  <label>{isHebrew ? "פלטפורמה" : "Platform"}</label>
                   <select
                     value={analyzeForm.platform}
                     onChange={(e) => setAnalyzeField("platform", e.target.value)}
@@ -676,169 +776,181 @@ export default function App() {
                 </div>
 
                 <button className="primary-btn" onClick={handleAnalyze} disabled={loading}>
-                  {loading ? t.loading : t.analyzeBtn}
+                  {loading ? (isHebrew ? "טוען..." : "Loading...") : isHebrew ? "נתח פוסט" : "Analyze Post"}
                 </button>
               </>
-            )}
+            ) : null}
 
             {error ? <div className="error-box">{error}</div> : null}
             {copyMessage ? <div className="success-box">{copyMessage}</div> : null}
+            {successMessage ? <div className="success-box">{successMessage}</div> : null}
           </section>
 
           <section className="panel glass">
-            <h2>{t.result}</h2>
+            <h2 style={{ marginTop: 0 }}>{isHebrew ? "תוצאה" : "Result"}</h2>
 
-            {!result && (
+            {!result ? (
               <div className="empty-state">
-                {isHebrew ? "עדיין אין תוצאה להצגה" : "No result yet"}
+                {isHebrew ? "עדיין אין תוצאה" : "No result yet"}
               </div>
-            )}
+            ) : null}
 
-            {result?.type === "build" && (
+            {result?.type === "build" ? (
               <div className="result-wrap">
-                <Section title={t.title} onCopy={() => copyText(result.data?.title || "")} copyLabel={copyLabel}>
-                  <div className="text-card">{result.data?.title || ""}</div>
-                </Section>
-
-                <Section title={t.hook} onCopy={() => copyText(result.data?.hook || "")} copyLabel={copyLabel}>
-                  <div className="text-card">{result.data?.hook || ""}</div>
-                </Section>
-
-                <Section title={t.body} onCopy={() => copyText(result.data?.body || "")} copyLabel={copyLabel}>
-                  <div className="text-card">{result.data?.body || ""}</div>
-                </Section>
-
-                <Section title={t.cta} onCopy={() => copyText(result.data?.cta || "")} copyLabel={copyLabel}>
-                  <div className="text-card">{result.data?.cta || ""}</div>
-                </Section>
-
-                <Section
-                  title={t.hashtags}
-                  onCopy={() => copyText((result.data?.hashtags || []).join(" "))}
-                  copyLabel={copyLabel}
-                >
-                  <div className="hashtags">
-                    {(result.data?.hashtags || []).map((tag, index) => (
-                      <span key={`${tag}-${index}`}>{tag}</span>
-                    ))}
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "כותרת" : "Title"}</h3>
+                    <button type="button" className="copy-btn" onClick={() => copyText(result.data?.title || "")}>
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
                   </div>
-                </Section>
+                  <div className="text-card">{result.data?.title || ""}</div>
+                </div>
 
-                <Section
-                  title={t.shortVersion}
-                  onCopy={() => copyText(result.data?.shortVersion || "")}
-                  copyLabel={copyLabel}
-                >
-                  <div className="text-card">{result.data?.shortVersion || ""}</div>
-                </Section>
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>Hook</h3>
+                    <button type="button" className="copy-btn" onClick={() => copyText(result.data?.hook || "")}>
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="text-card">{result.data?.hook || ""}</div>
+                </div>
 
-                <Section
-                  title={t.alternativeVersion}
-                  onCopy={() => copyText(result.data?.alternativeVersion || "")}
-                  copyLabel={copyLabel}
-                >
-                  <div className="text-card">{result.data?.alternativeVersion || ""}</div>
-                </Section>
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "גוף הפוסט" : "Body"}</h3>
+                    <button type="button" className="copy-btn" onClick={() => copyText(result.data?.body || "")}>
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="text-card">{result.data?.body || ""}</div>
+                </div>
 
-                <button className="secondary-btn" onClick={moveBuildToImprove}>
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "קריאה לפעולה" : "CTA"}</h3>
+                    <button type="button" className="copy-btn" onClick={() => copyText(result.data?.cta || "")}>
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="text-card">{result.data?.cta || ""}</div>
+                </div>
+
+                <button type="button" className="secondary-btn" onClick={moveBuildToImprove}>
                   {isHebrew ? "העבר ל־Improve" : "Move to Improve"}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {result?.type === "improve" && (
+            {result?.type === "improve" ? (
               <div className="result-wrap">
-                <Section title={t.strengths} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.strengths || []} />
-                </Section>
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "גרסה משופרת" : "Improved Version"}</h3>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyText(getImprovePrimaryText(result.data))}
+                    >
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
+                  <div className="text-card">{getImprovePrimaryText(result.data)}</div>
+                </div>
 
-                <Section title={t.weaknesses} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.weaknesses || []} />
-                </Section>
-
-                <Section
-                  title={t.improvedVersion}
-                  onCopy={() => copyText(getPrimaryImproveText(result.data))}
-                  copyLabel={copyLabel}
-                >
-                  <div className="text-card">{getPrimaryImproveText(result.data)}</div>
-                </Section>
-
-                <Section
-                  title={t.moreViralVersion}
-                  onCopy={() => copyText(result.data?.moreViralVersion || "")}
-                  copyLabel={copyLabel}
-                >
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "גרסה ויראלית יותר" : "More Viral Version"}</h3>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyText(result.data?.moreViralVersion || "")}
+                    >
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
                   <div className="text-card">{result.data?.moreViralVersion || ""}</div>
-                </Section>
+                </div>
 
-                <Section
-                  title={t.moreAuthenticVersion}
-                  onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
-                  copyLabel={copyLabel}
-                >
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "גרסה אנושית יותר" : "More Authentic Version"}</h3>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyText(result.data?.moreAuthenticVersion || "")}
+                    >
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
                   <div className="text-card">{result.data?.moreAuthenticVersion || ""}</div>
-                </Section>
+                </div>
 
-                <Section title={t.tips} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.tips || []} />
-                </Section>
-
-                <button className="secondary-btn" onClick={moveImproveToAnalyze}>
+                <button type="button" className="secondary-btn" onClick={moveImproveToAnalyze}>
                   {isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version"}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {result?.type === "analyze" && (
+            {result?.type === "analyze" ? (
               <div className="result-wrap">
                 <div className="scores-grid">
-                  <ScoreCard label={t.viralScore} value={result.data?.viralScore} />
-                  <ScoreCard label={t.authenticityScore} value={result.data?.authenticityScore} />
-                  <ScoreCard label={t.clarityScore} value={result.data?.clarityScore} />
-                  <ScoreCard label={t.emotionalScore} value={result.data?.emotionalScore} />
-                  <ScoreCard label={t.curiosityScore} value={result.data?.curiosityScore} />
-                  <ScoreCard label={t.hookScore} value={result.data?.hookScore} />
-                  <ScoreCard label={t.ctaScore} value={result.data?.ctaScore} />
+                  {[
+                    { label: isHebrew ? "ויראליות" : "Viral", value: result.data?.viralScore },
+                    { label: isHebrew ? "אותנטיות" : "Authenticity", value: result.data?.authenticityScore },
+                    { label: isHebrew ? "בהירות" : "Clarity", value: result.data?.clarityScore },
+                    { label: isHebrew ? "רגש" : "Emotion", value: result.data?.emotionalScore },
+                    { label: isHebrew ? "סקרנות" : "Curiosity", value: result.data?.curiosityScore },
+                    { label: "Hook", value: result.data?.hookScore },
+                    { label: "CTA", value: result.data?.ctaScore }
+                  ].map((item) => (
+                    <div key={item.label} className="score-card">
+                      <div className="score-value">{Number(item.value || 0)}%</div>
+                      <div className="score-label">{item.label}</div>
+                    </div>
+                  ))}
                 </div>
 
-                <Section
-                  title={t.summary}
-                  onCopy={() => copyText(result.data?.summary || "")}
-                  copyLabel={copyLabel}
-                >
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "סיכום" : "Summary"}</h3>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyText(result.data?.summary || "")}
+                    >
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
                   <div className="text-card">{result.data?.summary || ""}</div>
-                </Section>
+                </div>
 
-                <Section title={t.whatWorks} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.whatWorks || []} />
-                </Section>
-
-                <Section title={t.whatHurts} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.whatHurts || []} />
-                </Section>
-
-                <Section title={t.improvements} copyLabel={copyLabel}>
-                  <ListBlock items={result.data?.improvements || []} />
-                </Section>
-
-                <Section
-                  title={t.improvedVersion}
-                  onCopy={() => copyText(result.data?.improvedVersion || "")}
-                  copyLabel={copyLabel}
-                >
+                <div className="result-section">
+                  <div className="section-header">
+                    <h3>{isHebrew ? "גרסה משופרת" : "Improved Version"}</h3>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyText(result.data?.improvedVersion || "")}
+                    >
+                      {isHebrew ? "העתק" : "Copy"}
+                    </button>
+                  </div>
                   <div className="text-card">{result.data?.improvedVersion || ""}</div>
-                </Section>
+                </div>
               </div>
-            )}
+            ) : null}
           </section>
         </div>
 
         <section className="panel glass history-panel">
           <div className="history-header">
             <div>
-              <h2>{isHebrew ? "היסטוריה" : "History"}</h2>
-              <p>{isHebrew ? "ניהול מלא של פריטי ההיסטוריה שלך" : "Full management of your history items"}</p>
+              <h2 style={{ margin: 0 }}>{isHebrew ? "היסטוריה" : "History"}</h2>
+              <p style={{ margin: "6px 0 0", color: "#9fb0cd" }}>
+                {isHebrew ? "מחיקה, טעינה מחדש וסינון" : "Delete, reload and filter"}
+              </p>
             </div>
 
             <div className="history-actions">
@@ -847,30 +959,23 @@ export default function App() {
                 value={historyFilter}
                 onChange={(e) => setHistoryFilter(e.target.value)}
               >
-                {filters.map((filter) => (
-                  <option key={filter.value} value={filter.value}>
-                    {filter.label}
-                  </option>
-                ))}
+                <option value="all">{isHebrew ? "הכל" : "All"}</option>
+                <option value="build">Build</option>
+                <option value="improve">Improve</option>
+                <option value="analyze">Analyze</option>
               </select>
 
               <button className="secondary-btn" onClick={loadHistory} disabled={historyLoading}>
-                {historyLoading ? (isHebrew ? "טוען..." : "Loading...") : (isHebrew ? "רענן" : "Refresh")}
+                {historyLoading ? (isHebrew ? "טוען..." : "Loading...") : isHebrew ? "רענן" : "Refresh"}
               </button>
             </div>
           </div>
 
           {historyError ? <div className="error-box">{historyError}</div> : null}
 
-          {historyLoading && history.length === 0 ? (
-            <div className="empty-state">{isHebrew ? "טוען היסטוריה..." : "Loading history..."}</div>
-          ) : null}
-
           {!historyLoading && historyItems.length === 0 ? (
             <div className="empty-state">
-              {isHebrew
-                ? "אין עדיין פריטים בהיסטוריה עבור הסינון הנבחר"
-                : "No history items for the selected filter"}
+              {isHebrew ? "אין פריטים בהיסטוריה" : "No history items"}
             </div>
           ) : null}
 
@@ -892,18 +997,22 @@ export default function App() {
                       className="secondary-btn"
                       onClick={() => handleLoadFromHistory(item)}
                     >
-                      {loadLabel}
+                      {isHebrew ? "טען" : "Load"}
                     </button>
 
                     <button
                       type="button"
                       className="danger-btn"
                       disabled={deletingId === item._id}
-                      onClick={() => handleDeleteHistoryItem(item._id)}
+                      onClick={() => handleDeleteHistory(item._id)}
                     >
                       {deletingId === item._id
-                        ? (isHebrew ? "מוחק..." : "Deleting...")
-                        : deleteLabel}
+                        ? isHebrew
+                          ? "מוחק..."
+                          : "Deleting..."
+                        : isHebrew
+                          ? "מחק"
+                          : "Delete"}
                     </button>
                   </div>
                 </div>
