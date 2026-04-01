@@ -80,32 +80,6 @@ function getLanguageLabel(language) {
   return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
 }
 
-function getPlatformGuide(platform, language) {
-  const safePlatform = normalizePlatform(platform);
-  const safeLanguage = normalizeLanguage(language);
-
-  const map = {
-    instagram: {
-      he: "פוסט זורם, אישי, חד, עם hook חזק וקריאה טבעית לפעולה",
-      en: "flowing, personal, sharp post with a strong hook and natural CTA"
-    },
-    facebook: {
-      he: "פוסט מעט יותר שיחתי וסיפורי, מחבר וקל לקריאה",
-      en: "slightly more conversational and story-driven, connective and easy to read"
-    },
-    linkedin: {
-      he: "פוסט מקצועי, חכם, ברור, עם סמכות וערך",
-      en: "professional, smart, clear, authority-driven, value-based post"
-    },
-    tiktok: {
-      he: "פוסט קצר, מסקרן, מהיר, חד, עם מתח או עצירה חזקה",
-      en: "short, curiosity-driven, fast, punchy post with strong stopping power"
-    }
-  };
-
-  return map[safePlatform][safeLanguage];
-}
-
 function normalizeHashtags(value) {
   return cleanArray(value)
     .map((tag) => {
@@ -183,7 +157,7 @@ function buildGenerateFallback({ topic, language }) {
   };
 }
 
-function buildImproveFallback({ post }) {
+function buildImproveFallback(post) {
   return {
     strengths: [],
     weaknesses: [],
@@ -194,9 +168,8 @@ function buildImproveFallback({ post }) {
   };
 }
 
-function buildAnalyzeFallback({ post, language, platform }) {
+function buildAnalyzeFallback(post, language, platform) {
   const isHebrew = normalizeLanguage(language) === "he";
-  const safePlatform = normalizePlatform(platform);
 
   return {
     viralScore: 60,
@@ -218,22 +191,14 @@ function buildAnalyzeFallback({ post, language, platform }) {
     improvements: isHebrew
       ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא"]
       : ["Strengthen the first sentence", "Clarify the value for the reader"],
-    raiseViralScore: isHebrew
-      ? ["להתחיל חד יותר", "ליצור יותר מתח"]
-      : ["Start more sharply", "Create more tension"],
-    raiseAuthenticityScore: isHebrew
-      ? ["לדבר פשוט יותר", "להישמע פחות רובוטי"]
-      : ["Use simpler wording", "Sound less robotic"],
-    raiseEmotionalScore: isHebrew
-      ? ["להוסיף חיבור רגשי", "לגעת בצורך אמיתי"]
-      : ["Add emotional connection", "Touch a real need"],
-    raiseCuriosityScore: isHebrew
-      ? ["להשאיר לולאה פתוחה", "לרמוז על תובנה לפני החשיפה"]
-      : ["Leave an open loop", "Hint at an insight before revealing it"],
+    raiseViralScore: [],
+    raiseAuthenticityScore: [],
+    raiseEmotionalScore: [],
+    raiseCuriosityScore: [],
     improvedVersion: cleanString(post) ||
       (isHebrew
-        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
-        : `If you want this post to work better on ${safePlatform}, it needs a stronger opening and clearer wording.`)
+        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${platform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
+        : `If you want this post to work better on ${platform}, it needs a stronger opening and clearer wording.`)
   };
 }
 
@@ -250,6 +215,10 @@ function buildUserResponse(user) {
   };
 }
 
+function getIncomingPostText(body) {
+  return cleanString(body?.post || body?.postText || body?.text);
+}
+
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
 });
@@ -261,7 +230,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-/* Auth */
 app.post("/api/auth/register", async (req, res) => {
   try {
     const email = cleanString(req.body?.email).toLowerCase();
@@ -350,7 +318,6 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-/* AI */
 app.post("/api/posts/generate", auth, async (req, res) => {
   try {
     const topic = cleanString(req.body?.topic);
@@ -361,20 +328,25 @@ app.post("/api/posts/generate", auth, async (req, res) => {
     const language = normalizeLanguage(req.body?.language);
 
     if (!topic) {
-      return res.status(400).json({ success: false, message: "Topic is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Topic is required"
+      });
     }
 
-    const systemPrompt = `
-You are a world-class social media content strategist.
-
-You NEVER generate generic AI text.
-You ALWAYS write like a real human and optimize for engagement.
-
-Return valid JSON only.
-`;
-
-    const userPrompt = `
-INPUT:
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.85,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a world-class social media strategist. Return valid JSON only."
+        },
+        {
+          role: "user",
+          content: `
 Topic: ${topic}
 Audience: ${targetAudience || "General audience"}
 Goal: ${goal || "Create a strong post"}
@@ -392,23 +364,8 @@ Return JSON:
   "shortVersion": "",
   "alternativeVersion": ""
 }
-
-Rules:
-- strong hook
-- human tone
-- natural CTA
-- adapt to ${platform}
-- platform guide: ${getPlatformGuide(platform, language)}
-- write only in ${getLanguageLabel(language)}
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.85,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+`
+        }
       ]
     });
 
@@ -418,35 +375,45 @@ Rules:
 
     return res.json({ success: true, data });
   } catch (error) {
-    const data = normalizeGenerateData(
-      buildGenerateFallback({
-        topic: cleanString(req.body?.topic),
-        language: normalizeLanguage(req.body?.language)
-      })
-    );
-
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      data: normalizeGenerateData(
+        buildGenerateFallback({
+          topic: cleanString(req.body?.topic),
+          language: normalizeLanguage(req.body?.language)
+        })
+      )
+    });
   }
 });
 
 app.post("/api/posts/improve", auth, async (req, res) => {
   try {
-    const post = cleanString(req.body?.post);
+    const post = getIncomingPostText(req.body);
     const goal = cleanString(req.body?.goal);
     const style = normalizeStyle(req.body?.style);
     const platform = normalizePlatform(req.body?.platform);
     const language = normalizeLanguage(req.body?.language);
 
     if (!post) {
-      return res.status(400).json({ success: false, message: "Post is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Post is required"
+      });
     }
 
-    const systemPrompt = `
-You are an expert social media editor.
-Return valid JSON only.
-`;
-
-    const userPrompt = `
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.8,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert social media editor. Return valid JSON only."
+        },
+        {
+          role: "user",
+          content: `
 Original post:
 ${post}
 
@@ -464,15 +431,8 @@ Return JSON:
   "moreAuthenticVersion": "",
   "tips": []
 }
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.8,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+`
+        }
       ]
     });
 
@@ -482,32 +442,38 @@ Return JSON:
 
     return res.json({ success: true, data });
   } catch (error) {
-    const data = normalizeImproveData(
-      buildImproveFallback({
-        post: cleanString(req.body?.post)
-      })
-    );
-
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      data: normalizeImproveData(buildImproveFallback(getIncomingPostText(req.body)))
+    });
   }
 });
 
 app.post("/api/posts/analyze", auth, async (req, res) => {
   try {
-    const post = cleanString(req.body?.post);
+    const post = getIncomingPostText(req.body);
     const platform = normalizePlatform(req.body?.platform);
     const language = normalizeLanguage(req.body?.language);
 
     if (!post) {
-      return res.status(400).json({ success: false, message: "Post is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Post is required"
+      });
     }
 
-    const systemPrompt = `
-You are an expert social media post analyst.
-Return valid JSON only.
-`;
-
-    const userPrompt = `
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert social media analyst. Return valid JSON only."
+        },
+        {
+          role: "user",
+          content: `
 Post:
 ${post}
 
@@ -533,15 +499,8 @@ Return JSON:
   "raiseCuriosityScore": [],
   "improvedVersion": ""
 }
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
+`
+        }
       ]
     });
 
@@ -551,19 +510,19 @@ Return JSON:
 
     return res.json({ success: true, data });
   } catch (error) {
-    const data = normalizeAnalyzeData(
-      buildAnalyzeFallback({
-        post: cleanString(req.body?.post),
-        language: normalizeLanguage(req.body?.language),
-        platform: normalizePlatform(req.body?.platform)
-      })
-    );
-
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      data: normalizeAnalyzeData(
+        buildAnalyzeFallback(
+          getIncomingPostText(req.body),
+          normalizeLanguage(req.body?.language),
+          normalizePlatform(req.body?.platform)
+        )
+      )
+    });
   }
 });
 
-/* History */
 app.post("/api/posts/save", auth, async (req, res) => {
   try {
     const type = String(req.body?.type || "").toLowerCase();
