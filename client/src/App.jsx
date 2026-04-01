@@ -256,37 +256,44 @@ export default function App() {
     setAuthForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function handleAuthSubmit() {
-    setAuthLoading(true);
-    setAuthError("");
+ async function handleBuild() {
+  setError("");
+  setResult(null);
 
-    try {
-      const payload = {
-        email: authForm.email.trim(),
-        password: authForm.password
-      };
+  const topicValue = (buildForm.topic || "").trim();
 
-      const response =
-        authMode === "login"
-          ? await loginUser(payload)
-          : await registerUser(payload);
-
-      setUser(response?.user || getStoredUser());
-      setSuccessMessage(
-        authMode === "login"
-          ? isHebrew
-            ? "התחברת בהצלחה"
-            : "Logged in successfully"
-          : isHebrew
-            ? "נרשמת בהצלחה"
-            : "Registered successfully"
-      );
-    } catch (err) {
-      setAuthError(err?.message || (isHebrew ? "שגיאת התחברות" : "Authentication failed"));
-    } finally {
-      setAuthLoading(false);
-    }
+  if (!topicValue) {
+    setError(isHebrew ? "יש להזין נושא לפוסט" : "Please enter a topic");
+    return;
   }
+
+  setLoading(true);
+
+  try {
+    const payload = {
+      topic: topicValue,
+      targetAudience: (buildForm.targetAudience || "").trim(),
+      goal: (buildForm.goal || "").trim(),
+      style: buildForm.style || "professional",
+      platform: buildForm.platform || "instagram",
+      language
+    };
+
+    const response = await generatePost(payload);
+
+    const nextResult = {
+      type: "build",
+      data: response?.data || {}
+    };
+
+    setResult(nextResult);
+    await persistHistoryItem("build", payload, nextResult.data);
+  } catch (err) {
+    setError(err?.message || (isHebrew ? "יצירת הפוסט נכשלה" : "Generate failed"));
+  } finally {
+    setLoading(false);
+  }
+} 
 
   function handleLogout() {
     logoutUser();
