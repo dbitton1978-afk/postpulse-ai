@@ -1,30 +1,41 @@
 import jwt from "jsonwebtoken";
 
-export function authMiddleware(req, res, next) {
+function getTokenFromHeader(req) {
+  const authHeader = req.headers.authorization || req.headers.Authorization || "";
+
+  if (!authHeader || typeof authHeader !== "string") {
+    return "";
+  }
+
+  if (authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+
+  return authHeader.trim();
+}
+
+export default function auth(req, res, next) {
   try {
-    const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : null;
+    const token = getTokenFromHeader(req);
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: "No token"
+        message: "No token"
       });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.user = {
-      userId: decoded.userId
+      id: decoded.id
     };
 
     next();
-  } catch (err) {
+  } catch (error) {
     return res.status(401).json({
       success: false,
-      error: "Invalid token"
+      message: "Invalid token"
     });
   }
 }
