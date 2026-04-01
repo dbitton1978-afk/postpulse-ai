@@ -42,6 +42,10 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || "";
 }
 
+export function hasToken() {
+  return Boolean(getToken());
+}
+
 export function setToken(token) {
   if (!token) {
     localStorage.removeItem(TOKEN_KEY);
@@ -150,8 +154,26 @@ export async function analyzePost(payload) {
   });
 }
 
+export async function savePost(payload) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("You must be logged in to save history");
+  }
+
+  return request("/api/posts/save", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token
+  });
+}
+
 export async function loadMyPosts() {
   const token = getToken();
+
+  if (!token) {
+    return { success: true, posts: [] };
+  }
 
   return request("/api/posts/my-posts", {
     method: "GET",
