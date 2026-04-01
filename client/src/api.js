@@ -17,40 +17,6 @@ function parseJsonSafely(value, fallback = null) {
   }
 }
 
-function getAuthHeaders(extraHeaders = {}) {
-  const token = getStoredToken();
-
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extraHeaders
-  };
-}
-
-async function request(path, options = {}) {
-  const response = await fetch(buildUrl(path), {
-    ...options,
-    headers: getAuthHeaders(options.headers || {})
-  });
-
-  const contentType = response.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-
-  const data = isJson ? await response.json() : await response.text();
-
-  if (!response.ok) {
-    const message =
-      (typeof data === "object" && data?.message) ||
-      (typeof data === "object" && data?.error) ||
-      (typeof data === "string" && data) ||
-      "Request failed";
-
-    throw new Error(message);
-  }
-
-  return data;
-}
-
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY) || "";
 }
@@ -81,6 +47,39 @@ export function clearStoredAuth() {
 
 export function logoutUser() {
   clearStoredAuth();
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+  const token = getStoredToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders
+  };
+}
+
+async function request(path, options = {}) {
+  const response = await fetch(buildUrl(path), {
+    ...options,
+    headers: getAuthHeaders(options.headers || {})
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const data = isJson ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const message =
+      (typeof data === "object" && data?.message) ||
+      (typeof data === "object" && data?.error) ||
+      (typeof data === "string" && data) ||
+      "Request failed";
+
+    throw new Error(message);
+  }
+
+  return data;
 }
 
 export async function registerUser(payload) {
@@ -141,6 +140,10 @@ export async function getMyPosts() {
   return request("/api/posts/my-posts", {
     method: "GET"
   });
+}
+
+export async function loadMyPosts() {
+  return getMyPosts();
 }
 
 export async function deleteHistoryItem(postId) {
