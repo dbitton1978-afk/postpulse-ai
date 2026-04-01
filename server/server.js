@@ -320,7 +320,13 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.post("/api/posts/generate", auth, async (req, res) => {
   try {
-    const topic = cleanString(req.body?.topic);
+    const topic = cleanString(
+      req.body?.topic ||
+      req.body?.Topic ||
+      req.body?.title ||
+      req.body?.idea
+    );
+
     const targetAudience = cleanString(req.body?.targetAudience);
     const goal = cleanString(req.body?.goal);
     const style = normalizeStyle(req.body?.style);
@@ -368,6 +374,24 @@ Return JSON:
         }
       ]
     });
+
+    const raw = completion.choices?.[0]?.message?.content || "{}";
+    const parsed = safeJsonParse(raw, {});
+    const data = normalizeGenerateData(parsed);
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.json({
+      success: true,
+      data: normalizeGenerateData(
+        buildGenerateFallback({
+          topic: "Post idea",
+          language: normalizeLanguage(req.body?.language)
+        })
+      )
+    });
+  }
+});
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
     const parsed = safeJsonParse(raw, {});
