@@ -282,18 +282,6 @@ function sanitizeUser(user) {
   };
 }
 
-async function saveGeneratedContent(userId, type, content) {
-  try {
-    await Post.create({
-      userId,
-      type,
-      content
-    });
-  } catch (err) {
-    console.error("saveGeneratedContent error:", err.message);
-  }
-}
-
 app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
 });
@@ -407,10 +395,17 @@ app.post("/api/auth/login", async (req, res) => {
 app.post("/api/posts/save", authMiddleware, async (req, res) => {
   try {
     const type = cleanString(req.body?.type, "build");
-    const content = req.body?.content ?? req.body;
+    const content = req.body?.content ?? {};
+
+    if (!content || typeof content !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid content"
+      });
+    }
 
     const post = await Post.create({
-      userId: req.user.userId,
+      userId: String(req.user.userId),
       type: ["build", "improve", "analyze"].includes(type) ? type : "build",
       content
     });
@@ -431,7 +426,7 @@ app.post("/api/posts/save", authMiddleware, async (req, res) => {
 
 app.get("/api/posts/my-posts", authMiddleware, async (req, res) => {
   try {
-    const posts = await Post.find({ userId: req.user.userId })
+    const posts = await Post.find({ userId: String(req.user.userId) })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -522,10 +517,6 @@ RULES:
       goal
     });
 
-    if (req.user?.userId) {
-      await saveGeneratedContent(req.user.userId, "build", normalized);
-    }
-
     return res.json({
       success: true,
       data: normalized
@@ -608,10 +599,6 @@ RULES:
       style,
       goal
     });
-
-    if (req.user?.userId) {
-      await saveGeneratedContent(req.user.userId, "improve", normalized);
-    }
 
     return res.json({
       success: true,
@@ -711,10 +698,6 @@ RULES:
       language,
       platform
     });
-
-    if (req.user?.userId) {
-      await saveGeneratedContent(req.user.userId, "analyze", normalized);
-    }
 
     return res.json({
       success: true,
