@@ -3,8 +3,7 @@ import mongoose from "mongoose";
 const postSchema = new mongoose.Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      type: String,
       required: true,
       index: true
     },
@@ -15,7 +14,8 @@ const postSchema = new mongoose.Schema(
     },
     content: {
       type: mongoose.Schema.Types.Mixed,
-      required: true
+      required: true,
+      default: {}
     }
   },
   {
