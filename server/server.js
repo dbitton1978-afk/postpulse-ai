@@ -2,18 +2,20 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-import { connectDB } from "./config/db.js";
+import connectDB from "./config/db.js";
 import User from "./models/User.js";
 import Post from "./models/Post.js";
-import { authMiddleware } from "./middleware/auth.js";
+import auth from "./middleware/auth.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+connectDB();
 
 app.use(
   cors({
@@ -45,21 +47,10 @@ function cleanArray(value, fallback = []) {
   return value.map((item) => String(item || "").trim()).filter(Boolean);
 }
 
-function normalizeScoreValue(value) {
-  const num = Number(value);
-
-  if (!Number.isFinite(num)) return 0;
-
-  if (num >= 0 && num <= 10) {
-    return Math.round(num * 10);
-  }
-
-  return Math.round(num);
-}
-
 function clampScore(value) {
-  const normalized = normalizeScoreValue(value);
-  return Math.max(0, Math.min(100, normalized));
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
 }
 
 function normalizeLanguage(language) {
@@ -124,12 +115,8 @@ function normalizeHashtags(value) {
     .filter(Boolean);
 }
 
-function normalizeGenerateData(data, meta = {}) {
+function normalizeGenerateData(data) {
   return {
-    language: normalizeLanguage(meta.language),
-    platform: normalizePlatform(meta.platform),
-    style: normalizeStyle(meta.style),
-    goal: cleanString(meta.goal),
     title: cleanString(data?.title),
     hook: cleanString(data?.hook),
     body: cleanString(data?.body),
@@ -140,12 +127,8 @@ function normalizeGenerateData(data, meta = {}) {
   };
 }
 
-function normalizeImproveData(data, meta = {}) {
+function normalizeImproveData(data) {
   return {
-    language: normalizeLanguage(meta.language),
-    platform: normalizePlatform(meta.platform),
-    style: normalizeStyle(meta.style),
-    goal: cleanString(meta.goal),
     strengths: cleanArray(data?.strengths),
     weaknesses: cleanArray(data?.weaknesses),
     improvedPost: cleanString(data?.improvedPost),
@@ -155,10 +138,8 @@ function normalizeImproveData(data, meta = {}) {
   };
 }
 
-function normalizeAnalyzeData(data, meta = {}) {
+function normalizeAnalyzeData(data) {
   return {
-    language: normalizeLanguage(meta.language),
-    platform: normalizePlatform(meta.platform),
     viralScore: clampScore(data?.viralScore),
     authenticityScore: clampScore(data?.authenticityScore),
     clarityScore: clampScore(data?.clarityScore),
@@ -178,14 +159,10 @@ function normalizeAnalyzeData(data, meta = {}) {
   };
 }
 
-function buildGenerateFallback({ topic, language, platform, style, goal }) {
+function buildGenerateFallback({ topic, language }) {
   const isHebrew = normalizeLanguage(language) === "he";
 
   return {
-    language: normalizeLanguage(language),
-    platform: normalizePlatform(platform),
-    style: normalizeStyle(style),
-    goal: cleanString(goal),
     title: isHebrew ? `פוסט על ${topic}` : `Post about ${topic}`,
     hook: isHebrew
       ? "יש רגעים שבהם הדרך שבה מציגים רעיון משנה את כל התגובה אליו."
@@ -206,12 +183,8 @@ function buildGenerateFallback({ topic, language, platform, style, goal }) {
   };
 }
 
-function buildImproveFallback({ post, language, platform, style, goal }) {
+function buildImproveFallback({ post }) {
   return {
-    language: normalizeLanguage(language),
-    platform: normalizePlatform(platform),
-    style: normalizeStyle(style),
-    goal: cleanString(goal),
     strengths: [],
     weaknesses: [],
     improvedPost: cleanString(post),
@@ -226,58 +199,53 @@ function buildAnalyzeFallback({ post, language, platform }) {
   const safePlatform = normalizePlatform(platform);
 
   return {
-    language: normalizeLanguage(language),
-    platform: safePlatform,
-    viralScore: 68,
-    authenticityScore: 74,
-    clarityScore: 76,
-    emotionalScore: 66,
-    curiosityScore: 67,
-    hookScore: 64,
-    ctaScore: 63,
+    viralScore: 60,
+    authenticityScore: 68,
+    clarityScore: 70,
+    emotionalScore: 58,
+    curiosityScore: 57,
+    hookScore: 56,
+    ctaScore: 54,
     summary: isHebrew
-      ? "יש כאן בסיס טוב, אבל אפשר לחזק פתיחה, סקרנות וקריאה לפעולה."
-      : "There is a solid base here, but the opening, curiosity, and CTA can be stronger.",
+      ? "יש כאן בסיס טוב, אבל אפשר לחזק חדות, סקרנות וקריאה לפעולה."
+      : "There is a solid base here, but it can be sharper, more curiosity-driven, and stronger on CTA.",
     whatWorks: isHebrew
-      ? ["הנושא ברור", "יש בסיס טוב למסר", "אפשר לבנות עליו חזק"]
-      : ["The topic is clear", "There is a solid message base", "It has strong potential"],
+      ? ["הנושא ברור", "יש בסיס לפוסט טוב"]
+      : ["The topic is clear", "There is a base for a good post"],
     whatHurts: isHebrew
-      ? ["הפתיחה לא מספיק חדה", "הטקסט יכול להיות אנושי יותר"]
-      : ["The opening is not sharp enough", "The text could sound more human"],
+      ? ["הפתיחה לא מספיק חזקה", "הניסוח מעט כללי"]
+      : ["The opening is not strong enough", "The wording is a bit generic"],
     improvements: isHebrew
-      ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא", "לשפר CTA"]
-      : ["Strengthen the first sentence", "Clarify the reader value", "Improve the CTA"],
+      ? ["לחזק את המשפט הראשון", "לחדד את הערך לקורא"]
+      : ["Strengthen the first sentence", "Clarify the value for the reader"],
     raiseViralScore: isHebrew
-      ? ["לפתוח עם מתח", "להכניס זווית מפתיעה"]
-      : ["Open with tension", "Add a surprising angle"],
+      ? ["להתחיל חד יותר", "ליצור יותר מתח"]
+      : ["Start more sharply", "Create more tension"],
     raiseAuthenticityScore: isHebrew
-      ? ["לפשט ניסוח", "לדבר בגובה העיניים"]
-      : ["Simplify wording", "Use a more natural voice"],
+      ? ["לדבר פשוט יותר", "להישמע פחות רובוטי"]
+      : ["Use simpler wording", "Sound less robotic"],
     raiseEmotionalScore: isHebrew
-      ? ["לגעת בכאב או רצון אמיתי"]
-      : ["Touch a real pain point or desire"],
+      ? ["להוסיף חיבור רגשי", "לגעת בצורך אמיתי"]
+      : ["Add emotional connection", "Touch a real need"],
     raiseCuriosityScore: isHebrew
-      ? ["להשאיר לולאה פתוחה", "לעורר שאלה כבר בפתיחה"]
-      : ["Leave an open loop", "Trigger a question in the opening"],
-    improvedVersion:
-      cleanString(post) ||
+      ? ["להשאיר לולאה פתוחה", "לרמוז על תובנה לפני החשיפה"]
+      : ["Leave an open loop", "Hint at an insight before revealing it"],
+    improvedVersion: cleanString(post) ||
       (isHebrew
-        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך פתיחה חזקה יותר וניסוח ברור יותר.`
+        ? `אם רוצים שהפוסט יעבוד טוב יותר ב-${safePlatform}, צריך לפתוח חזק יותר ולדבר ברור יותר.`
         : `If you want this post to work better on ${safePlatform}, it needs a stronger opening and clearer wording.`)
   };
 }
 
-function signToken(user) {
-  return jwt.sign(
-    { userId: user._id.toString() },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+function createToken(userId) {
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: "7d"
+  });
 }
 
-function sanitizeUser(user) {
+function buildUserResponse(user) {
   return {
-    id: user._id.toString(),
+    id: user._id,
     email: user.email
   };
 }
@@ -293,6 +261,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+/* Auth */
 app.post("/api/auth/register", async (req, res) => {
   try {
     const email = cleanString(req.body?.email).toLowerCase();
@@ -301,23 +270,16 @@ app.post("/api/auth/register", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: "Email and password are required"
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        error: "Password must be at least 6 characters"
+        message: "Email and password are required"
       });
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(409).json({
+      return res.status(400).json({
         success: false,
-        error: "User already exists"
+        message: "User already exists"
       });
     }
 
@@ -328,19 +290,17 @@ app.post("/api/auth/register", async (req, res) => {
       password: hashedPassword
     });
 
-    const token = signToken(user);
+    const token = createToken(user._id);
 
-    return res.json({
+    return res.status(201).json({
       success: true,
       token,
-      user: sanitizeUser(user)
+      user: buildUserResponse(user)
     });
-  } catch (err) {
-    console.error("register error:", err);
-
+  } catch (error) {
     return res.status(500).json({
       success: false,
-      error: "Register failed"
+      message: error.message || "Register failed"
     });
   }
 });
@@ -353,7 +313,7 @@ app.post("/api/auth/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: "Email and password are required"
+        message: "Email and password are required"
       });
     }
 
@@ -362,7 +322,7 @@ app.post("/api/auth/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: "Invalid credentials"
+        message: "Invalid credentials"
       });
     }
 
@@ -371,80 +331,27 @@ app.post("/api/auth/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: "Invalid credentials"
+        message: "Invalid credentials"
       });
     }
 
-    const token = signToken(user);
+    const token = createToken(user._id);
 
     return res.json({
       success: true,
       token,
-      user: sanitizeUser(user)
+      user: buildUserResponse(user)
     });
-  } catch (err) {
-    console.error("login error:", err);
-
+  } catch (error) {
     return res.status(500).json({
       success: false,
-      error: "Login failed"
+      message: error.message || "Login failed"
     });
   }
 });
 
-app.post("/api/posts/save", authMiddleware, async (req, res) => {
-  try {
-    const type = cleanString(req.body?.type, "build");
-    const content = req.body?.content ?? {};
-
-    if (!content || typeof content !== "object") {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid content"
-      });
-    }
-
-    const post = await Post.create({
-      userId: String(req.user.userId),
-      type: ["build", "improve", "analyze"].includes(type) ? type : "build",
-      content
-    });
-
-    return res.json({
-      success: true,
-      post
-    });
-  } catch (err) {
-    console.error("save post error:", err);
-
-    return res.status(500).json({
-      success: false,
-      error: "Save post failed"
-    });
-  }
-});
-
-app.get("/api/posts/my-posts", authMiddleware, async (req, res) => {
-  try {
-    const posts = await Post.find({ userId: String(req.user.userId) })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    return res.json({
-      success: true,
-      posts
-    });
-  } catch (err) {
-    console.error("my-posts error:", err);
-
-    return res.status(500).json({
-      success: false,
-      error: "Load history failed"
-    });
-  }
-});
-
-async function handleGenerate(req, res) {
+/* AI */
+app.post("/api/posts/generate", auth, async (req, res) => {
   try {
     const topic = cleanString(req.body?.topic);
     const targetAudience = cleanString(req.body?.targetAudience);
@@ -454,13 +361,15 @@ async function handleGenerate(req, res) {
     const language = normalizeLanguage(req.body?.language);
 
     if (!topic) {
-      return res.status(400).json({ success: false, error: "Topic is required" });
+      return res.status(400).json({ success: false, message: "Topic is required" });
     }
 
     const systemPrompt = `
 You are a world-class social media content strategist.
+
 You NEVER generate generic AI text.
-You ALWAYS write like a sharp, natural human creator.
+You ALWAYS write like a real human and optimize for engagement.
+
 Return valid JSON only.
 `;
 
@@ -473,8 +382,7 @@ Style: ${style}
 Platform: ${platform}
 Language: ${getLanguageLabel(language)}
 
-Return JSON only:
-
+Return JSON:
 {
   "title": "",
   "hook": "",
@@ -485,12 +393,11 @@ Return JSON only:
   "alternativeVersion": ""
 }
 
-RULES:
-- hook must be strong and scroll-stopping
-- body must feel human, not robotic
-- CTA must be natural and action-driven
-- avoid generic AI phrases
-- adapt naturally to ${platform}
+Rules:
+- strong hook
+- human tone
+- natural CTA
+- adapt to ${platform}
 - platform guide: ${getPlatformGuide(platform, language)}
 - write only in ${getLanguageLabel(language)}
 `;
@@ -506,32 +413,23 @@ RULES:
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = safeJsonParse(
-      raw,
-      buildGenerateFallback({ topic, language, platform, style, goal })
+    const parsed = safeJsonParse(raw, {});
+    const data = normalizeGenerateData(parsed);
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    const data = normalizeGenerateData(
+      buildGenerateFallback({
+        topic: cleanString(req.body?.topic),
+        language: normalizeLanguage(req.body?.language)
+      })
     );
-    const normalized = normalizeGenerateData(parsed, {
-      language,
-      platform,
-      style,
-      goal
-    });
 
-    return res.json({
-      success: true,
-      data: normalized
-    });
-  } catch (err) {
-    console.error("generate-post error:", err);
-
-    return res.status(500).json({
-      success: false,
-      error: "Generate failed"
-    });
+    return res.json({ success: true, data });
   }
-}
+});
 
-async function handleImprove(req, res) {
+app.post("/api/posts/improve", auth, async (req, res) => {
   try {
     const post = cleanString(req.body?.post);
     const goal = cleanString(req.body?.goal);
@@ -540,25 +438,24 @@ async function handleImprove(req, res) {
     const language = normalizeLanguage(req.body?.language);
 
     if (!post) {
-      return res.status(400).json({ success: false, error: "Post is required" });
+      return res.status(400).json({ success: false, message: "Post is required" });
     }
 
     const systemPrompt = `
-You are a world-class social media post optimizer.
-You improve text in a natural, human, persuasive way.
+You are an expert social media editor.
 Return valid JSON only.
 `;
 
     const userPrompt = `
-INPUT:
-Post: ${post}
-Goal: ${goal || "Make it sharper, more human, and more effective"}
+Original post:
+${post}
+
+Goal: ${goal || "Improve the post"}
 Style: ${style}
 Platform: ${platform}
 Language: ${getLanguageLabel(language)}
 
-Return JSON only:
-
+Return JSON:
 {
   "strengths": [],
   "weaknesses": [],
@@ -567,15 +464,6 @@ Return JSON only:
   "moreAuthenticVersion": "",
   "tips": []
 }
-
-RULES:
-- keep the meaning unless improvement is necessary
-- make the text feel more human
-- avoid robotic AI tone
-- improve hook, clarity, and emotional pull where needed
-- adapt naturally to ${platform}
-- platform guide: ${getPlatformGuide(platform, language)}
-- write only in ${getLanguageLabel(language)}
 `;
 
     const completion = await openai.chat.completions.create({
@@ -589,68 +477,44 @@ RULES:
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = safeJsonParse(
-      raw,
-      buildImproveFallback({ post, language, platform, style, goal })
+    const parsed = safeJsonParse(raw, {});
+    const data = normalizeImproveData(parsed);
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    const data = normalizeImproveData(
+      buildImproveFallback({
+        post: cleanString(req.body?.post)
+      })
     );
-    const normalized = normalizeImproveData(parsed, {
-      language,
-      platform,
-      style,
-      goal
-    });
 
-    return res.json({
-      success: true,
-      data: normalized
-    });
-  } catch (err) {
-    console.error("improve-post error:", err);
-
-    return res.status(500).json({
-      success: false,
-      error: "Improve failed"
-    });
+    return res.json({ success: true, data });
   }
-}
+});
 
-async function handleAnalyze(req, res) {
+app.post("/api/posts/analyze", auth, async (req, res) => {
   try {
     const post = cleanString(req.body?.post);
     const platform = normalizePlatform(req.body?.platform);
     const language = normalizeLanguage(req.body?.language);
 
     if (!post) {
-      return res.status(400).json({ success: false, error: "Post is required" });
+      return res.status(400).json({ success: false, message: "Post is required" });
     }
 
     const systemPrompt = `
-You are a world-class social media content analyst.
-
-You analyze posts for:
-- virality
-- authenticity
-- clarity
-- emotional impact
-- curiosity
-- hook quality
-- CTA strength
-
+You are an expert social media post analyst.
 Return valid JSON only.
-All scores must be on a 0-100 scale.
-Do not use 0-10 scores.
-Be realistic, but not harsh by default.
-A decent post should usually land in the 60-85 range.
 `;
 
     const userPrompt = `
-INPUT:
-Post: ${post}
+Post:
+${post}
+
 Platform: ${platform}
 Language: ${getLanguageLabel(language)}
 
-Return JSON only:
-
+Return JSON:
 {
   "viralScore": 0,
   "authenticityScore": 0,
@@ -669,19 +533,11 @@ Return JSON only:
   "raiseCuriosityScore": [],
   "improvedVersion": ""
 }
-
-RULES:
-- scores must be 0-100 only
-- a decent post should not get single-digit results
-- be practical, specific, and concise
-- adapt to ${platform}
-- platform guide: ${getPlatformGuide(platform, language)}
-- write only in ${getLanguageLabel(language)}
 `;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.6,
+      temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -690,54 +546,109 @@ RULES:
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
-    const parsed = safeJsonParse(
-      raw,
-      buildAnalyzeFallback({ post, language, platform })
+    const parsed = safeJsonParse(raw, {});
+    const data = normalizeAnalyzeData(parsed);
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    const data = normalizeAnalyzeData(
+      buildAnalyzeFallback({
+        post: cleanString(req.body?.post),
+        language: normalizeLanguage(req.body?.language),
+        platform: normalizePlatform(req.body?.platform)
+      })
     );
-    const normalized = normalizeAnalyzeData(parsed, {
-      language,
-      platform
+
+    return res.json({ success: true, data });
+  }
+});
+
+/* History */
+app.post("/api/posts/save", auth, async (req, res) => {
+  try {
+    const type = String(req.body?.type || "").toLowerCase();
+    const allowedTypes = ["build", "improve", "analyze"];
+
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid history item type"
+      });
+    }
+
+    const post = await Post.create({
+      user: req.user.id,
+      type,
+      language: normalizeLanguage(req.body?.language),
+      input: req.body?.input || {},
+      data: req.body?.data || {}
     });
+
+    return res.status(201).json({
+      success: true,
+      post
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Save post failed"
+    });
+  }
+});
+
+app.get("/api/posts/my-posts", auth, async (req, res) => {
+  try {
+    const posts = await Post.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
 
     return res.json({
       success: true,
-      data: normalized
+      posts
     });
-  } catch (err) {
-    console.error("analyze-post error:", err);
-
+  } catch (error) {
     return res.status(500).json({
       success: false,
-      error: "Analyze failed"
+      message: error.message || "Fetch history failed"
     });
   }
-}
+});
 
-app.post("/generate-post", handleGenerate);
-app.post("/improve-post", handleImprove);
-app.post("/analyze-post", handleAnalyze);
+app.delete("/api/posts/:id", auth, async (req, res) => {
+  try {
+    const deleted = await Post.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id
+    });
 
-app.post("/api/generate-post", handleGenerate);
-app.post("/api/improve-post", handleImprove);
-app.post("/api/analyze-post", handleAnalyze);
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "History item not found"
+      });
+    }
 
-app.post("/api/posts/generate", authMiddleware, handleGenerate);
-app.post("/api/posts/improve", authMiddleware, handleImprove);
-app.post("/api/posts/analyze", authMiddleware, handleAnalyze);
-
-async function startServer() {
-  if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is missing");
+    return res.json({
+      success: true,
+      message: "History item deleted",
+      id: req.params.id
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Delete history failed"
+    });
   }
+});
 
-  await connectDB();
-
-  app.listen(PORT, () => {
-    console.log(`PostPulse AI server running on port ${PORT}`);
+app.use((err, req, res, next) => {
+  return res.status(500).json({
+    success: false,
+    message: err.message || "Internal server error"
   });
-}
+});
 
-startServer().catch((err) => {
-  console.error("Server start error:", err);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
