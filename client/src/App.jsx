@@ -6,7 +6,9 @@ import {
   loginUser,
   registerUser,
   getStoredUser,
-  logoutUser
+  logoutUser,
+  savePost,
+  getMyPosts
 } from "./api";
 import "./App.css";
 
@@ -84,6 +86,14 @@ function getImprovePrimaryText(data) {
   );
 }
 
+function formatHistoryDate(value, locale) {
+  try {
+    return new Date(value).toLocaleString(locale);
+  } catch {
+    return "";
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(() => getStoredUser());
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -99,9 +109,12 @@ export default function App() {
   const [error, setError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const isHebrew = language === "he";
   const dir = isHebrew ? "rtl" : "ltr";
+  const locale = isHebrew ? "he-IL" : "en-US";
 
   const t = useMemo(
     () => ({
@@ -112,7 +125,6 @@ export default function App() {
       logout: isHebrew ? "התנתק" : "Logout",
       noAccount: isHebrew ? "אין חשבון? הירשם" : "No account? Register",
       haveAccount: isHebrew ? "יש חשבון? התחבר" : "Already have an account? Login",
-      authTitle: isHebrew ? "כניסה למערכת" : "Access your account",
       authSubtitle: isHebrew
         ? "התחבר או הירשם כדי להשתמש ב־PostPulse AI"
         : "Log in or register to use PostPulse AI",
@@ -173,6 +185,8 @@ export default function App() {
       copied: isHebrew ? "הועתק" : "Copied",
       copyFailed: isHebrew ? "ההעתקה נכשלה" : "Copy failed",
       copy: isHebrew ? "העתק" : "Copy",
+      saved: isHebrew ? "נשמר בהיסטוריה" : "Saved to history",
+      save: isHebrew ? "שמור" : "Save",
 
       moveToImprove: isHebrew ? "העבר לשיפור" : "Move to Improve",
       analyzeImproved: isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version",
@@ -181,7 +195,10 @@ export default function App() {
       topicPlaceholder: isHebrew ? "על מה הפוסט?" : "What is the post about?",
       audiencePlaceholder: isHebrew ? "למי הפוסט מיועד?" : "Who is the audience?",
       goalPlaceholder: isHebrew ? "מה המטרה?" : "What is the goal?",
-      userLabel: isHebrew ? "מחובר כ:" : "Signed in as:"
+      userLabel: isHebrew ? "מחובר כ:" : "Signed in as:",
+      history: isHebrew ? "היסטוריה" : "History",
+      noHistory: isHebrew ? "עדיין אין פריטים בהיסטוריה" : "No history items yet",
+      loadHistoryFailed: isHebrew ? "טעינת היסטוריה נכשלה" : "Failed to load history"
     }),
     [isHebrew]
   );
@@ -208,9 +225,49 @@ export default function App() {
 
   useEffect(() => {
     if (!copyMessage) return;
-    const timer = window.setTimeout(() => setCopyMessage(""), 1500);
+    const timer = window.setTimeout(() => setCopyMessage(""), 1800);
     return () => window.clearTimeout(timer);
   }, [copyMessage]);
+
+  useEffect(() => {
+    if (!user) {
+      setHistory([]);
+      return;
+    }
+
+    loadHistory();
+  }, [user]);
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+
+    try {
+      const response = await getMyPosts();
+      setHistory(Array.isArray(response?.posts) ? response.posts : []);
+    } catch (err) {
+      setError(err?.message || t.loadHistoryFailed);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function persistHistory(type, input, data) {
+    try {
+      const response = await savePost({
+        type,
+        language,
+        input,
+        data
+      });
+
+      if (response?.post) {
+        setHistory((prev) => [response.post, ...prev].slice(0, 50));
+      }
+      setCopyMessage(t.saved);
+    } catch {
+      // keep quiet to avoid blocking main flow
+    }
+  }
 
   async function copyText(text) {
     try {
@@ -293,11 +350,14 @@ export default function App() {
       };
 
       const response = await generatePost(payload);
+      const data = response?.data || {};
 
       setResult({
         type: "build",
-        data: response?.data || {}
+        data
       });
+
+      await persistHistory("build", payload, data);
     } catch (err) {
       setError(err?.message || t.generateFailed);
     } finally {
@@ -328,11 +388,14 @@ export default function App() {
       };
 
       const response = await improvePost(payload);
+      const data = response?.data || {};
 
       setResult({
         type: "improve",
-        data: response?.data || {}
+        data
       });
+
+      await persistHistory("improve", payload, data);
     } catch (err) {
       setError(err?.message || t.improveFailed);
     } finally {
@@ -361,11 +424,14 @@ export default function App() {
       };
 
       const response = await analyzePost(payload);
+      const data = response?.data || {};
 
       setResult({
         type: "analyze",
-        data: response?.data || {}
+        data
       });
+
+      await persistHistory("analyze", payload, data);
     } catch (err) {
       setError(err?.message || t.analyzeFailed);
     } finally {
@@ -403,13 +469,7 @@ export default function App() {
         <div className="app-bg" />
 
         <div className="app-container">
-          <section
-            className="panel glass"
-            style={{
-              maxWidth: 520,
-              margin: "60px auto"
-            }}
-          >
+          <section className="panel glass" style={{ maxWidth: 520, margin: "60px auto" }}>
             <div style={{ marginBottom: 20 }}>
               <h1 style={{ margin: 0 }}>PostPulse AI</h1>
               <p style={{ marginTop: 10, color: "#9fb0cd" }}>{t.authSubtitle}</p>
@@ -475,11 +535,7 @@ export default function App() {
               onClick={handleAuthSubmit}
               disabled={authLoading}
             >
-              {authLoading
-                ? t.loading
-                : isLoginMode
-                  ? t.login
-                  : t.register}
+              {authLoading ? t.loading : isLoginMode ? t.login : t.register}
             </button>
 
             <button
@@ -509,20 +565,8 @@ export default function App() {
             <p>{t.appSubtitle}</p>
           </div>
 
-          <div
-            className="topbar-actions"
-            style={{
-              flexWrap: "wrap",
-              alignItems: "center"
-            }}
-          >
-            <div
-              style={{
-                color: "#cfd9ee",
-                fontSize: 14,
-                padding: "0 8px"
-              }}
-            >
+          <div className="topbar-actions" style={{ flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ color: "#cfd9ee", fontSize: 14, padding: "0 8px" }}>
               <strong>{t.userLabel}</strong> {user.email}
             </div>
 
@@ -874,6 +918,35 @@ export default function App() {
             )}
           </section>
         </div>
+
+        <section className="panel glass" style={{ marginTop: 24 }}>
+          <div className="section-header">
+            <h2 style={{ margin: 0 }}>{t.history}</h2>
+            {historyLoading ? <span style={{ color: "#9fb0cd" }}>{t.loading}</span> : null}
+          </div>
+
+          {history.length === 0 ? (
+            <div className="empty-state">{t.noHistory}</div>
+          ) : (
+            <div className="result-wrap">
+              {history.map((item) => (
+                <div key={item._id} className="result-section">
+                  <div className="section-header">
+                    <h3>{item.type}</h3>
+                    <span style={{ color: "#9fb0cd", fontSize: 13 }}>
+                      {formatHistoryDate(item.createdAt, locale)}
+                    </span>
+                  </div>
+                  <div className="text-card">
+                    {item.type === "build" && safeText(item.data?.title)}
+                    {item.type === "improve" && getImprovePrimaryText(item.data)}
+                    {item.type === "analyze" && safeText(item.data?.summary)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
