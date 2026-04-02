@@ -23,6 +23,11 @@ async function request(path, options = {}) {
   return data;
 }
 
+function getAuthHeaders() {
+  const token = localStorage.getItem(TOKEN_KEY) || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function saveAuth(data) {
   if (data?.token) {
     localStorage.setItem(TOKEN_KEY, data.token);
@@ -96,14 +101,21 @@ export async function analyzePost(payload) {
   });
 }
 
-export async function savePost() {
-  return { success: false };
+export async function savePost(payload) {
+  return request("/api/posts/save", {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(payload || {})
+  });
 }
 
 export async function getMyPosts() {
-  return { success: true, posts: [] };
-}
-
-export async function deletePost() {
-  return { success: false };
+  return request("/api/posts/my-posts", {
+    method: "GET",
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
 }
