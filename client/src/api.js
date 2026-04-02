@@ -53,10 +53,6 @@ export function getStoredUser() {
   }
 }
 
-export function hasToken() {
-  return Boolean(getStoredToken());
-}
-
 export function logoutUser() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
@@ -118,8 +114,4 @@ export async function getMyPosts() {
       ...getAuthHeaders()
     }
   });
-}
-
-export async function deletePost() {
-  return { success: false };
 }
