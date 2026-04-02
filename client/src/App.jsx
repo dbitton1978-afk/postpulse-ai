@@ -302,16 +302,18 @@ export default function App() {
   }
 
   async function persistHistory(type, input, data) {
-    const safeType = String(type || "").toLowerCase().trim();
+    const derivedType =
+      String(type || "").trim().toLowerCase() ||
+      (tab === "build" ? "build" : tab === "improve" ? "improve" : "analyze");
 
-    if (!["build", "improve", "analyze"].includes(safeType)) {
-      setError(`${t.invalidHistoryType}: ${safeType}`);
+    if (!["build", "improve", "analyze"].includes(derivedType)) {
+      setError(`${t.invalidHistoryType}: ${derivedType}`);
       return;
     }
 
     try {
       const response = await savePost({
-        type: safeType,
+        type: derivedType,
         language,
         input,
         data
