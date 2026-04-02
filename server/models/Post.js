@@ -11,10 +11,12 @@ const postSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["build", "improve", "analyze"],
-      required: true
+      required: true,
+      index: true
     },
     language: {
       type: String,
+      enum: ["he", "en"],
       default: "he"
     },
     input: {
