@@ -98,75 +98,156 @@ function normalizeHistoryType(type) {
   return map[value] || "";
 }
 
-function clampScore(value, fallback = 75) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return fallback;
-  return Math.max(42, Math.min(96, Math.round(num)));
+/* ================= ANALYZE ENGINE ================= */
+
+function normalizeBand(value) {
+  const allowed = ["very_low", "low", "medium", "high", "very_high"];
+  const safe = String(value || "").trim().toLowerCase();
+  return allowed.includes(safe) ? safe : "medium";
 }
 
-function scoreSpread(scores) {
+function bandToScore(category, band) {
+  const ranges = {
+    hookScore: {
+      very_low: 28,
+      low: 46,
+      medium: 64,
+      high: 80,
+      very_high: 92
+    },
+    curiosityScore: {
+      very_low: 30,
+      low: 47,
+      medium: 65,
+      high: 79,
+      very_high: 91
+    },
+    emotionalScore: {
+      very_low: 32,
+      low: 49,
+      medium: 66,
+      high: 81,
+      very_high: 90
+    },
+    clarityScore: {
+      very_low: 35,
+      low: 52,
+      medium: 69,
+      high: 84,
+      very_high: 93
+    },
+    authenticityScore: {
+      very_low: 34,
+      low: 51,
+      medium: 68,
+      high: 83,
+      very_high: 92
+    },
+    ctaScore: {
+      very_low: 26,
+      low: 44,
+      medium: 62,
+      high: 78,
+      very_high: 90
+    },
+    viralScore: {
+      very_low: 30,
+      low: 48,
+      medium: 66,
+      high: 82,
+      very_high: 93
+    }
+  };
+
+  const categoryMap = ranges[category] || ranges.viralScore;
+  return categoryMap[band] ?? 66;
+}
+
+function clampScore(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 66;
+  return Math.max(20, Math.min(97, Math.round(num)));
+}
+
+function computeScoreSpread(scores) {
   const values = Object.values(scores);
   return Math.max(...values) - Math.min(...values);
 }
 
-function diversifyScores(scores) {
-  const values = Object.values(scores);
-  const uniqueCount = new Set(values).size;
-  const spread = scoreSpread(scores);
+function widenScores(scores) {
+  const order = [
+    "ctaScore",
+    "emotionalScore",
+    "curiosityScore",
+    "viralScore",
+    "clarityScore",
+    "authenticityScore",
+    "hookScore"
+  ];
 
-  if (uniqueCount >= 5 && spread >= 12) {
-    return scores;
+  const deltas = {
+    ctaScore: -8,
+    emotionalScore: -4,
+    curiosityScore: -1,
+    viralScore: 2,
+    clarityScore: 4,
+    authenticityScore: 6,
+    hookScore: 9
+  };
+
+  const widened = {};
+  for (const key of order) {
+    widened[key] = clampScore((scores[key] || 66) + deltas[key]);
+  }
+  return widened;
+}
+
+function buildScoresFromBands(data) {
+  const initial = {
+    viralScore: bandToScore("viralScore", normalizeBand(data?.viralBand)),
+    authenticityScore: bandToScore(
+      "authenticityScore",
+      normalizeBand(data?.authenticityBand)
+    ),
+    clarityScore: bandToScore("clarityScore", normalizeBand(data?.clarityBand)),
+    emotionalScore: bandToScore(
+      "emotionalScore",
+      normalizeBand(data?.emotionalBand)
+    ),
+    curiosityScore: bandToScore(
+      "curiosityScore",
+      normalizeBand(data?.curiosityBand)
+    ),
+    hookScore: bandToScore("hookScore", normalizeBand(data?.hookBand)),
+    ctaScore: bandToScore("ctaScore", normalizeBand(data?.ctaBand))
+  };
+
+  const spread = computeScoreSpread(initial);
+
+  if (spread < 10) {
+    return widenScores(initial);
   }
 
-  const adjusted = {
-    viralScore: scores.viralScore + 2,
-    authenticityScore: scores.authenticityScore + 7,
-    clarityScore: scores.clarityScore + 4,
-    emotionalScore: scores.emotionalScore - 2,
-    curiosityScore: scores.curiosityScore + 5,
-    hookScore: scores.hookScore + 8,
-    ctaScore: scores.ctaScore - 3
-  };
-
-  return {
-    viralScore: clampScore(adjusted.viralScore, 74),
-    authenticityScore: clampScore(adjusted.authenticityScore, 82),
-    clarityScore: clampScore(adjusted.clarityScore, 79),
-    emotionalScore: clampScore(adjusted.emotionalScore, 69),
-    curiosityScore: clampScore(adjusted.curiosityScore, 76),
-    hookScore: clampScore(adjusted.hookScore, 84),
-    ctaScore: clampScore(adjusted.ctaScore, 66)
-  };
+  return initial;
 }
 
 function normalizeAnalyzeData(data, language) {
   const isHebrew = language === "he";
-
-  const rawScores = {
-    viralScore: clampScore(data?.viralScore, 74),
-    authenticityScore: clampScore(data?.authenticityScore, 80),
-    clarityScore: clampScore(data?.clarityScore, 78),
-    emotionalScore: clampScore(data?.emotionalScore, 69),
-    curiosityScore: clampScore(data?.curiosityScore, 75),
-    hookScore: clampScore(data?.hookScore, 83),
-    ctaScore: clampScore(data?.ctaScore, 66)
-  };
-
-  const scores = diversifyScores(rawScores);
+  const scores = buildScoresFromBands(data);
 
   return {
     ...scores,
     summary: cleanString(
       data?.summary,
       isHebrew
-        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, לחדד את המסר ולשפר את הזרימה כדי להעלות ביצועים."
-        : "The post has a solid base, but the hook, message clarity, and flow can be improved for stronger performance."
+        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לשפר ביצועים."
+        : "The post has a solid base, but the hook, flow, and sharpness can be improved."
     ),
     whatWorks: Array.isArray(data?.whatWorks)
       ? data.whatWorks
       : isHebrew
         ? ["המסר המרכזי ברור", "יש בסיס טוב לחיבור עם הקהל"]
-        : ["The core message is clear", "There is a solid base for audience connection"],
+        : ["The main message is clear", "There is a solid base for audience connection"],
     whatHurts: Array.isArray(data?.whatHurts)
       ? data.whatHurts
       : isHebrew
@@ -191,13 +272,13 @@ function buildAnalyzeFallback(post, language) {
 
   return normalizeAnalyzeData(
     {
-      viralScore: 73,
-      authenticityScore: 81,
-      clarityScore: 78,
-      emotionalScore: 67,
-      curiosityScore: 74,
-      hookScore: 82,
-      ctaScore: 64,
+      viralBand: "medium",
+      authenticityBand: "high",
+      clarityBand: "high",
+      emotionalBand: "medium",
+      curiosityBand: "medium",
+      hookBand: "high",
+      ctaBand: "low",
       summary: isHebrew
         ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח ואת הזרימה כדי להגדיל מעורבות."
         : "The post is a solid base, but the opening and flow can be improved to increase engagement.",
@@ -417,15 +498,15 @@ app.post("/analyze-post", async (req, res) => {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.35,
+      temperature: 0.25,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
             language === "he"
-              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד, בעברית בלבד, עם ציונים נפרדים, טבעיים ואמינים."
-              : "You analyze social media posts. Return valid JSON only, in English only, with differentiated, realistic scores."
+              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד, בעברית בלבד. אל תחזיר אחוזים. תחזיר רק דירוג איכות לכל מדד."
+              : "You analyze social media posts. Return valid JSON only, in English only. Do not return percentages. Return only quality bands for each metric."
         },
         {
           role: "user",
@@ -433,16 +514,28 @@ app.post("/analyze-post", async (req, res) => {
             language === "he"
               ? `
 נתח את הפוסט הבא בעברית בלבד.
-אסור לכתוב באנגלית.
-אסור שכל הציונים יהיו דומים מדי.
-כל מדד חייב להיבחן בפני עצמו:
-- viralScore
-- authenticityScore
-- clarityScore
-- emotionalScore
-- curiosityScore
-- hookScore
-- ctaScore
+
+לכל אחד מהמדדים תחזיר רק אחד מהערכים:
+- very_low
+- low
+- medium
+- high
+- very_high
+
+המדדים:
+- viralBand
+- authenticityBand
+- clarityBand
+- emotionalBand
+- curiosityBand
+- hookBand
+- ctaBand
+
+חשוב:
+- אסור שכל המדדים יהיו אותו דבר
+- כל מדד חייב להיבחן בנפרד
+- hook ו-cta אינם אותו דבר
+- clarity ו-authenticity אינם אותו דבר
 
 פלטפורמה: ${platform}
 פוסט:
@@ -450,13 +543,13 @@ ${post}
 
 החזר JSON בדיוק כך:
 {
-  "viralScore": 0,
-  "authenticityScore": 0,
-  "clarityScore": 0,
-  "emotionalScore": 0,
-  "curiosityScore": 0,
-  "hookScore": 0,
-  "ctaScore": 0,
+  "viralBand": "medium",
+  "authenticityBand": "medium",
+  "clarityBand": "medium",
+  "emotionalBand": "medium",
+  "curiosityBand": "medium",
+  "hookBand": "medium",
+  "ctaBand": "medium",
   "summary": "",
   "whatWorks": [],
   "whatHurts": [],
@@ -465,16 +558,29 @@ ${post}
 }
 `
               : `
-Analyze this post in English only.
-Do not return flat or nearly identical scores.
-Each category must be judged independently:
-- viralScore
-- authenticityScore
-- clarityScore
-- emotionalScore
-- curiosityScore
-- hookScore
-- ctaScore
+Analyze the following post in English only.
+
+For each metric, return only one of:
+- very_low
+- low
+- medium
+- high
+- very_high
+
+Metrics:
+- viralBand
+- authenticityBand
+- clarityBand
+- emotionalBand
+- curiosityBand
+- hookBand
+- ctaBand
+
+Important:
+- do not make all metrics identical
+- judge each metric independently
+- hook and cta are different
+- clarity and authenticity are different
 
 Platform: ${platform}
 Post:
@@ -482,13 +588,13 @@ ${post}
 
 Return JSON exactly like this:
 {
-  "viralScore": 0,
-  "authenticityScore": 0,
-  "clarityScore": 0,
-  "emotionalScore": 0,
-  "curiosityScore": 0,
-  "hookScore": 0,
-  "ctaScore": 0,
+  "viralBand": "medium",
+  "authenticityBand": "medium",
+  "clarityBand": "medium",
+  "emotionalBand": "medium",
+  "curiosityBand": "medium",
+  "hookBand": "medium",
+  "ctaBand": "medium",
   "summary": "",
   "whatWorks": [],
   "whatHurts": [],
