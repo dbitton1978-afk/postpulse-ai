@@ -119,3 +119,7 @@ export async function getMyPosts() {
     }
   });
 }
+
+export async function deletePost() {
+  return { success: false };
+}
