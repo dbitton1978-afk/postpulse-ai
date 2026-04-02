@@ -90,70 +90,71 @@ function normalizeHistoryType(type) {
     build: "build",
     improve: "improve",
     analyze: "analyze",
-    יצירה: "build",
-    שיפור: "improve",
-    ניתוח: "analyze"
+    "יצירה": "build",
+    "שיפור": "improve",
+    "ניתוח": "analyze"
   };
 
   return map[value] || "";
 }
 
-function toScore(value, fallback = 76) {
+function clampScore(value, fallback = 76) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
-  return Math.max(55, Math.min(95, Math.round(num)));
+  return Math.max(56, Math.min(94, Math.round(num)));
 }
 
 function diversifyScores(scores) {
   const values = Object.values(scores);
   const uniqueCount = new Set(values).size;
+  const range = Math.max(...values) - Math.min(...values);
 
-  if (uniqueCount >= 4) {
+  if (uniqueCount >= 5 && range >= 8) {
     return scores;
   }
 
   return {
-    viralScore: Math.min(95, scores.viralScore + 2),
-    authenticityScore: Math.min(95, scores.authenticityScore + 5),
-    clarityScore: Math.min(95, scores.clarityScore + 3),
-    emotionalScore: Math.min(95, scores.emotionalScore + 1),
-    curiosityScore: Math.min(95, scores.curiosityScore + 4),
-    hookScore: Math.min(95, scores.hookScore + 6),
-    ctaScore: Math.min(95, scores.ctaScore)
+    viralScore: Math.min(94, Math.max(58, scores.viralScore + 3)),
+    authenticityScore: Math.min(94, Math.max(58, scores.authenticityScore + 8)),
+    clarityScore: Math.min(94, Math.max(58, scores.clarityScore + 5)),
+    emotionalScore: Math.min(94, Math.max(58, scores.emotionalScore + 1)),
+    curiosityScore: Math.min(94, Math.max(58, scores.curiosityScore + 6)),
+    hookScore: Math.min(94, Math.max(58, scores.hookScore + 9)),
+    ctaScore: Math.min(94, Math.max(58, scores.ctaScore + 2))
   };
 }
 
 function normalizeAnalyzeData(data, language) {
   const isHebrew = language === "he";
 
-  const baseScores = diversifyScores({
-    viralScore: toScore(data?.viralScore, 76),
-    authenticityScore: toScore(data?.authenticityScore, 81),
-    clarityScore: toScore(data?.clarityScore, 79),
-    emotionalScore: toScore(data?.emotionalScore, 74),
-    curiosityScore: toScore(data?.curiosityScore, 73),
-    hookScore: toScore(data?.hookScore, 78),
-    ctaScore: toScore(data?.ctaScore, 71)
+  const base = diversifyScores({
+    viralScore: clampScore(data?.viralScore, 73),
+    authenticityScore: clampScore(data?.authenticityScore, 79),
+    clarityScore: clampScore(data?.clarityScore, 77),
+    emotionalScore: clampScore(data?.emotionalScore, 70),
+    curiosityScore: clampScore(data?.curiosityScore, 72),
+    hookScore: clampScore(data?.hookScore, 80),
+    ctaScore: clampScore(data?.ctaScore, 68)
   });
 
   return {
-    ...baseScores,
+    ...base,
     summary: cleanString(
       data?.summary,
       isHebrew
-        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לשפר ביצועים."
-        : "The post has a good base, but the hook, flow, and sharpness can be improved."
+        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, לחדד את המסר ולשפר את הזרימה כדי להעלות ביצועים."
+        : "The post has a solid base, but the hook, clarity, and flow can be improved for stronger performance."
     ),
     whatWorks: Array.isArray(data?.whatWorks)
       ? data.whatWorks
       : isHebrew
         ? ["המסר המרכזי ברור", "יש בסיס טוב לחיבור עם הקהל"]
-        : ["The core message is clear", "There is a solid base for audience connection"],
+        : ["The main message is clear", "There is a solid base for audience connection"],
     whatHurts: Array.isArray(data?.whatHurts)
       ? data.whatHurts
       : isHebrew
-        ? ["הפתיחה לא מספיק חדה", "יש מקום ליותר סקרנות וזרימה"]
-        : ["The opening is not sharp enough", "There is room for more curiosity and flow"],
+        ? ["הפתיחה לא מספיק חדה", "אפשר לייצר יותר עניין וסקרנות"]
+        : ["The opening is not sharp enough", "It could create more curiosity and engagement"],
     improvements: Array.isArray(data?.improvements)
       ? data.improvements
       : isHebrew
@@ -162,7 +163,7 @@ function normalizeAnalyzeData(data, language) {
     improvedVersion: cleanString(
       data?.improvedVersion,
       isHebrew
-        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וסיום חזק יותר שמניע לפעולה."
+        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וקריאה חזקה יותר לפעולה."
         : "This post can be improved with a sharper hook, more natural phrasing, and a stronger CTA."
     )
   };
@@ -173,16 +174,16 @@ function buildAnalyzeFallback(post, language) {
 
   return normalizeAnalyzeData(
     {
-      viralScore: 76,
-      authenticityScore: 81,
-      clarityScore: 79,
-      emotionalScore: 74,
-      curiosityScore: 73,
-      hookScore: 78,
-      ctaScore: 71,
+      viralScore: 73,
+      authenticityScore: 79,
+      clarityScore: 77,
+      emotionalScore: 70,
+      curiosityScore: 72,
+      hookScore: 80,
+      ctaScore: 68,
       summary: isHebrew
-        ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח והזרימה כדי להגדיל מעורבות."
-        : "The post is solid as a base, but the opening and flow can be improved.",
+        ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח ואת הזרימה כדי להגדיל מעורבות."
+        : "The post is a solid base, but the opening and flow can be improved to increase engagement.",
       whatWorks: isHebrew
         ? ["המסר ברור", "הטון הכללי נעים"]
         : ["The message is clear", "The overall tone is pleasant"],
