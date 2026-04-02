@@ -186,7 +186,6 @@ export default function App() {
       copyFailed: isHebrew ? "ההעתקה נכשלה" : "Copy failed",
       copy: isHebrew ? "העתק" : "Copy",
       saved: isHebrew ? "נשמר בהיסטוריה" : "Saved to history",
-      save: isHebrew ? "שמור" : "Save",
 
       moveToImprove: isHebrew ? "העבר לשיפור" : "Move to Improve",
       analyzeImproved: isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version",
@@ -198,7 +197,8 @@ export default function App() {
       userLabel: isHebrew ? "מחובר כ:" : "Signed in as:",
       history: isHebrew ? "היסטוריה" : "History",
       noHistory: isHebrew ? "עדיין אין פריטים בהיסטוריה" : "No history items yet",
-      loadHistoryFailed: isHebrew ? "טעינת היסטוריה נכשלה" : "Failed to load history"
+      loadHistoryFailed: isHebrew ? "טעינת היסטוריה נכשלה" : "Failed to load history",
+      openSavedItem: isHebrew ? "טען" : "Load"
     }),
     [isHebrew]
   );
@@ -261,11 +261,12 @@ export default function App() {
       });
 
       if (response?.post) {
-        setHistory((prev) => [response.post, ...prev].slice(0, 50));
+        setHistory((prev) => [response.post, ...prev].slice(0, 100));
       }
+
       setCopyMessage(t.saved);
     } catch {
-      // keep quiet to avoid blocking main flow
+      // keep non-blocking
     }
   }
 
@@ -461,6 +462,44 @@ export default function App() {
     }));
 
     setTab("analyze");
+  }
+
+  function loadHistoryItem(item) {
+    if (!item) return;
+
+    if (item.type === "build") {
+      setTab("build");
+      setBuildForm({
+        topic: safeText(item.input?.topic),
+        targetAudience: safeText(item.input?.targetAudience),
+        goal: safeText(item.input?.goal),
+        style: safeText(item.input?.style) || "professional",
+        platform: safeText(item.input?.platform) || "instagram"
+      });
+      setResult({ type: "build", data: item.data || {} });
+      return;
+    }
+
+    if (item.type === "improve") {
+      setTab("improve");
+      setImproveForm({
+        post: safeText(item.input?.post),
+        goal: safeText(item.input?.goal),
+        style: safeText(item.input?.style) || "professional",
+        platform: safeText(item.input?.platform) || "instagram"
+      });
+      setResult({ type: "improve", data: item.data || {} });
+      return;
+    }
+
+    if (item.type === "analyze") {
+      setTab("analyze");
+      setAnalyzeForm({
+        post: safeText(item.input?.post),
+        platform: safeText(item.input?.platform) || "instagram"
+      });
+      setResult({ type: "analyze", data: item.data || {} });
+    }
   }
 
   if (!user) {
@@ -933,9 +972,18 @@ export default function App() {
                 <div key={item._id} className="result-section">
                   <div className="section-header">
                     <h3>{item.type}</h3>
-                    <span style={{ color: "#9fb0cd", fontSize: 13 }}>
-                      {formatHistoryDate(item.createdAt, locale)}
-                    </span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ color: "#9fb0cd", fontSize: 13 }}>
+                        {formatHistoryDate(item.createdAt, locale)}
+                      </span>
+                      <button
+                        type="button"
+                        className="copy-btn"
+                        onClick={() => loadHistoryItem(item)}
+                      >
+                        {t.openSavedItem}
+                      </button>
+                    </div>
                   </div>
                   <div className="text-card">
                     {item.type === "build" && safeText(item.data?.title)}
