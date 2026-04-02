@@ -74,22 +74,68 @@ function getLangLabel(language) {
   return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
 }
 
-function normalizeHashtags(items) {
-  if (!Array.isArray(items)) return [];
-  return items
-    .map((item) => "#" + String(item || "").replace(/^#+/, "").trim())
-    .filter(Boolean);
+function normalizeAnalyzeData(data, language) {
+  const isHebrew = language === "he";
+
+  const baseScores = diversifyScores({
+    viralScore: toScore(data?.viralScore, 76),
+    authenticityScore: toScore(data?.authenticityScore, 81),
+    clarityScore: toScore(data?.clarityScore, 79),
+    emotionalScore: toScore(data?.emotionalScore, 74),
+    curiosityScore: toScore(data?.curiosityScore, 73),
+    hookScore: toScore(data?.hookScore, 78),
+    ctaScore: toScore(data?.ctaScore, 71)
+  });
+
+  return {
+    ...baseScores,
+    summary: cleanString(
+      data?.summary,
+      isHebrew
+        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לשפר ביצועים."
+        : "The post has a good base, but the hook, flow, and sharpness can be improved."
+    ),
+    whatWorks: Array.isArray(data?.whatWorks)
+      ? data.whatWorks
+      : isHebrew
+        ? ["המסר המרכזי ברור", "יש בסיס טוב לחיבור עם הקהל"]
+        : ["The core message is clear", "There is a solid base for audience connection"],
+    whatHurts: Array.isArray(data?.whatHurts)
+      ? data.whatHurts
+      : isHebrew
+        ? ["הפתיחה לא מספיק חדה", "יש מקום ליותר סקרנות וזרימה"]
+        : ["The opening is not sharp enough", "There is room for more curiosity and flow"],
+    improvements: Array.isArray(data?.improvements)
+      ? data.improvements
+      : isHebrew
+        ? ["לחזק את המשפט הראשון", "לקצר מעט ולשפר קריאות"]
+        : ["Strengthen the first sentence", "Trim slightly and improve readability"],
+    improvedVersion: cleanString(
+      data?.improvedVersion,
+      isHebrew
+        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וסיום חזק יותר שמניע לפעולה."
+        : "This post can be improved with a sharper hook, more natural phrasing, and a stronger CTA."
+    )
+  };
 }
 
-function toScore(value, fallback = 76) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return fallback;
+function diversifyScores(scores) {
+  const values = Object.values(scores);
+  const uniqueCount = new Set(values).size;
 
-  if (num >= 0 && num <= 100) {
-    return Math.max(58, Math.min(96, Math.round(num)));
+  if (uniqueCount > 2) {
+    return scores;
   }
 
-  return fallback;
+  return {
+    viralScore: Math.min(95, scores.viralScore + 2),
+    authenticityScore: Math.min(95, scores.authenticityScore + 5),
+    clarityScore: Math.min(95, scores.clarityScore + 3),
+    emotionalScore: Math.min(95, scores.emotionalScore + 1),
+    curiosityScore: Math.min(95, scores.curiosityScore + 4),
+    hookScore: Math.min(95, scores.hookScore + 6),
+    ctaScore: Math.min(95, scores.ctaScore)
+  };
 }
 
 function normalizeAnalyzeData(data, language) {
