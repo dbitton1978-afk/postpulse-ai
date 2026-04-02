@@ -90,66 +90,83 @@ function normalizeHistoryType(type) {
     build: "build",
     improve: "improve",
     analyze: "analyze",
-    "יצירה": "build",
-    "שיפור": "improve",
-    "ניתוח": "analyze"
+    יצירה: "build",
+    שיפור: "improve",
+    ניתוח: "analyze"
   };
 
   return map[value] || "";
 }
 
-function clampScore(value, fallback = 76) {
+function clampScore(value, fallback = 75) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
-  return Math.max(56, Math.min(94, Math.round(num)));
+  return Math.max(42, Math.min(96, Math.round(num)));
+}
+
+function scoreSpread(scores) {
+  const values = Object.values(scores);
+  return Math.max(...values) - Math.min(...values);
 }
 
 function diversifyScores(scores) {
   const values = Object.values(scores);
   const uniqueCount = new Set(values).size;
-  const range = Math.max(...values) - Math.min(...values);
+  const spread = scoreSpread(scores);
 
-  if (uniqueCount >= 5 && range >= 8) {
+  if (uniqueCount >= 5 && spread >= 12) {
     return scores;
   }
 
+  const adjusted = {
+    viralScore: scores.viralScore + 2,
+    authenticityScore: scores.authenticityScore + 7,
+    clarityScore: scores.clarityScore + 4,
+    emotionalScore: scores.emotionalScore - 2,
+    curiosityScore: scores.curiosityScore + 5,
+    hookScore: scores.hookScore + 8,
+    ctaScore: scores.ctaScore - 3
+  };
+
   return {
-    viralScore: Math.min(94, Math.max(58, scores.viralScore + 3)),
-    authenticityScore: Math.min(94, Math.max(58, scores.authenticityScore + 8)),
-    clarityScore: Math.min(94, Math.max(58, scores.clarityScore + 5)),
-    emotionalScore: Math.min(94, Math.max(58, scores.emotionalScore + 1)),
-    curiosityScore: Math.min(94, Math.max(58, scores.curiosityScore + 6)),
-    hookScore: Math.min(94, Math.max(58, scores.hookScore + 9)),
-    ctaScore: Math.min(94, Math.max(58, scores.ctaScore + 2))
+    viralScore: clampScore(adjusted.viralScore, 74),
+    authenticityScore: clampScore(adjusted.authenticityScore, 82),
+    clarityScore: clampScore(adjusted.clarityScore, 79),
+    emotionalScore: clampScore(adjusted.emotionalScore, 69),
+    curiosityScore: clampScore(adjusted.curiosityScore, 76),
+    hookScore: clampScore(adjusted.hookScore, 84),
+    ctaScore: clampScore(adjusted.ctaScore, 66)
   };
 }
 
 function normalizeAnalyzeData(data, language) {
   const isHebrew = language === "he";
 
-  const base = diversifyScores({
-    viralScore: clampScore(data?.viralScore, 73),
-    authenticityScore: clampScore(data?.authenticityScore, 79),
-    clarityScore: clampScore(data?.clarityScore, 77),
-    emotionalScore: clampScore(data?.emotionalScore, 70),
-    curiosityScore: clampScore(data?.curiosityScore, 72),
-    hookScore: clampScore(data?.hookScore, 80),
-    ctaScore: clampScore(data?.ctaScore, 68)
-  });
+  const rawScores = {
+    viralScore: clampScore(data?.viralScore, 74),
+    authenticityScore: clampScore(data?.authenticityScore, 80),
+    clarityScore: clampScore(data?.clarityScore, 78),
+    emotionalScore: clampScore(data?.emotionalScore, 69),
+    curiosityScore: clampScore(data?.curiosityScore, 75),
+    hookScore: clampScore(data?.hookScore, 83),
+    ctaScore: clampScore(data?.ctaScore, 66)
+  };
+
+  const scores = diversifyScores(rawScores);
 
   return {
-    ...base,
+    ...scores,
     summary: cleanString(
       data?.summary,
       isHebrew
         ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, לחדד את המסר ולשפר את הזרימה כדי להעלות ביצועים."
-        : "The post has a solid base, but the hook, clarity, and flow can be improved for stronger performance."
+        : "The post has a solid base, but the hook, message clarity, and flow can be improved for stronger performance."
     ),
     whatWorks: Array.isArray(data?.whatWorks)
       ? data.whatWorks
       : isHebrew
         ? ["המסר המרכזי ברור", "יש בסיס טוב לחיבור עם הקהל"]
-        : ["The main message is clear", "There is a solid base for audience connection"],
+        : ["The core message is clear", "There is a solid base for audience connection"],
     whatHurts: Array.isArray(data?.whatHurts)
       ? data.whatHurts
       : isHebrew
@@ -175,12 +192,12 @@ function buildAnalyzeFallback(post, language) {
   return normalizeAnalyzeData(
     {
       viralScore: 73,
-      authenticityScore: 79,
-      clarityScore: 77,
-      emotionalScore: 70,
-      curiosityScore: 72,
-      hookScore: 80,
-      ctaScore: 68,
+      authenticityScore: 81,
+      clarityScore: 78,
+      emotionalScore: 67,
+      curiosityScore: 74,
+      hookScore: 82,
+      ctaScore: 64,
       summary: isHebrew
         ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח ואת הזרימה כדי להגדיל מעורבות."
         : "The post is a solid base, but the opening and flow can be improved to increase engagement.",
@@ -407,8 +424,8 @@ app.post("/analyze-post", async (req, res) => {
           role: "system",
           content:
             language === "he"
-              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד, בעברית בלבד, עם ציונים נפרדים והגיוניים."
-              : "You analyze social media posts. Return valid JSON only, in English only, with reasonable differentiated scores."
+              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד, בעברית בלבד, עם ציונים נפרדים, טבעיים ואמינים."
+              : "You analyze social media posts. Return valid JSON only, in English only, with differentiated, realistic scores."
         },
         {
           role: "user",
@@ -417,8 +434,15 @@ app.post("/analyze-post", async (req, res) => {
               ? `
 נתח את הפוסט הבא בעברית בלבד.
 אסור לכתוב באנגלית.
-אסור להחזיר את כל הציונים אותו דבר.
-הציונים צריכים להיות שונים זה מזה בהתאם לאיכות של כל היבט.
+אסור שכל הציונים יהיו דומים מדי.
+כל מדד חייב להיבחן בפני עצמו:
+- viralScore
+- authenticityScore
+- clarityScore
+- emotionalScore
+- curiosityScore
+- hookScore
+- ctaScore
 
 פלטפורמה: ${platform}
 פוסט:
@@ -442,7 +466,15 @@ ${post}
 `
               : `
 Analyze this post in English only.
-Do not return identical scores for every category.
+Do not return flat or nearly identical scores.
+Each category must be judged independently:
+- viralScore
+- authenticityScore
+- clarityScore
+- emotionalScore
+- curiosityScore
+- hookScore
+- ctaScore
 
 Platform: ${platform}
 Post:
