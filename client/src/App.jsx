@@ -89,44 +89,68 @@ export default function App() {
 
   const t = useMemo(
     () => ({
-      build: isHebrew ? "Build" : "Build",
-      improve: isHebrew ? "Improve" : "Improve",
-      analyze: isHebrew ? "Analyze" : "Analyze",
+      build: isHebrew ? "יצירה" : "Build",
+      improve: isHebrew ? "שיפור" : "Improve",
+      analyze: isHebrew ? "ניתוח" : "Analyze",
+
       topic: isHebrew ? "נושא / רעיון" : "Topic / Idea",
       targetAudience: isHebrew ? "קהל יעד" : "Target Audience",
       goal: isHebrew ? "מטרה" : "Goal",
       style: isHebrew ? "סגנון" : "Style",
       platform: isHebrew ? "פלטפורמה" : "Platform",
       postText: isHebrew ? "טקסט הפוסט" : "Post Text",
+
       generate: isHebrew ? "צור פוסט" : "Generate Post",
       improveBtn: isHebrew ? "שפר פוסט" : "Improve Post",
       analyzeBtn: isHebrew ? "נתח פוסט" : "Analyze Post",
       loading: isHebrew ? "טוען..." : "Loading...",
+
       result: isHebrew ? "תוצאה" : "Result",
       title: isHebrew ? "כותרת" : "Title",
-      hook: "Hook",
+      hook: isHebrew ? "פתיח" : "Hook",
       body: isHebrew ? "גוף הפוסט" : "Body",
       cta: isHebrew ? "קריאה לפעולה" : "CTA",
       hashtags: isHebrew ? "האשטגים" : "Hashtags",
       shortVersion: isHebrew ? "גרסה קצרה" : "Short Version",
       alternativeVersion: isHebrew ? "גרסה חלופית" : "Alternative Version",
+
       strengths: isHebrew ? "חוזקות" : "Strengths",
       weaknesses: isHebrew ? "חולשות" : "Weaknesses",
       improvedVersion: isHebrew ? "גרסה משופרת" : "Improved Version",
       moreViralVersion: isHebrew ? "גרסה ויראלית יותר" : "More Viral Version",
       moreAuthenticVersion: isHebrew ? "גרסה אנושית יותר" : "More Authentic Version",
       tips: isHebrew ? "טיפים" : "Tips",
+
       viralScore: isHebrew ? "ויראליות" : "Viral",
       authenticityScore: isHebrew ? "אותנטיות" : "Authenticity",
       clarityScore: isHebrew ? "בהירות" : "Clarity",
       emotionalScore: isHebrew ? "רגש" : "Emotion",
       curiosityScore: isHebrew ? "סקרנות" : "Curiosity",
-      hookScore: "Hook",
-      ctaScore: "CTA",
+      hookScore: isHebrew ? "פתיח" : "Hook",
+      ctaScore: isHebrew ? "הנעה לפעולה" : "CTA",
+
       summary: isHebrew ? "סיכום" : "Summary",
       whatWorks: isHebrew ? "מה עובד" : "What Works",
       whatHurts: isHebrew ? "מה פוגע" : "What Hurts",
-      improvements: isHebrew ? "שיפורים" : "Improvements"
+      improvements: isHebrew ? "שיפורים" : "Improvements",
+
+      noResultYet: isHebrew ? "עדיין אין תוצאה להצגה" : "No result yet",
+      enterTopic: isHebrew ? "יש להזין נושא לפוסט" : "Please enter a topic",
+      enterPostText: isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text",
+      generateFailed: isHebrew ? "יצירת הפוסט נכשלה" : "Generate failed",
+      improveFailed: isHebrew ? "שיפור הפוסט נכשל" : "Improve failed",
+      analyzeFailed: isHebrew ? "ניתוח הפוסט נכשל" : "Analyze failed",
+      copied: isHebrew ? "הועתק" : "Copied",
+      copyFailed: isHebrew ? "ההעתקה נכשלה" : "Copy failed",
+      copy: isHebrew ? "העתק" : "Copy",
+
+      moveToImprove: isHebrew ? "העבר לשיפור" : "Move to Improve",
+      analyzeImproved: isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version",
+
+      appSubtitle: isHebrew ? "בנה, שפר ונתח פוסטים" : "Build, improve and analyze posts",
+      topicPlaceholder: isHebrew ? "על מה הפוסט?" : "What is the post about?",
+      audiencePlaceholder: isHebrew ? "למי הפוסט מיועד?" : "Who is the audience?",
+      goalPlaceholder: isHebrew ? "מה המטרה?" : "What is the goal?"
     }),
     [isHebrew]
   );
@@ -154,10 +178,10 @@ export default function App() {
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text || "");
-      setCopyMessage(isHebrew ? "הועתק" : "Copied");
+      setCopyMessage(t.copied);
       window.setTimeout(() => setCopyMessage(""), 1500);
     } catch {
-      setCopyMessage(isHebrew ? "ההעתקה נכשלה" : "Copy failed");
+      setCopyMessage(t.copyFailed);
       window.setTimeout(() => setCopyMessage(""), 1500);
     }
   }
@@ -181,7 +205,7 @@ export default function App() {
     const topicValue = (buildForm.topic || "").trim();
 
     if (!topicValue) {
-      setError(isHebrew ? "יש להזין נושא לפוסט" : "Please enter a topic");
+      setError(t.enterTopic);
       return;
     }
 
@@ -204,7 +228,7 @@ export default function App() {
         data: response?.data || {}
       });
     } catch (err) {
-      setError(err?.message || (isHebrew ? "יצירת הפוסט נכשלה" : "Generate failed"));
+      setError(err?.message || t.generateFailed);
     } finally {
       setLoading(false);
     }
@@ -217,7 +241,7 @@ export default function App() {
     const postValue = (improveForm.post || "").trim();
 
     if (!postValue) {
-      setError(isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text");
+      setError(t.enterPostText);
       return;
     }
 
@@ -239,7 +263,7 @@ export default function App() {
         data: response?.data || {}
       });
     } catch (err) {
-      setError(err?.message || (isHebrew ? "שיפור הפוסט נכשל" : "Improve failed"));
+      setError(err?.message || t.improveFailed);
     } finally {
       setLoading(false);
     }
@@ -252,7 +276,7 @@ export default function App() {
     const postValue = (analyzeForm.post || "").trim();
 
     if (!postValue) {
-      setError(isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text");
+      setError(t.enterPostText);
       return;
     }
 
@@ -272,7 +296,7 @@ export default function App() {
         data: response?.data || {}
       });
     } catch (err) {
-      setError(err?.message || (isHebrew ? "ניתוח הפוסט נכשל" : "Analyze failed"));
+      setError(err?.message || t.analyzeFailed);
     } finally {
       setLoading(false);
     }
@@ -310,7 +334,7 @@ export default function App() {
         <header className="topbar glass">
           <div>
             <h1>PostPulse AI</h1>
-            <p>{isHebrew ? "בנה, שפר ונתח פוסטים" : "Build, improve and analyze posts"}</p>
+            <p>{t.appSubtitle}</p>
           </div>
 
           <div className="topbar-actions">
@@ -364,7 +388,7 @@ export default function App() {
                   <input
                     value={buildForm.topic}
                     onChange={(e) => setBuildField("topic", e.target.value)}
-                    placeholder={isHebrew ? "על מה הפוסט?" : "What is the post about?"}
+                    placeholder={t.topicPlaceholder}
                   />
                 </div>
 
@@ -373,7 +397,7 @@ export default function App() {
                   <input
                     value={buildForm.targetAudience}
                     onChange={(e) => setBuildField("targetAudience", e.target.value)}
-                    placeholder={isHebrew ? "למי הפוסט מיועד?" : "Who is the audience?"}
+                    placeholder={t.audiencePlaceholder}
                   />
                 </div>
 
@@ -382,7 +406,7 @@ export default function App() {
                   <input
                     value={buildForm.goal}
                     onChange={(e) => setBuildField("goal", e.target.value)}
-                    placeholder={isHebrew ? "מה המטרה?" : "What is the goal?"}
+                    placeholder={t.goalPlaceholder}
                   />
                 </div>
 
@@ -438,6 +462,7 @@ export default function App() {
                   <input
                     value={improveForm.goal}
                     onChange={(e) => setImproveField("goal", e.target.value)}
+                    placeholder={t.goalPlaceholder}
                   />
                 </div>
 
@@ -517,32 +542,32 @@ export default function App() {
 
             {!result && (
               <div className="empty-state">
-                {isHebrew ? "עדיין אין תוצאה להצגה" : "No result yet"}
+                {t.noResultYet}
               </div>
             )}
 
             {result?.type === "build" && (
               <div className="result-wrap">
-                <Section title={t.title} onCopy={() => copyText(result.data?.title || "")} copyLabel={isHebrew ? "העתק" : "Copy"}>
+                <Section title={t.title} onCopy={() => copyText(result.data?.title || "")} copyLabel={t.copy}>
                   <div className="text-card">{result.data?.title || ""}</div>
                 </Section>
 
-                <Section title={t.hook} onCopy={() => copyText(result.data?.hook || "")} copyLabel={isHebrew ? "העתק" : "Copy"}>
+                <Section title={t.hook} onCopy={() => copyText(result.data?.hook || "")} copyLabel={t.copy}>
                   <div className="text-card">{result.data?.hook || ""}</div>
                 </Section>
 
-                <Section title={t.body} onCopy={() => copyText(result.data?.body || "")} copyLabel={isHebrew ? "העתק" : "Copy"}>
+                <Section title={t.body} onCopy={() => copyText(result.data?.body || "")} copyLabel={t.copy}>
                   <div className="text-card">{result.data?.body || ""}</div>
                 </Section>
 
-                <Section title={t.cta} onCopy={() => copyText(result.data?.cta || "")} copyLabel={isHebrew ? "העתק" : "Copy"}>
+                <Section title={t.cta} onCopy={() => copyText(result.data?.cta || "")} copyLabel={t.copy}>
                   <div className="text-card">{result.data?.cta || ""}</div>
                 </Section>
 
                 <Section
                   title={t.hashtags}
                   onCopy={() => copyText((result.data?.hashtags || []).join(" "))}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="hashtags">
                     {(result.data?.hashtags || []).map((tag, index) => (
@@ -554,7 +579,7 @@ export default function App() {
                 <Section
                   title={t.shortVersion}
                   onCopy={() => copyText(result.data?.shortVersion || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.shortVersion || ""}</div>
                 </Section>
@@ -562,13 +587,13 @@ export default function App() {
                 <Section
                   title={t.alternativeVersion}
                   onCopy={() => copyText(result.data?.alternativeVersion || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.alternativeVersion || ""}</div>
                 </Section>
 
                 <button type="button" className="secondary-btn" onClick={moveBuildToImprove}>
-                  {isHebrew ? "העבר ל־Improve" : "Move to Improve"}
+                  {t.moveToImprove}
                 </button>
               </div>
             )}
@@ -586,7 +611,7 @@ export default function App() {
                 <Section
                   title={t.improvedVersion}
                   onCopy={() => copyText(getImprovePrimaryText(result.data))}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{getImprovePrimaryText(result.data)}</div>
                 </Section>
@@ -594,7 +619,7 @@ export default function App() {
                 <Section
                   title={t.moreViralVersion}
                   onCopy={() => copyText(result.data?.moreViralVersion || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.moreViralVersion || ""}</div>
                 </Section>
@@ -602,7 +627,7 @@ export default function App() {
                 <Section
                   title={t.moreAuthenticVersion}
                   onCopy={() => copyText(result.data?.moreAuthenticVersion || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.moreAuthenticVersion || ""}</div>
                 </Section>
@@ -612,7 +637,7 @@ export default function App() {
                 </Section>
 
                 <button type="button" className="secondary-btn" onClick={moveImproveToAnalyze}>
-                  {isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version"}
+                  {t.analyzeImproved}
                 </button>
               </div>
             )}
@@ -632,7 +657,7 @@ export default function App() {
                 <Section
                   title={t.summary}
                   onCopy={() => copyText(result.data?.summary || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.summary || ""}</div>
                 </Section>
@@ -652,7 +677,7 @@ export default function App() {
                 <Section
                   title={t.improvedVersion}
                   onCopy={() => copyText(result.data?.improvedVersion || "")}
-                  copyLabel={isHebrew ? "העתק" : "Copy"}
+                  copyLabel={t.copy}
                 >
                   <div className="text-card">{result.data?.improvedVersion || ""}</div>
                 </Section>
