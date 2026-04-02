@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "./models/User.js";
+import Post from "./models/Post.js";
+import auth from "./middleware/auth.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -67,14 +69,16 @@ function normalizeStyle(s) {
 
 function normalizeHashtags(arr) {
   if (!Array.isArray(arr)) return [];
-  return arr.map((t) => "#" + String(t).replace("#", "").trim());
+  return arr
+    .map((t) => "#" + String(t || "").replace("#", "").trim())
+    .filter(Boolean);
 }
 
 /* ================= AUTH ================= */
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const email = cleanString(req.body.email);
+    const email = cleanString(req.body.email).toLowerCase();
     const password = cleanString(req.body.password);
 
     if (!email || !password) {
@@ -106,7 +110,7 @@ app.post("/api/auth/register", async (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const email = cleanString(req.body.email);
+    const email = cleanString(req.body.email).toLowerCase();
     const password = cleanString(req.body.password);
 
     const user = await User.findOne({ email });
@@ -136,6 +140,10 @@ app.get("/", (req, res) => {
   res.send("PostPulse API is running 🚀");
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({ success: true, message: "PostPulse API is running" });
+});
+
 /* ================= GENERATE ================= */
 
 app.post("/generate-post", async (req, res) => {
@@ -144,6 +152,8 @@ app.post("/generate-post", async (req, res) => {
     const language = normalizeLanguage(req.body.language);
     const platform = normalizePlatform(req.body.platform);
     const style = normalizeStyle(req.body.style);
+    const targetAudience = cleanString(req.body.targetAudience);
+    const goal = cleanString(req.body.goal);
 
     if (!topic) {
       return res.status(400).json({ error: "Topic is required" });
@@ -162,6 +172,8 @@ app.post("/generate-post", async (req, res) => {
           role: "user",
           content: `
 Topic: ${topic}
+Target Audience: ${targetAudience || "General audience"}
+Goal: ${goal || "Create a strong post"}
 Style: ${style}
 Platform: ${platform}
 Language: ${getLangLabel(language)}
@@ -172,7 +184,9 @@ Return JSON:
 "hook":"",
 "body":"",
 "cta":"",
-"hashtags":[]
+"hashtags":[],
+"shortVersion":"",
+"alternativeVersion":""
 }
 `
         }
@@ -180,8 +194,7 @@ Return JSON:
     });
 
     const raw = completion.choices[0].message.content;
-    const parsed = safeJsonParse(raw);
-
+    const parsed = safeJsonParse(raw, {});
     parsed.hashtags = normalizeHashtags(parsed.hashtags);
 
     res.json({ success: true, data: parsed });
@@ -195,6 +208,9 @@ Return JSON:
 app.post("/improve-post", async (req, res) => {
   try {
     const post = cleanString(req.body.post);
+    const goal = cleanString(req.body.goal);
+    const style = normalizeStyle(req.body.style);
+    const platform = normalizePlatform(req.body.platform);
     const language = normalizeLanguage(req.body.language);
 
     if (!post) {
@@ -213,6 +229,9 @@ app.post("/improve-post", async (req, res) => {
           role: "user",
           content: `
 Post: ${post}
+Goal: ${goal || "Improve the post"}
+Style: ${style}
+Platform: ${platform}
 Language: ${getLangLabel(language)}
 
 {
@@ -229,7 +248,7 @@ Language: ${getLangLabel(language)}
     });
 
     const raw = completion.choices[0].message.content;
-    const parsed = safeJsonParse(raw);
+    const parsed = safeJsonParse(raw, {});
 
     res.json({ success: true, data: parsed });
   } catch {
@@ -266,7 +285,15 @@ Language: ${getLangLabel(language)}
 "viralScore":0,
 "authenticityScore":0,
 "clarityScore":0,
-"summary":""
+"emotionalScore":0,
+"curiosityScore":0,
+"hookScore":0,
+"ctaScore":0,
+"summary":"",
+"whatWorks":[],
+"whatHurts":[],
+"improvements":[],
+"improvedVersion":""
 }
 `
         }
@@ -274,11 +301,48 @@ Language: ${getLangLabel(language)}
     });
 
     const raw = completion.choices[0].message.content;
-    const parsed = safeJsonParse(raw);
+    const parsed = safeJsonParse(raw, {});
 
     res.json({ success: true, data: parsed });
   } catch {
     res.status(500).json({ error: "Analyze failed" });
+  }
+});
+
+/* ================= HISTORY ================= */
+
+app.post("/api/posts/save", auth, async (req, res) => {
+  try {
+    const type = cleanString(req.body.type);
+
+    if (!["build", "improve", "analyze"].includes(type)) {
+      return res.status(400).json({ message: "Invalid type" });
+    }
+
+    const post = await Post.create({
+      user: req.user.id,
+      type,
+      language: normalizeLanguage(req.body.language),
+      input: req.body.input || {},
+      data: req.body.data || {}
+    });
+
+    res.json({ success: true, post });
+  } catch {
+    res.status(500).json({ message: "Save failed" });
+  }
+});
+
+app.get("/api/posts/my-posts", auth, async (req, res) => {
+  try {
+    const posts = await Post.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    res.json({ success: true, posts });
+  } catch {
+    res.status(500).json({ message: "Load history failed" });
   }
 });
 
