@@ -94,6 +94,52 @@ function formatHistoryDate(value, locale) {
   }
 }
 
+function getHistoryPreview(item, language) {
+  const isHebrew = language === "he";
+
+  if (item?.type === "build") {
+    return (
+      safeText(item?.data?.title) ||
+      safeText(item?.data?.hook) ||
+      (isHebrew ? "פוסט שנוצר" : "Generated post")
+    );
+  }
+
+  if (item?.type === "improve") {
+    return (
+      getImprovePrimaryText(item?.data) ||
+      (isHebrew ? "פוסט ששופר" : "Improved post")
+    );
+  }
+
+  if (item?.type === "analyze") {
+    return (
+      safeText(item?.data?.summary) ||
+      (isHebrew ? "ניתוח פוסט" : "Post analysis")
+    );
+  }
+
+  return "";
+}
+
+function getHistoryTitle(item, language) {
+  const isHebrew = language === "he";
+
+  if (item?.type === "build") {
+    return isHebrew ? "פוסט שנוצר" : "Generated Post";
+  }
+
+  if (item?.type === "improve") {
+    return isHebrew ? "פוסט משופר" : "Improved Post";
+  }
+
+  if (item?.type === "analyze") {
+    return isHebrew ? "ניתוח פוסט" : "Post Analysis";
+  }
+
+  return isHebrew ? "פריט" : "Item";
+}
+
 export default function App() {
   const [user, setUser] = useState(() => getStoredUser());
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -198,7 +244,10 @@ export default function App() {
       history: isHebrew ? "היסטוריה" : "History",
       noHistory: isHebrew ? "עדיין אין פריטים בהיסטוריה" : "No history items yet",
       loadHistoryFailed: isHebrew ? "טעינת היסטוריה נכשלה" : "Failed to load history",
-      openSavedItem: isHebrew ? "טען" : "Load"
+      openSavedItem: isHebrew ? "טען" : "Load",
+      invalidHistoryType: isHebrew ? "סוג היסטוריה לא תקין" : "Invalid history type",
+      historySaveFailed: isHebrew ? "שמירה להיסטוריה נכשלה" : "History save failed",
+      refreshHistory: isHebrew ? "רענן היסטוריה" : "Refresh History"
     }),
     [isHebrew]
   );
@@ -240,6 +289,7 @@ export default function App() {
 
   async function loadHistory() {
     setHistoryLoading(true);
+    setError("");
 
     try {
       const response = await getMyPosts();
@@ -252,25 +302,32 @@ export default function App() {
   }
 
   async function persistHistory(type, input, data) {
-  try {
-    const response = await savePost({
-      type,
-      language,
-      input,
-      data
-    });
+    const safeType = String(type || "").toLowerCase().trim();
 
-    if (response?.post) {
-      setHistory((prev) => [response.post, ...prev].slice(0, 100));
-      setCopyMessage(t.saved);
+    if (!["build", "improve", "analyze"].includes(safeType)) {
+      setError(`${t.invalidHistoryType}: ${safeType}`);
       return;
     }
 
-    setError("History save failed");
-  } catch (err) {
-    setError(err?.message || "History save failed");
+    try {
+      const response = await savePost({
+        type: safeType,
+        language,
+        input,
+        data
+      });
+
+      if (response?.post) {
+        setHistory((prev) => [response.post, ...prev].slice(0, 100));
+        setCopyMessage(t.saved);
+        return;
+      }
+
+      setError(t.historySaveFailed);
+    } catch (err) {
+      setError(err?.message || t.historySaveFailed);
+    }
   }
-}
 
   async function copyText(text) {
     try {
@@ -327,6 +384,7 @@ export default function App() {
     setUser(null);
     setError("");
     setResult(null);
+    setHistory([]);
   }
 
   async function handleBuild() {
@@ -963,7 +1021,12 @@ export default function App() {
         <section className="panel glass" style={{ marginTop: 24 }}>
           <div className="section-header">
             <h2 style={{ margin: 0 }}>{t.history}</h2>
-            {historyLoading ? <span style={{ color: "#9fb0cd" }}>{t.loading}</span> : null}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {historyLoading ? <span style={{ color: "#9fb0cd" }}>{t.loading}</span> : null}
+              <button type="button" className="copy-btn" onClick={loadHistory}>
+                {t.refreshHistory}
+              </button>
+            </div>
           </div>
 
           {history.length === 0 ? (
@@ -973,25 +1036,23 @@ export default function App() {
               {history.map((item) => (
                 <div key={item._id} className="result-section">
                   <div className="section-header">
-                    <h3>{item.type}</h3>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ color: "#9fb0cd", fontSize: 13 }}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>{getHistoryTitle(item, language)}</h3>
+                      <div style={{ color: "#9fb0cd", fontSize: 13, marginTop: 6 }}>
                         {formatHistoryDate(item.createdAt, locale)}
-                      </span>
-                      <button
-                        type="button"
-                        className="copy-btn"
-                        onClick={() => loadHistoryItem(item)}
-                      >
-                        {t.openSavedItem}
-                      </button>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => loadHistoryItem(item)}
+                    >
+                      {t.openSavedItem}
+                    </button>
                   </div>
-                  <div className="text-card">
-                    {item.type === "build" && safeText(item.data?.title)}
-                    {item.type === "improve" && getImprovePrimaryText(item.data)}
-                    {item.type === "analyze" && safeText(item.data?.summary)}
-                  </div>
+
+                  <div className="text-card">{getHistoryPreview(item, language)}</div>
                 </div>
               ))}
             </div>
