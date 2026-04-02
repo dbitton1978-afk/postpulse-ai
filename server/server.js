@@ -1,13 +1,14 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import User from "./models/User.js";
-import Post from "./models/Post.js";
-import auth from "./middleware/auth.js";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+
+import User from "./models/User.js";
+import Post from "./models/Post.js";
+import auth from "./middleware/auth.js";
 
 dotenv.config();
 
@@ -80,28 +81,28 @@ function normalizeHashtags(items) {
     .filter(Boolean);
 }
 
-function clampScore(value, fallback = 72) {
+function clampScore(value, fallback = 78) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
-  return Math.max(0, Math.min(100, Math.round(num)));
+  return Math.max(52, Math.min(98, Math.round(num)));
 }
 
 function normalizeAnalyzeData(data, language) {
   const isHebrew = language === "he";
 
   return {
-    viralScore: clampScore(data?.viralScore, 74),
-    authenticityScore: clampScore(data?.authenticityScore, 79),
-    clarityScore: clampScore(data?.clarityScore, 77),
-    emotionalScore: clampScore(data?.emotionalScore, 73),
-    curiosityScore: clampScore(data?.curiosityScore, 72),
-    hookScore: clampScore(data?.hookScore, 75),
-    ctaScore: clampScore(data?.ctaScore, 71),
+    viralScore: clampScore(data?.viralScore, 79),
+    authenticityScore: clampScore(data?.authenticityScore, 83),
+    clarityScore: clampScore(data?.clarityScore, 81),
+    emotionalScore: clampScore(data?.emotionalScore, 77),
+    curiosityScore: clampScore(data?.curiosityScore, 76),
+    hookScore: clampScore(data?.hookScore, 80),
+    ctaScore: clampScore(data?.ctaScore, 74),
     summary: cleanString(
       data?.summary,
       isHebrew
-        ? "הפוסט טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחיבור הרגשי כדי לשפר ביצועים."
-        : "The post is a solid base, but the hook, flow, and emotional connection can be stronger."
+        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לקבל ביצועים טובים יותר."
+        : "The post has a good base, but the hook, flow, and sharpness can be improved for stronger performance."
     ),
     whatWorks: Array.isArray(data?.whatWorks)
       ? data.whatWorks
@@ -111,8 +112,8 @@ function normalizeAnalyzeData(data, language) {
     whatHurts: Array.isArray(data?.whatHurts)
       ? data.whatHurts
       : isHebrew
-        ? ["הפתיחה לא מספיק חדה", "יש מקום ליותר עניין וזרימה"]
-        : ["The opening is not sharp enough", "There is room for more engagement and flow"],
+        ? ["הפתיחה לא מספיק חדה", "אפשר ליצור יותר עניין וסקרנות"]
+        : ["The opening is not sharp enough", "It could create more curiosity and tension"],
     improvements: Array.isArray(data?.improvements)
       ? data.improvements
       : isHebrew
@@ -121,7 +122,7 @@ function normalizeAnalyzeData(data, language) {
     improvedVersion: cleanString(
       data?.improvedVersion,
       isHebrew
-        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וסיום שמניע לפעולה."
+        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וסיום חזק יותר שמניע לפעולה."
         : "This post can be improved with a sharper hook, more natural phrasing, and a stronger CTA."
     )
   };
@@ -132,22 +133,22 @@ function buildAnalyzeFallback(post, language) {
 
   return normalizeAnalyzeData(
     {
-      viralScore: 74,
-      authenticityScore: 79,
-      clarityScore: 77,
-      emotionalScore: 73,
-      curiosityScore: 72,
-      hookScore: 75,
-      ctaScore: 71,
+      viralScore: 79,
+      authenticityScore: 83,
+      clarityScore: 81,
+      emotionalScore: 77,
+      curiosityScore: 76,
+      hookScore: 80,
+      ctaScore: 74,
       summary: isHebrew
-        ? "הפוסט ברור ומובן, אבל צריך לחזק את הפתיח ואת הזרימה כדי להשיג תגובה חזקה יותר."
-        : "The post is clear, but the opening and flow should be stronger for better performance.",
+        ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח ואת הזרימה כדי להגדיל מעורבות."
+        : "The post is solid as a base, but the opening and flow can be improved to raise engagement.",
       whatWorks: isHebrew
         ? ["המסר ברור", "הטון הכללי נעים"]
         : ["The message is clear", "The overall tone is pleasant"],
       whatHurts: isHebrew
-        ? ["חסר פתיח חזק", "אפשר להוסיף יותר סקרנות"]
-        : ["It lacks a strong opening", "It could create more curiosity"],
+        ? ["הפתיחה לא מספיק חזקה", "אפשר ליצור יותר סקרנות"]
+        : ["The opening is not strong enough", "It could create more curiosity"],
       improvements: isHebrew
         ? ["לפתוח במשפט חד יותר", "ליצור יותר מתח רגשי"]
         : ["Open with a sharper first line", "Create more emotional tension"],
@@ -354,15 +355,15 @@ app.post("/analyze-post", async (req, res) => {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.5,
+      temperature: 0.4,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
             language === "he"
-              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר תשובה בעברית בלבד וב־JSON תקין בלבד."
-              : "You analyze social media posts. Return English only and valid JSON only."
+              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד ובעברית בלבד."
+              : "You analyze social media posts. Return valid JSON only and in English only."
         },
         {
           role: "user",
@@ -370,8 +371,9 @@ app.post("/analyze-post", async (req, res) => {
             language === "he"
               ? `
 נתח את הפוסט הבא בעברית בלבד.
-אל תכתוב באנגלית.
-תן ציונים מציאותיים בטווח סביר, לא נמוך מדי בלי סיבה.
+אסור לכתוב באנגלית.
+אל תחזיר ציונים נמוכים מדי בלי סיבה.
+הציונים צריכים לשקף פוסט ממוצע-טוב ברמה מקצועית.
 
 פלטפורמה: ${platform}
 פוסט:
@@ -394,7 +396,7 @@ ${post}
 }
 `
               : `
-Analyze the following post in English only.
+Analyze this post in English only.
 
 Platform: ${platform}
 Post:
@@ -443,7 +445,7 @@ app.post("/api/posts/save", auth, async (req, res) => {
       return res.status(400).json({ message: "Invalid type" });
     }
 
-    const post = await Post.create({
+    const created = await Post.create({
       user: req.user.id,
       type,
       language: normalizeLanguage(req.body.language),
@@ -451,8 +453,9 @@ app.post("/api/posts/save", auth, async (req, res) => {
       data: req.body.data || {}
     });
 
-    res.json({ success: true, post });
-  } catch {
+    res.json({ success: true, post: created });
+  } catch (error) {
+    console.error("Save history error:", error.message);
     res.status(500).json({ message: "Save failed" });
   }
 });
@@ -465,7 +468,8 @@ app.get("/api/posts/my-posts", auth, async (req, res) => {
       .lean();
 
     res.json({ success: true, posts });
-  } catch {
+  } catch (error) {
+    console.error("Load history error:", error.message);
     res.status(500).json({ message: "Load history failed" });
   }
 });
