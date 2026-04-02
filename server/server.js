@@ -9,6 +9,15 @@ import OpenAI from "openai";
 
 dotenv.config();
 
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB connected");
+  })
+  .catch((error) => {
+    console.error("MongoDB connection error:", error.message);
+  });
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
