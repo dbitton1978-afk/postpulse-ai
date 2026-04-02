@@ -54,11 +54,13 @@ function normalizeLanguage(language) {
 }
 
 function normalizePlatform(platform) {
+  const value = String(platform || "").trim().toLowerCase();
   const allowed = ["instagram", "facebook", "linkedin", "tiktok"];
-  return allowed.includes(platform) ? platform : "instagram";
+  return allowed.includes(value) ? value : "instagram";
 }
 
 function normalizeStyle(style) {
+  const value = String(style || "").trim().toLowerCase();
   const allowed = [
     "kabbalist",
     "mentor",
@@ -67,11 +69,58 @@ function normalizeStyle(style) {
     "emotional",
     "professional"
   ];
-  return allowed.includes(style) ? style : "professional";
+  return allowed.includes(value) ? value : "professional";
 }
 
 function getLangLabel(language) {
   return normalizeLanguage(language) === "he" ? "Hebrew" : "English";
+}
+
+function normalizeHashtags(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => "#" + String(item || "").replace(/^#+/, "").trim())
+    .filter(Boolean);
+}
+
+function normalizeHistoryType(type) {
+  const value = String(type || "").trim().toLowerCase();
+
+  const map = {
+    build: "build",
+    improve: "improve",
+    analyze: "analyze",
+    יצירה: "build",
+    שיפור: "improve",
+    ניתוח: "analyze"
+  };
+
+  return map[value] || "";
+}
+
+function toScore(value, fallback = 76) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(55, Math.min(95, Math.round(num)));
+}
+
+function diversifyScores(scores) {
+  const values = Object.values(scores);
+  const uniqueCount = new Set(values).size;
+
+  if (uniqueCount >= 4) {
+    return scores;
+  }
+
+  return {
+    viralScore: Math.min(95, scores.viralScore + 2),
+    authenticityScore: Math.min(95, scores.authenticityScore + 5),
+    clarityScore: Math.min(95, scores.clarityScore + 3),
+    emotionalScore: Math.min(95, scores.emotionalScore + 1),
+    curiosityScore: Math.min(95, scores.curiosityScore + 4),
+    hookScore: Math.min(95, scores.hookScore + 6),
+    ctaScore: Math.min(95, scores.ctaScore)
+  };
 }
 
 function normalizeAnalyzeData(data, language) {
@@ -119,86 +168,18 @@ function normalizeAnalyzeData(data, language) {
   };
 }
 
-function diversifyScores(scores) {
-  const values = Object.values(scores);
-  const uniqueCount = new Set(values).size;
-
-  if (uniqueCount > 2) {
-    return scores;
-  }
-
-  return {
-    viralScore: Math.min(95, scores.viralScore + 2),
-    authenticityScore: Math.min(95, scores.authenticityScore + 5),
-    clarityScore: Math.min(95, scores.clarityScore + 3),
-    emotionalScore: Math.min(95, scores.emotionalScore + 1),
-    curiosityScore: Math.min(95, scores.curiosityScore + 4),
-    hookScore: Math.min(95, scores.hookScore + 6),
-    ctaScore: Math.min(95, scores.ctaScore)
-  };
-}
-
-function normalizeAnalyzeData(data, language) {
-  const isHebrew = language === "he";
-
-  const viralScore = toScore(data?.viralScore, 78);
-  const authenticityScore = toScore(data?.authenticityScore, 82);
-  const clarityScore = toScore(data?.clarityScore, 80);
-  const emotionalScore = toScore(data?.emotionalScore, 75);
-  const curiosityScore = toScore(data?.curiosityScore, 74);
-  const hookScore = toScore(data?.hookScore, 79);
-  const ctaScore = toScore(data?.ctaScore, 72);
-
-  return {
-    viralScore,
-    authenticityScore,
-    clarityScore,
-    emotionalScore,
-    curiosityScore,
-    hookScore,
-    ctaScore,
-    summary: cleanString(
-      data?.summary,
-      isHebrew
-        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לשפר ביצועים."
-        : "The post has a good base, but the hook, flow, and sharpness can be improved."
-    ),
-    whatWorks: Array.isArray(data?.whatWorks)
-      ? data.whatWorks
-      : isHebrew
-        ? ["המסר המרכזי ברור", "יש בסיס טוב לחיבור עם הקהל"]
-        : ["The core message is clear", "There is a solid base for audience connection"],
-    whatHurts: Array.isArray(data?.whatHurts)
-      ? data.whatHurts
-      : isHebrew
-        ? ["הפתיחה לא מספיק חדה", "יש מקום ליותר סקרנות וזרימה"]
-        : ["The opening is not sharp enough", "There is room for more curiosity and flow"],
-    improvements: Array.isArray(data?.improvements)
-      ? data.improvements
-      : isHebrew
-        ? ["לחזק את המשפט הראשון", "לקצר מעט ולשפר קריאות"]
-        : ["Strengthen the first sentence", "Trim slightly and improve readability"],
-    improvedVersion: cleanString(
-      data?.improvedVersion,
-      isHebrew
-        ? "אפשר לשפר את הפוסט עם פתיח חד יותר, ניסוח טבעי יותר, וסיום חזק יותר שמניע לפעולה."
-        : "This post can be improved with a sharper hook, more natural phrasing, and a stronger CTA."
-    )
-  };
-}
-
 function buildAnalyzeFallback(post, language) {
   const isHebrew = language === "he";
 
   return normalizeAnalyzeData(
     {
-      viralScore: 78,
-      authenticityScore: 82,
-      clarityScore: 80,
-      emotionalScore: 75,
-      curiosityScore: 74,
-      hookScore: 79,
-      ctaScore: 72,
+      viralScore: 76,
+      authenticityScore: 81,
+      clarityScore: 79,
+      emotionalScore: 74,
+      curiosityScore: 73,
+      hookScore: 78,
+      ctaScore: 71,
       summary: isHebrew
         ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח והזרימה כדי להגדיל מעורבות."
         : "The post is solid as a base, but the opening and flow can be improved.",
@@ -504,10 +485,12 @@ Return JSON exactly like this:
 
 app.post("/api/posts/save", auth, async (req, res) => {
   try {
-    const type = cleanString(req.body.type);
+    const type = normalizeHistoryType(req.body.type);
 
-    if (!["build", "improve", "analyze"].includes(type)) {
-      return res.status(400).json({ message: "Invalid type" });
+    if (!type) {
+      return res.status(400).json({
+        message: `Invalid type: ${req.body.type}`
+      });
     }
 
     const created = await Post.create({
