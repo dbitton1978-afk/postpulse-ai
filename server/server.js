@@ -81,28 +81,41 @@ function normalizeHashtags(items) {
     .filter(Boolean);
 }
 
-function clampScore(value, fallback = 78) {
+function toScore(value, fallback = 76) {
   const num = Number(value);
   if (!Number.isFinite(num)) return fallback;
-  return Math.max(52, Math.min(98, Math.round(num)));
+
+  if (num >= 0 && num <= 100) {
+    return Math.max(58, Math.min(96, Math.round(num)));
+  }
+
+  return fallback;
 }
 
 function normalizeAnalyzeData(data, language) {
   const isHebrew = language === "he";
 
+  const viralScore = toScore(data?.viralScore, 78);
+  const authenticityScore = toScore(data?.authenticityScore, 82);
+  const clarityScore = toScore(data?.clarityScore, 80);
+  const emotionalScore = toScore(data?.emotionalScore, 75);
+  const curiosityScore = toScore(data?.curiosityScore, 74);
+  const hookScore = toScore(data?.hookScore, 79);
+  const ctaScore = toScore(data?.ctaScore, 72);
+
   return {
-    viralScore: clampScore(data?.viralScore, 79),
-    authenticityScore: clampScore(data?.authenticityScore, 83),
-    clarityScore: clampScore(data?.clarityScore, 81),
-    emotionalScore: clampScore(data?.emotionalScore, 77),
-    curiosityScore: clampScore(data?.curiosityScore, 76),
-    hookScore: clampScore(data?.hookScore, 80),
-    ctaScore: clampScore(data?.ctaScore, 74),
+    viralScore,
+    authenticityScore,
+    clarityScore,
+    emotionalScore,
+    curiosityScore,
+    hookScore,
+    ctaScore,
     summary: cleanString(
       data?.summary,
       isHebrew
-        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לקבל ביצועים טובים יותר."
-        : "The post has a good base, but the hook, flow, and sharpness can be improved for stronger performance."
+        ? "הפוסט בנוי טוב כבסיס, אבל אפשר לחזק את הפתיח, הזרימה והחדות כדי לשפר ביצועים."
+        : "The post has a good base, but the hook, flow, and sharpness can be improved."
     ),
     whatWorks: Array.isArray(data?.whatWorks)
       ? data.whatWorks
@@ -112,8 +125,8 @@ function normalizeAnalyzeData(data, language) {
     whatHurts: Array.isArray(data?.whatHurts)
       ? data.whatHurts
       : isHebrew
-        ? ["הפתיחה לא מספיק חדה", "אפשר ליצור יותר עניין וסקרנות"]
-        : ["The opening is not sharp enough", "It could create more curiosity and tension"],
+        ? ["הפתיחה לא מספיק חדה", "יש מקום ליותר סקרנות וזרימה"]
+        : ["The opening is not sharp enough", "There is room for more curiosity and flow"],
     improvements: Array.isArray(data?.improvements)
       ? data.improvements
       : isHebrew
@@ -133,16 +146,16 @@ function buildAnalyzeFallback(post, language) {
 
   return normalizeAnalyzeData(
     {
-      viralScore: 79,
-      authenticityScore: 83,
-      clarityScore: 81,
-      emotionalScore: 77,
-      curiosityScore: 76,
-      hookScore: 80,
-      ctaScore: 74,
+      viralScore: 78,
+      authenticityScore: 82,
+      clarityScore: 80,
+      emotionalScore: 75,
+      curiosityScore: 74,
+      hookScore: 79,
+      ctaScore: 72,
       summary: isHebrew
-        ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח ואת הזרימה כדי להגדיל מעורבות."
-        : "The post is solid as a base, but the opening and flow can be improved to raise engagement.",
+        ? "הפוסט טוב כבסיס, אבל אפשר לשפר את הפתיח והזרימה כדי להגדיל מעורבות."
+        : "The post is solid as a base, but the opening and flow can be improved.",
       whatWorks: isHebrew
         ? ["המסר ברור", "הטון הכללי נעים"]
         : ["The message is clear", "The overall tone is pleasant"],
@@ -187,7 +200,8 @@ app.post("/api/auth/register", async (req, res) => {
       token,
       user: { id: user._id, email: user.email }
     });
-  } catch {
+  } catch (error) {
+    console.error("Register error:", error.message);
     res.status(500).json({ message: "Register failed" });
   }
 });
@@ -213,7 +227,8 @@ app.post("/api/auth/login", async (req, res) => {
       token,
       user: { id: user._id, email: user.email }
     });
-  } catch {
+  } catch (error) {
+    console.error("Login error:", error.message);
     res.status(500).json({ message: "Login failed" });
   }
 });
@@ -282,7 +297,8 @@ Return JSON:
     parsed.hashtags = normalizeHashtags(parsed.hashtags);
 
     res.json({ success: true, data: parsed });
-  } catch {
+  } catch (error) {
+    console.error("Generate error:", error.message);
     res.status(500).json({ error: "Generate failed" });
   }
 });
@@ -336,7 +352,8 @@ Return JSON:
     const parsed = safeJsonParse(raw, {});
 
     res.json({ success: true, data: parsed });
-  } catch {
+  } catch (error) {
+    console.error("Improve error:", error.message);
     res.status(500).json({ error: "Improve failed" });
   }
 });
@@ -355,15 +372,15 @@ app.post("/analyze-post", async (req, res) => {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.4,
+      temperature: 0.35,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
             language === "he"
-              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד ובעברית בלבד."
-              : "You analyze social media posts. Return valid JSON only and in English only."
+              ? "אתה מנתח פוסטים לרשתות חברתיות. תחזיר JSON תקין בלבד, בעברית בלבד, עם ציונים נפרדים והגיוניים."
+              : "You analyze social media posts. Return valid JSON only, in English only, with reasonable differentiated scores."
         },
         {
           role: "user",
@@ -372,8 +389,8 @@ app.post("/analyze-post", async (req, res) => {
               ? `
 נתח את הפוסט הבא בעברית בלבד.
 אסור לכתוב באנגלית.
-אל תחזיר ציונים נמוכים מדי בלי סיבה.
-הציונים צריכים לשקף פוסט ממוצע-טוב ברמה מקצועית.
+אסור להחזיר את כל הציונים אותו דבר.
+הציונים צריכים להיות שונים זה מזה בהתאם לאיכות של כל היבט.
 
 פלטפורמה: ${platform}
 פוסט:
@@ -397,6 +414,7 @@ ${post}
 `
               : `
 Analyze this post in English only.
+Do not return identical scores for every category.
 
 Platform: ${platform}
 Post:
@@ -427,7 +445,8 @@ Return JSON exactly like this:
     const normalized = normalizeAnalyzeData(parsed, language);
 
     res.json({ success: true, data: normalized });
-  } catch {
+  } catch (error) {
+    console.error("Analyze error:", error.message);
     res.json({
       success: true,
       data: buildAnalyzeFallback(post, language)
