@@ -2,6 +2,9 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:5000"
 ).replace(/\/+$/, "");
 
+const TOKEN_KEY = "postpulse_token";
+const USER_KEY = "postpulse_user";
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
@@ -20,28 +23,56 @@ async function request(path, options = {}) {
   return data;
 }
 
-export function getStoredToken() {
-  return "";
+function saveAuth(data) {
+  if (data?.token) {
+    localStorage.setItem(TOKEN_KEY, data.token);
+  }
+
+  if (data?.user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+  }
+
+  return data;
 }
 
-export function hasToken() {
-  return false;
+export function getStoredToken() {
+  return localStorage.getItem(TOKEN_KEY) || "";
 }
 
 export function getStoredUser() {
-  return null;
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function hasToken() {
+  return Boolean(getStoredToken());
 }
 
 export function logoutUser() {
-  return null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
-export async function registerUser() {
-  throw new Error("Auth is not active in the restored server version");
+export async function registerUser(payload) {
+  const data = await request("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+
+  return saveAuth(data);
 }
 
-export async function loginUser() {
-  throw new Error("Auth is not active in the restored server version");
+export async function loginUser(payload) {
+  const data = await request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload || {})
+  });
+
+  return saveAuth(data);
 }
 
 export async function generatePost(payload) {
@@ -66,20 +97,13 @@ export async function analyzePost(payload) {
 }
 
 export async function savePost() {
-  return {
-    success: false
-  };
+  return { success: false };
 }
 
 export async function getMyPosts() {
-  return {
-    success: true,
-    posts: []
-  };
+  return { success: true, posts: [] };
 }
 
 export async function deletePost() {
-  return {
-    success: false
-  };
+  return { success: false };
 }
