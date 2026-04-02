@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const PostSchema = new mongoose.Schema(
+const postSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -11,12 +11,10 @@ const PostSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["build", "improve", "analyze"],
-      required: true,
-      index: true
+      required: true
     },
     language: {
       type: String,
-      enum: ["he", "en"],
       default: "he"
     },
     input: {
@@ -28,9 +26,7 @@ const PostSchema = new mongoose.Schema(
       default: {}
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-export default mongoose.models.Post || mongoose.model("Post", PostSchema);
+export default mongoose.models.Post || mongoose.model("Post", postSchema);
