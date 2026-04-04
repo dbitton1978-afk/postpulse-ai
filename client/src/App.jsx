@@ -7,7 +7,8 @@ import {
   getStoredUser,
   logoutUser,
   savePost,
-  getMyPosts
+  getMyPosts,
+  deletePost
 } from "./api";
 import "./App.css";
 
@@ -133,6 +134,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
 
   const isHebrew = language === "he";
   const dir = isHebrew ? "rtl" : "ltr";
@@ -192,6 +194,7 @@ export default function App() {
       copyFailed: isHebrew ? "ההעתקה נכשלה" : "Copy failed",
       copy: isHebrew ? "העתק" : "Copy",
       saved: isHebrew ? "נשמר בהיסטוריה" : "Saved to history",
+      deleted: isHebrew ? "נמחק מההיסטוריה" : "Deleted from history",
 
       moveToImprove: isHebrew ? "העבר לשיפור" : "Move to Improve",
 
@@ -206,7 +209,9 @@ export default function App() {
       openSavedItem: isHebrew ? "טען" : "Load",
       invalidHistoryType: isHebrew ? "סוג היסטוריה לא תקין" : "Invalid history type",
       historySaveFailed: isHebrew ? "שמירה להיסטוריה נכשלה" : "History save failed",
-      refreshHistory: isHebrew ? "רענן היסטוריה" : "Refresh History"
+      refreshHistory: isHebrew ? "רענן היסטוריה" : "Refresh History",
+      delete: isHebrew ? "מחק" : "Delete",
+      deleteFailed: isHebrew ? "מחיקה נכשלה" : "Delete failed"
     }),
     [isHebrew]
   );
@@ -283,6 +288,27 @@ export default function App() {
       setError(t.historySaveFailed);
     } catch (err) {
       setError(err?.message || t.historySaveFailed);
+    }
+  }
+
+  async function handleDeleteHistoryItem(postId) {
+    if (!postId) return;
+
+    setDeletingId(postId);
+    setError("");
+
+    try {
+      await deletePost(postId);
+      setHistory((prev) => prev.filter((item) => item._id !== postId));
+      setCopyMessage(t.deleted);
+
+      if (result && history.find((item) => item._id === postId)) {
+        // no-op for now, keep current result visible
+      }
+    } catch (err) {
+      setError(err?.message || t.deleteFailed);
+    } finally {
+      setDeletingId("");
     }
   }
 
@@ -854,13 +880,24 @@ export default function App() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      className="copy-btn"
-                      onClick={() => loadHistoryItem(item)}
-                    >
-                      {t.openSavedItem}
-                    </button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        className="copy-btn"
+                        onClick={() => loadHistoryItem(item)}
+                      >
+                        {t.openSavedItem}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="copy-btn"
+                        onClick={() => handleDeleteHistoryItem(item._id)}
+                        disabled={deletingId === item._id}
+                      >
+                        {deletingId === item._id ? t.loading : t.delete}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="text-card">{getHistoryPreview(item, language)}</div>
