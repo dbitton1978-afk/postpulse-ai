@@ -327,6 +327,30 @@ app.get("/api/posts/my-posts", auth, async (req, res) => {
   }
 });
 
+app.delete("/api/posts/:id", auth, async (req, res) => {
+  try {
+    const postId = cleanString(req.params.id);
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ message: "Invalid post id" });
+    }
+
+    const deleted = await Post.findOneAndDelete({
+      _id: postId,
+      user: req.user.id
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.json({ success: true, deletedId: postId });
+  } catch (error) {
+    console.error("Delete history error:", error.message);
+    res.status(500).json({ message: "Delete failed" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
