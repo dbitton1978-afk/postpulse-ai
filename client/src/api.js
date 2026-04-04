@@ -90,13 +90,6 @@ export async function improvePost(payload) {
   });
 }
 
-export async function analyzePost(payload) {
-  return request("/analyze-post", {
-    method: "POST",
-    body: JSON.stringify(payload || {})
-  });
-}
-
 export async function savePost(payload) {
   return request("/api/posts/save", {
     method: "POST",
