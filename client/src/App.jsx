@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  analyzePost,
   generatePost,
   improvePost,
   loginUser,
@@ -41,18 +40,6 @@ function ListBlock({ items }) {
         <li key={`${String(item)}-${index}`}>{item}</li>
       ))}
     </ul>
-  );
-}
-
-function ScoreCard({ label, value }) {
-  const num = Number(value);
-  const safeValue = Number.isFinite(num) ? Math.round(num) : 0;
-
-  return (
-    <div className="score-card">
-      <div className="score-value">{safeValue}%</div>
-      <div className="score-label">{label}</div>
-    </div>
   );
 }
 
@@ -112,13 +99,6 @@ function getHistoryPreview(item, language) {
     );
   }
 
-  if (item?.type === "analyze") {
-    return (
-      safeText(item?.data?.summary) ||
-      (isHebrew ? "ניתוח פוסט" : "Post analysis")
-    );
-  }
-
   return "";
 }
 
@@ -131,10 +111,6 @@ function getHistoryTitle(item, language) {
 
   if (item?.type === "improve") {
     return isHebrew ? "פוסט משופר" : "Improved Post";
-  }
-
-  if (item?.type === "analyze") {
-    return isHebrew ? "ניתוח פוסט" : "Post Analysis";
   }
 
   return isHebrew ? "פריט" : "Item";
@@ -179,7 +155,6 @@ export default function App() {
 
       build: isHebrew ? "יצירה" : "Build",
       improve: isHebrew ? "שיפור" : "Improve",
-      analyze: isHebrew ? "ניתוח" : "Analyze",
 
       topic: isHebrew ? "נושא / רעיון" : "Topic / Idea",
       targetAudience: isHebrew ? "קהל יעד" : "Target Audience",
@@ -190,7 +165,6 @@ export default function App() {
 
       generate: isHebrew ? "צור פוסט" : "Generate Post",
       improveBtn: isHebrew ? "שפר פוסט" : "Improve Post",
-      analyzeBtn: isHebrew ? "נתח פוסט" : "Analyze Post",
       loading: isHebrew ? "טוען..." : "Loading...",
 
       result: isHebrew ? "תוצאה" : "Result",
@@ -209,34 +183,19 @@ export default function App() {
       moreAuthenticVersion: isHebrew ? "גרסה אנושית יותר" : "More Authentic Version",
       tips: isHebrew ? "טיפים" : "Tips",
 
-      viralScore: isHebrew ? "ויראליות" : "Viral",
-      authenticityScore: isHebrew ? "אותנטיות" : "Authenticity",
-      clarityScore: isHebrew ? "בהירות" : "Clarity",
-      emotionalScore: isHebrew ? "רגש" : "Emotion",
-      curiosityScore: isHebrew ? "סקרנות" : "Curiosity",
-      hookScore: isHebrew ? "פתיח" : "Hook",
-      ctaScore: isHebrew ? "הנעה לפעולה" : "CTA",
-
-      summary: isHebrew ? "סיכום" : "Summary",
-      whatWorks: isHebrew ? "מה עובד" : "What Works",
-      whatHurts: isHebrew ? "מה פוגע" : "What Hurts",
-      improvements: isHebrew ? "שיפורים" : "Improvements",
-
       noResultYet: isHebrew ? "עדיין אין תוצאה להצגה" : "No result yet",
       enterTopic: isHebrew ? "יש להזין נושא לפוסט" : "Please enter a topic",
       enterPostText: isHebrew ? "יש להזין טקסט לפוסט" : "Please enter post text",
       generateFailed: isHebrew ? "יצירת הפוסט נכשלה" : "Generate failed",
       improveFailed: isHebrew ? "שיפור הפוסט נכשל" : "Improve failed",
-      analyzeFailed: isHebrew ? "ניתוח הפוסט נכשל" : "Analyze failed",
       copied: isHebrew ? "הועתק" : "Copied",
       copyFailed: isHebrew ? "ההעתקה נכשלה" : "Copy failed",
       copy: isHebrew ? "העתק" : "Copy",
       saved: isHebrew ? "נשמר בהיסטוריה" : "Saved to history",
 
       moveToImprove: isHebrew ? "העבר לשיפור" : "Move to Improve",
-      analyzeImproved: isHebrew ? "נתח את הגרסה המשופרת" : "Analyze improved version",
 
-      appSubtitle: isHebrew ? "בנה, שפר ונתח פוסטים" : "Build, improve and analyze posts",
+      appSubtitle: isHebrew ? "בנה ושפר פוסטים" : "Build and improve posts",
       topicPlaceholder: isHebrew ? "על מה הפוסט?" : "What is the post about?",
       audiencePlaceholder: isHebrew ? "למי הפוסט מיועד?" : "Who is the audience?",
       goalPlaceholder: isHebrew ? "מה המטרה?" : "What is the goal?",
@@ -267,11 +226,6 @@ export default function App() {
     platform: "instagram"
   });
 
-  const [analyzeForm, setAnalyzeForm] = useState({
-    post: "",
-    platform: "instagram"
-  });
-
   useEffect(() => {
     if (!copyMessage) return;
     const timer = window.setTimeout(() => setCopyMessage(""), 1800);
@@ -293,7 +247,8 @@ export default function App() {
 
     try {
       const response = await getMyPosts();
-      setHistory(Array.isArray(response?.posts) ? response.posts : []);
+      const items = Array.isArray(response?.posts) ? response.posts : [];
+      setHistory(items.filter((item) => item?.type === "build" || item?.type === "improve"));
     } catch (err) {
       setError(err?.message || t.loadHistoryFailed);
     } finally {
@@ -304,9 +259,9 @@ export default function App() {
   async function persistHistory(type, input, data) {
     const derivedType =
       String(type || "").trim().toLowerCase() ||
-      (tab === "build" ? "build" : tab === "improve" ? "improve" : "analyze");
+      (tab === "build" ? "build" : "improve");
 
-    if (!["build", "improve", "analyze"].includes(derivedType)) {
+    if (!["build", "improve"].includes(derivedType)) {
       setError(`${t.invalidHistoryType}: ${derivedType}`);
       return;
     }
@@ -346,10 +301,6 @@ export default function App() {
 
   function setImproveField(field, value) {
     setImproveForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function setAnalyzeField(field, value) {
-    setAnalyzeForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function setAuthField(field, value) {
@@ -466,42 +417,6 @@ export default function App() {
     }
   }
 
-  async function handleAnalyze() {
-    setError("");
-    setResult(null);
-
-    const postValue = (analyzeForm.post || "").trim();
-
-    if (!postValue) {
-      setError(t.enterPostText);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const payload = {
-        post: postValue,
-        platform: analyzeForm.platform || "instagram",
-        language
-      };
-
-      const response = await analyzePost(payload);
-      const data = response?.data || {};
-
-      setResult({
-        type: "analyze",
-        data
-      });
-
-      await persistHistory("analyze", payload, data);
-    } catch (err) {
-      setError(err?.message || t.analyzeFailed);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function moveBuildToImprove() {
     if (result?.type !== "build") return;
 
@@ -512,18 +427,6 @@ export default function App() {
     }));
 
     setTab("improve");
-  }
-
-  function moveImproveToAnalyze() {
-    if (result?.type !== "improve") return;
-
-    setAnalyzeForm((prev) => ({
-      ...prev,
-      post: getImprovePrimaryText(result.data),
-      platform: improveForm.platform || prev.platform
-    }));
-
-    setTab("analyze");
   }
 
   function loadHistoryItem(item) {
@@ -551,16 +454,6 @@ export default function App() {
         platform: safeText(item.input?.platform) || "instagram"
       });
       setResult({ type: "improve", data: item.data || {} });
-      return;
-    }
-
-    if (item.type === "analyze") {
-      setTab("analyze");
-      setAnalyzeForm({
-        post: safeText(item.input?.post),
-        platform: safeText(item.input?.platform) || "instagram"
-      });
-      setResult({ type: "analyze", data: item.data || {} });
     }
   }
 
@@ -710,13 +603,6 @@ export default function App() {
               >
                 {t.improve}
               </button>
-              <button
-                type="button"
-                className={`tab-btn ${tab === "analyze" ? "active" : ""}`}
-                onClick={() => setTab("analyze")}
-              >
-                {t.analyze}
-              </button>
             </div>
 
             {tab === "build" && (
@@ -840,37 +726,6 @@ export default function App() {
               </>
             )}
 
-            {tab === "analyze" && (
-              <>
-                <div className="field">
-                  <label>{t.postText}</label>
-                  <textarea
-                    rows={8}
-                    value={analyzeForm.post}
-                    onChange={(e) => setAnalyzeField("post", e.target.value)}
-                  />
-                </div>
-
-                <div className="field">
-                  <label>{t.platform}</label>
-                  <select
-                    value={analyzeForm.platform}
-                    onChange={(e) => setAnalyzeField("platform", e.target.value)}
-                  >
-                    {platformOptions.map((platform) => (
-                      <option key={platform.value} value={platform.value}>
-                        {platform.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button type="button" className="primary-btn" onClick={handleAnalyze} disabled={loading}>
-                  {loading ? t.loading : t.analyzeBtn}
-                </button>
-              </>
-            )}
-
             {error ? <div className="error-box">{error}</div> : null}
             {copyMessage ? <div className="success-box">{copyMessage}</div> : null}
           </section>
@@ -968,52 +823,6 @@ export default function App() {
 
                 <Section title={t.tips}>
                   <ListBlock items={result.data?.tips || []} />
-                </Section>
-
-                <button type="button" className="secondary-btn" onClick={moveImproveToAnalyze}>
-                  {t.analyzeImproved}
-                </button>
-              </div>
-            )}
-
-            {result?.type === "analyze" && (
-              <div className="result-wrap">
-                <div className="scores-grid">
-                  <ScoreCard label={t.viralScore} value={result.data?.viralScore} />
-                  <ScoreCard label={t.authenticityScore} value={result.data?.authenticityScore} />
-                  <ScoreCard label={t.clarityScore} value={result.data?.clarityScore} />
-                  <ScoreCard label={t.emotionalScore} value={result.data?.emotionalScore} />
-                  <ScoreCard label={t.curiosityScore} value={result.data?.curiosityScore} />
-                  <ScoreCard label={t.hookScore} value={result.data?.hookScore} />
-                  <ScoreCard label={t.ctaScore} value={result.data?.ctaScore} />
-                </div>
-
-                <Section
-                  title={t.summary}
-                  onCopy={() => copyText(result.data?.summary || "")}
-                  copyLabel={t.copy}
-                >
-                  <div className="text-card">{result.data?.summary || ""}</div>
-                </Section>
-
-                <Section title={t.whatWorks}>
-                  <ListBlock items={result.data?.whatWorks || []} />
-                </Section>
-
-                <Section title={t.whatHurts}>
-                  <ListBlock items={result.data?.whatHurts || []} />
-                </Section>
-
-                <Section title={t.improvements}>
-                  <ListBlock items={result.data?.improvements || []} />
-                </Section>
-
-                <Section
-                  title={t.improvedVersion}
-                  onCopy={() => copyText(result.data?.improvedVersion || "")}
-                  copyLabel={t.copy}
-                >
-                  <div className="text-card">{result.data?.improvedVersion || ""}</div>
                 </Section>
               </div>
             )}
