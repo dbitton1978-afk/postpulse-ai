@@ -108,3 +108,12 @@ export async function getMyPosts() {
     }
   });
 }
+
+export async function deletePost(postId) {
+  return request(`/api/posts/${postId}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
+}
