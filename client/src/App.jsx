@@ -261,35 +261,47 @@ export default function App() {
     }
   }
 
-  async function persistHistory(type, input, data) {
-    const derivedType =
-      String(type || "").trim().toLowerCase() ||
-      (tab === "build" ? "build" : "improve");
+  async function saveBuildHistory(input, data) {
+  try {
+    const response = await savePost({
+      type: "build",
+      language,
+      input,
+      data
+    });
 
-    if (!["build", "improve"].includes(derivedType)) {
-      setError(`${t.invalidHistoryType}: ${derivedType}`);
+    if (response?.post) {
+      setHistory((prev) => [response.post, ...prev].slice(0, 100));
+      setCopyMessage(t.saved);
       return;
     }
 
-    try {
-      const response = await savePost({
-        type: derivedType,
-        language,
-        input,
-        data
-      });
-
-      if (response?.post) {
-        setHistory((prev) => [response.post, ...prev].slice(0, 100));
-        setCopyMessage(t.saved);
-        return;
-      }
-
-      setError(t.historySaveFailed);
-    } catch (err) {
-      setError(err?.message || t.historySaveFailed);
-    }
+    setError(t.historySaveFailed);
+  } catch (err) {
+    setError(err?.message || t.historySaveFailed);
   }
+}
+
+async function saveImproveHistory(input, data) {
+  try {
+    const response = await savePost({
+      type: "improve",
+      language,
+      input,
+      data
+    });
+
+    if (response?.post) {
+      setHistory((prev) => [response.post, ...prev].slice(0, 100));
+      setCopyMessage(t.saved);
+      return;
+    }
+
+    setError(t.historySaveFailed);
+  } catch (err) {
+    setError(err?.message || t.historySaveFailed);
+  }
+}
 
   async function handleDeleteHistoryItem(postId) {
     if (!postId) return;
@@ -397,7 +409,7 @@ export default function App() {
         data
       });
 
-      await persistHistory("build", payload, data);
+     await saveBuildHistory(payload, data);
     } catch (err) {
       setError(err?.message || t.generateFailed);
     } finally {
@@ -435,7 +447,7 @@ export default function App() {
         data
       });
 
-      await persistHistory("improve", payload, data);
+    await saveImproveHistory(payload, data); 
     } catch (err) {
       setError(err?.message || t.improveFailed);
     } finally {
